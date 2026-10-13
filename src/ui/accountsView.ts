@@ -359,20 +359,20 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   <div id="noMatch" class="notice info hidden" data-icon="info">
     <span>No accounts match the filters. <button id="noMatchClear" class="link-btn">Clear filters</button></span>
   </div>
-  <div id="empty" class="hidden">
-    <p class="empty-title">No saved accounts</p>
-    <div class="notice info" data-icon="info">
-      <span>Save the account Claude Code is logged in with, or log in to another one.</span>
-    </div>
-    <div class="empty-actions">
-      <button id="emptyLoginBtn" class="tb-btn">Add account</button>
-      <button id="emptyRestoreBtn" class="tb-btn">Restore backup…</button>
-    </div>
-    <div class="notice warn" role="note" data-icon="warning">
-      <span>Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</span>
-    </div>
-  </div>
   <div id="session"></div>
+  <div id="empty" class="hidden">
+    <div class="notice info empty-box" data-icon="info">
+      <div class="empty-box-body">
+        <b id="emptyTitle" class="empty-title">No saved accounts</b>
+        <span id="emptyText"></span>
+        <div class="empty-actions">
+          <button id="emptyLoginBtn" class="tb-btn">Add account</button>
+          <button id="emptyRestoreBtn" class="tb-btn">Restore backup…</button>
+        </div>
+      </div>
+    </div>
+    <p class="empty-footnote">Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</p>
+  </div>
   <div id="trackingNotice" class="notice info hidden" data-icon="info">
     <span>Usage tracking is off. Turn it on to record every account's limits and get the usage and
     capacity analytics. <button id="enableTrackingBtn" class="link-btn">Turn on tracking</button></span>

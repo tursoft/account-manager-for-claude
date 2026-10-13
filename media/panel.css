@@ -1044,6 +1044,40 @@ button:focus-visible {
   background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
+/* The welcome card (no saved accounts yet): solid, roomier, and first. */
+.session.welcome {
+  margin-top: 6px;
+  padding: 12px 12px 12px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+
+.session.welcome .session-name {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.session.welcome .session-note {
+  margin-top: 3px;
+}
+
+/* Room above and below the limit bars in every session box. */
+.session .meters {
+  margin-top: 9px;
+  margin-bottom: 9px;
+}
+
+.session.welcome .meters {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.session.welcome .session-btn {
+  margin-top: 10px;
+  height: 28px;
+}
+
 .session.loggedOut {
   border-color: color-mix(in srgb, var(--warn) 55%, var(--border));
   background: color-mix(in srgb, var(--warn) 7%, transparent);
@@ -1203,25 +1237,70 @@ button:focus-visible {
 /* ---- empty state ---------------------------------------------------- */
 
 #empty {
-  padding: 16px 6px;
-  text-align: center;
+  padding: 10px 0 6px;
   color: var(--muted);
   line-height: 1.5;
 }
 
 #empty p {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
+/* The info box's own bold heading. */
 .empty-title {
-  font-size: 13px;
-  font-weight: 600;
+  display: block;
+  margin-bottom: 2px;
+  font-size: 12.5px;
+  font-weight: 700;
   color: var(--vscode-foreground);
+}
+
+/* Below a welcome card the block is the secondary path. */
+#empty.secondary {
+  padding-top: 6px;
 }
 
 .empty-actions {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 6px;
-  margin: 12px 0;
+  margin: 12px 0 10px;
+}
+
+/* When "Save current" is hidden (an unsaved login is shown), "Add" alone fills the row. */
+#toolbar.solo-add #loginBtn {
+  flex: 1;
+  justify-content: center;
+}
+
+#toolbar.solo-add .spacer {
+  display: none;
+}
+
+/* The info box with the Add / Restore buttons inside it. */
+.empty-box {
+  text-align: left;
+  margin: 8px 0 10px;
+}
+
+.empty-box-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.empty-box .empty-actions {
+  justify-content: flex-start;
+  margin: 8px 0 0;
+}
+
+/* The /logout warning as a footnote rather than a third box. */
+.empty-footnote {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.empty-footnote code {
+  font-size: 10px;
 }

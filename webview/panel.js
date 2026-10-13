@@ -713,10 +713,16 @@ import {
   const sessionEl = document.getElementById("session");
 
   /** Info box for a Claude Code login that is not in the list (or no login at all). */
-  function sessionBox(session) {
-    const box = el("div", "session " + session.status);
+  /**
+   * The Claude Code login of this window when it is not a saved account. With `welcome`
+   * (no saved accounts yet) it is the panel's main card: the one thing to do is save it.
+   */
+  function sessionBox(session, welcome) {
+    const box = el("div", "session " + session.status + (welcome ? " welcome" : ""));
     const head = el("div", "session-head");
-    head.append(el("span", "session-kicker", "Current Claude Code session"));
+    head.append(
+      el("span", "session-kicker", welcome && session.status === "unsaved" ? "Claude Code is logged in as" : "Current Claude Code account (detected)")
+    );
     if (session.subscriptionType) head.appendChild(el("span", "badge", session.subscriptionType));
     box.appendChild(head);
 
@@ -726,22 +732,37 @@ import {
       const name = el("div", "session-name" + (tone ? ` tone-${tone}` : ""), session.label || "Unidentified account");
       name.title = [name.textContent, nameToneDescription(usage), "Double-click to copy"].filter(Boolean).join("\n");
       if (session.label) copyOnDoubleClick(name); // no id: the unsaved current login
-      box.append(name, el("div", "session-note", "Not in your account list yet."));
+      box.appendChild(name);
+      box.appendChild(
+        el(
+          "div",
+          "session-note",
+          welcome
+            ? "Save it to start switching between accounts and tracking their limits. Its login stays as it is."
+            : "Not in your account list yet."
+        )
+      );
       if (session.windows && session.windows.length) {
         const meters = el("div", "meters");
         for (const w of session.windows) meters.appendChild(meter(w, state.warnThreshold || 80));
         box.appendChild(meters);
       }
       const save = el("button", "tb-btn primary session-btn");
-      save.append(icon("save"), el("span", "", "Save to account list"));
+      save.append(icon("save"), el("span", "", welcome ? "Save this account" : "Save to account list"));
       save.addEventListener("click", () => post("add"));
       box.appendChild(save);
     } else {
       box.append(
         el("div", "session-name", "No account logged in"),
-        el("div", "session-note", "Claude Code has no usable login in this window. Switch to a saved account or log in.")
+        el(
+          "div",
+          "session-note",
+          welcome
+            ? "Claude Code has no usable login in this window. Log in, or add an account below."
+            : "Claude Code has no usable login in this window. Switch to a saved account or log in."
+        )
       );
-      const login = el("button", "tb-btn session-btn");
+      const login = el("button", "tb-btn session-btn" + (welcome ? " primary" : ""));
       login.append(icon("signIn"), el("span", "", "Log in"));
       login.addEventListener("click", () => post("loginCurrent"));
       box.appendChild(login);
@@ -752,11 +773,20 @@ import {
   function render() {
     listEl.innerHTML = "";
     sessionEl.innerHTML = "";
-    if (state.currentSession) sessionEl.appendChild(sessionBox(state.currentSession));
     const accounts = state.accounts || [];
+    const empty = accounts.length === 0;
+    if (state.currentSession) sessionEl.appendChild(sessionBox(state.currentSession, empty));
     renderFilterBar(accounts.length);
     renderStats(accounts);
-    if (accounts.length === 0) {
+    // Analytics mean nothing before the first account; keep the tracking hint out of the empty state.
+    document.getElementById("trackingNotice").classList.toggle("hidden", empty || state.trackingEnabled !== false);
+    // "Save current" only makes sense without a session box: an unsaved login has its own save
+    // button in the box, and a logged-out window has nothing to save.
+    const sessionShown = Boolean(state.currentSession);
+    document.getElementById("addBtn").classList.toggle("hidden", sessionShown);
+    document.getElementById("toolbar").classList.toggle("solo-add", sessionShown);
+    if (empty) {
+      renderEmpty(state.currentSession);
       emptyEl.classList.remove("hidden");
       noMatchEl.classList.add("hidden");
       applyBusy();
@@ -772,8 +802,22 @@ import {
     revealActiveChange(accounts);
     applyBusy();
     renderProposal();
-    // Offer to turn tracking on; it feeds the analytics and the calendar's past.
-    document.getElementById("trackingNotice").classList.toggle("hidden", state.trackingEnabled !== false);
+  }
+
+  /**
+   * The empty state's text and buttons follow the detected login: with one, saving it (the
+   * session card above) is the main action and Add / Restore are the alternatives; without
+   * one, Add and Restore are the offer.
+   */
+  function renderEmpty(session) {
+    const unsaved = session && session.status === "unsaved";
+    document.getElementById("emptyTitle").textContent = unsaved ? "Or set up another account" : "No saved accounts";
+    document.getElementById("emptyText").textContent = unsaved
+      ? "Log in to a second account in an isolated login that does not touch the current one, or restore an account list from a backup."
+      : session
+        ? "Add an account by logging in, or restore an account list from a backup."
+        : "Save the account Claude Code is logged in with, or log in to another one.";
+    emptyEl.classList.toggle("secondary", Boolean(unsaved));
   }
 
   const statsEl = document.getElementById("stats");
