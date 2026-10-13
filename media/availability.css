@@ -611,6 +611,19 @@ button.link {
   opacity: 0.5;
 }
 
+/* Single-limit view, for an account that does not have the ticked limit. */
+.track-empty {
+  display: flex;
+  align-items: center;
+  height: 16px;
+  margin: 4px 0;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+}
+
 .overall-row {
   min-height: 30px;
 }

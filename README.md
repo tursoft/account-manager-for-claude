@@ -268,7 +268,7 @@ as a week from Monday to Sunday or, after clicking a day, hour by hour:
   each limit's current percent and a **Switch** button for accounts that are available;
 - per account an overall lane (blocked while any limit is used up) and, for each limit you tick
   under **Limits**, its own lane: **5h**, **Fable**, and, when an account has them, weekly and
-  other model-specific limits;
+  other model-specific limits. With exactly one limit ticked, its bar is the account's main bar;
 - green = available, amber = 80%+ used, red = limited, grey = no data; markers show reset times
   and a red line shows now.
 

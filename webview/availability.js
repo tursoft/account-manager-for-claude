@@ -542,7 +542,12 @@ function render() {
     order,
     listing.sort
   );
-  renderLimitChecks(limitOptions([...timelines.values()]));
+  const options = limitOptions([...timelines.values()]);
+  renderLimitChecks(options);
+  // With exactly one limit ticked, that limit's bar is the account's main bar (not an overall bar
+  // plus a lane). With none or several ticked, the overall bar leads and each ticked limit gets a lane.
+  const ticked = options.filter(([kind]) => !ui.off.includes(kind));
+  const single = ticked.length === 1 ? ticked[0] : null; // [kind, text]
   syncListingControls(accounts);
   renderNow(visible, visible.map((acc) => timelines.get(acc.id)), now);
 
@@ -587,17 +592,28 @@ function render() {
       (acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label) + "\nDouble-click to copy";
     copyOnDoubleClick(name, acc.id);
     label.appendChild(name);
-    row.append(label, track(tl.overall, [], from, to, now, `${acc.label} (any limit)`, false));
+    let main;
+    if (single) {
+      const lane = tl.lanes.find((l) => l.kind === single[0]);
+      main = lane
+        ? track(lane.segments, lane.resets, from, to, now, `${acc.label} · ${lane.label}`, false)
+        : el("div", "track-empty", `No ${single[1]} limit`);
+    } else {
+      main = track(tl.overall, [], from, to, now, `${acc.label} (any limit)`, false);
+    }
+    row.append(label, main);
     group.appendChild(row);
 
-    for (const lane of tl.lanes) {
-      if (ui.off.includes(lane.kind)) continue;
-      const r = el("div", "row lane-row");
-      r.append(
-        el("div", "row-label lane-label", shortLane(lane.kind, lane.label)),
-        track(lane.segments, lane.resets, from, to, now, `${acc.label} · ${lane.label}`, true)
-      );
-      group.appendChild(r);
+    if (!single) {
+      for (const lane of tl.lanes) {
+        if (ui.off.includes(lane.kind)) continue;
+        const r = el("div", "row lane-row");
+        r.append(
+          el("div", "row-label lane-label", shortLane(lane.kind, lane.label)),
+          track(lane.segments, lane.resets, from, to, now, `${acc.label} · ${lane.label}`, true)
+        );
+        group.appendChild(r);
+      }
     }
     cal.appendChild(group);
   });
