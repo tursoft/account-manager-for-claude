@@ -16,9 +16,11 @@ with live usage limits for all your accounts at a glance.
   or run `ext install tursoft.account-manager-for-claude` in the Quick Open box (`Ctrl+P`).
 - **Source:** [github.com/tursoft/account-manager-for-claude](https://github.com/tursoft/account-manager-for-claude)
 
-> This project is a fork of
-> [KrzysztofZander/claude-account-switcher](https://github.com/KrzysztofZander/claude-account-switcher)
-> by Krzysztof Zander.
+> Built on [KrzysztofZander/claude-account-switcher](https://github.com/KrzysztofZander/claude-account-switcher)
+> by Krzysztof Zander, which provided the original account-switching core. This version has been
+> substantially extended: a redesigned accounts panel with a reworked UI/UX, plus new features
+> including usage analytics with capacity-utilization tracking, an availability calendar,
+> account proposals that suggest the best account to switch to, and much more.
 
 ## Why
 
