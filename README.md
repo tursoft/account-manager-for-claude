@@ -106,9 +106,11 @@ the account on each computer separately instead of copying credential files betw
 2. Open the **Claude Accounts** panel (activity bar icon) → **"Save current"**.
 3. Click **"+ Add account"** and log in with account #2. The current Claude Code account is not
    changed; the new account is saved automatically when the login completes.
-4. From now on, switch with one click via **"Switch"** on an account card (or the status bar /
-   `Claude: Switch account`). After confirmation the window reloads and Claude Code runs on the
-   selected account.
+4. From now on, switch with one click via the switch icon on an account row (shown on hover), the
+   row's **⋯** menu, the status bar, or `Claude: Switch account`. After confirmation the window
+   reloads and Claude Code runs on the selected account.
+5. Drag rows to reorder accounts (or use **Move up / Move down** in the **⋯** menu). The order is
+   remembered and also used by the status bar QuickPick.
 
 ## Commands
 
@@ -208,12 +210,90 @@ directories would each try to spend the same single-use refresh token.
 
 ## Development
 
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 18 or newer (npm included)
+- VS Code 1.85 or newer
+- Claude Code installed, for testing login and Say Hi
+
 ```bash
 npm install
-npm run watch       # build in watch mode
-# press F5 in VS Code -> Extension Development Host
-npm run build:vsix  # build the .vsix package
 ```
+
+### Compile
+
+| Script | What it does |
+| --- | --- |
+| `npm run compile` | one-off development build to `dist/extension.js` (with source maps) |
+| `npm run watch` | rebuilds on every change in `src/` |
+| `npm run package` | minified production build (what gets shipped) |
+| `npm run typecheck` | runs `tsc --noEmit`; esbuild does not type-check |
+| `npm run test:smoke` | runs the smoke tests in `test/` |
+
+The webview UI (`media/panel.js`, `media/panel.css`) is plain JS/CSS and is loaded as-is, so it
+needs no build step.
+
+### Run and debug in VS Code
+
+1. Open this folder in VS Code.
+2. Press **F5** (or **Run and Debug → Run Extension**). This compiles the extension and opens an
+   **Extension Development Host** window with it loaded.
+3. In that window, open the **Claude Accounts** icon in the activity bar.
+4. After editing code, run **Developer: Reload Window** (`Ctrl+R` / `Cmd+R`) in the Extension
+   Development Host. Keep `npm run watch` running to rebuild automatically.
+5. To debug the webview, run **Developer: Open Webview Developer Tools** in the Extension
+   Development Host.
+
+The development host shares your real `~/.claude` credentials and VS Code SecretStorage. Be
+careful with **Switch**, **Remove**, and logins while testing.
+
+### Package and install locally
+
+```bash
+npm run build:vsix
+```
+
+This creates `tursoft-claude-code-account-switcher-<version>.vsix` in the project root. Install it
+into your regular VS Code:
+
+```bash
+code --install-extension tursoft-claude-code-account-switcher-<version>.vsix
+```
+
+Or use **Extensions → ⋯ → Install from VSIX…**, then reload the window. To remove it, uninstall it
+from the Extensions view. Run `npx vsce ls` to list the files that will go into the package;
+exclusions are configured in `.vscodeignore`.
+
+### Publish to the Visual Studio Marketplace
+
+1. **Create a publisher** at <https://marketplace.visualstudio.com/manage> (sign in with a
+   Microsoft account). The publisher **ID** (lowercase, no spaces, e.g. `tursoft`) must match
+   the `publisher` field in `package.json` exactly.
+2. **Create a Personal Access Token** in Azure DevOps (<https://dev.azure.com> → *User settings →
+   Personal access tokens*) with **Organization: All accessible organizations** and the scope
+   **Marketplace → Manage**.
+3. **Log in** with vsce (it prompts for the token):
+
+   ```bash
+   npx vsce login <publisher-id>
+   ```
+
+4. **Bump the version** in `package.json` and add an entry to `CHANGELOG.md`. Alternatively, let
+   vsce bump the version for you (see the next step).
+5. **Publish**:
+
+   ```bash
+   npx vsce publish            # publishes the version in package.json
+   npx vsce publish patch      # or: bump patch/minor/major, commit, tag and publish
+   ```
+
+   `vscode:prepublish` runs the production build automatically. You can also upload a `.vsix`
+   built with `npm run build:vsix` manually on the publisher management page.
+
+The listing usually appears within a few minutes. The Marketplace shows `README.md` as the
+extension page, `CHANGELOG.md` as the changelog, and uses `icon` and `galleryBanner` from
+`package.json`. To publish to [Open VSX](https://open-vsx.org/) (VSCodium, Cursor, etc.) too,
+use `npx ovsx publish -p <token>` with a token from open-vsx.org.
 
 ## License
 
