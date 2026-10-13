@@ -49,7 +49,7 @@ export class AnalyticsPanel {
     extensionUri: vscode.Uri,
     private readonly deps: AnalyticsDeps
   ) {
-    panel.iconPath = vscode.Uri.joinPath(extensionUri, "media", "icon.svg");
+    panel.iconPath = vscode.Uri.joinPath(extensionUri, "media", "icon.png");
     panel.webview.html = this.html(extensionUri);
     panel.onDidDispose(() => this.dispose(), undefined, this.disposables);
     panel.webview.onDidReceiveMessage((msg) => void this.onMessage(msg), undefined, this.disposables);

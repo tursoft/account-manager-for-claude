@@ -1,3 +1,5 @@
+<p align="center"><img src="media/icon.png" width="128" alt="Account Manager for Claude logo"></p>
+
 # Account Manager for Claude
 
 Quickly switch between Claude accounts (subscriptions) in **Claude Code** inside VS Code,
