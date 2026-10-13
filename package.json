@@ -45,7 +45,7 @@
       "activitybar": [
         {
           "id": "accountManagerForClaude",
-          "title": "MultiAccount",
+          "title": "Claude Account Manager",
           "icon": "media/icon.svg"
         }
       ]

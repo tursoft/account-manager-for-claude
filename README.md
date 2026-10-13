@@ -103,7 +103,7 @@ account can be used, for a week or hour by hour for a single day.
 ## Getting started
 
 1. Log in to Claude Code with your first account.
-2. Open the **MultiAccount** panel from the activity bar and click **Save this account**.
+2. Open the **Claude Account Manager** panel from the activity bar and click **Save this account**.
 3. Click **Add account** and log in with another account. The current account is not changed.
 4. Switch with the blue **Switch** button on a card, the status bar, or `Claude: Switch account`.
 5. **Reload the window after switching** so Claude Code picks up the new account. The extension
