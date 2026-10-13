@@ -808,12 +808,17 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!password) {
         return;
       }
-      const date = new Date().toISOString().slice(0, 10);
+      // Local time, e.g. 20261029-105903, so several backups a day do not collide.
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp =
+        `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-` +
+        `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
       const target = await vscode.window.showSaveDialog({
         title: "Save account backup",
         defaultUri: vscode.Uri.joinPath(
           vscode.Uri.file(os.homedir()),
-          `claude-accounts-${date}.zip`
+          `claude-accounts-${stamp}.zip`
         ),
         filters: { "ZIP archive": ["zip"] },
       });
