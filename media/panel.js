@@ -22,6 +22,8 @@
     personAdd: '<circle cx="6.5" cy="5.5" r="2.5"/><path d="M2 13.5c.5-2.5 2.3-3.5 4.5-3.5s4 1 4.5 3.5M12.5 5v4M10.5 7h4"/>',
     up: '<path d="M8 13V3M4 7l4-4 4 4"/>',
     down: '<path d="M8 3v10M4 9l4 4 4-4"/>',
+    save: '<path d="M3 2.5h8l2 2v9H3z"/><path d="M5.5 2.5v3h4v-3M5.5 13.5v-4h5v4"/>',
+    signIn: '<path d="M9.5 2.5h3v11h-3M2.5 8h7M7 5.5 9.5 8 7 10.5"/>',
   };
 
   function icon(name) {
@@ -47,7 +49,6 @@
   bindToolbar("loginBtn", "login", "personAdd");
   bindToolbar("sayHiBtn", "sayHiAll", "hi");
   bindToolbar("refreshBtn", "refreshAll", "refresh");
-  bindToolbar("emptyAddBtn", "add");
   bindToolbar("emptyLoginBtn", "login");
 
   window.addEventListener("message", (event) => {
@@ -390,8 +391,41 @@
 
   // ---- render -----------------------------------------------------------
 
+  const sessionEl = document.getElementById("session");
+
+  /** Info box for a Claude Code login that is not in the list (or no login at all). */
+  function sessionBox(session) {
+    const box = el("div", "session " + session.status);
+    const head = el("div", "session-head");
+    head.append(el("span", "session-kicker", "Current Claude Code session"));
+    if (session.subscriptionType) head.appendChild(el("span", "badge", session.subscriptionType));
+    box.appendChild(head);
+
+    if (session.status === "unsaved") {
+      const name = el("div", "session-name", session.label || "Unidentified account");
+      name.title = name.textContent;
+      box.append(name, el("div", "session-note", "Not in your account list yet."));
+      const save = el("button", "tb-btn primary session-btn");
+      save.append(icon("save"), el("span", "", "Save to account list"));
+      save.addEventListener("click", () => post("add"));
+      box.appendChild(save);
+    } else {
+      box.append(
+        el("div", "session-name", "No account logged in"),
+        el("div", "session-note", "Claude Code has no usable login in this window. Switch to a saved account or log in.")
+      );
+      const login = el("button", "tb-btn session-btn");
+      login.append(icon("signIn"), el("span", "", "Log in"));
+      login.addEventListener("click", () => post("loginCurrent"));
+      box.appendChild(login);
+    }
+    return box;
+  }
+
   function render() {
     listEl.innerHTML = "";
+    sessionEl.innerHTML = "";
+    if (state.currentSession) sessionEl.appendChild(sessionBox(state.currentSession));
     const accounts = state.accounts || [];
     if (accounts.length === 0) {
       emptyEl.classList.remove("hidden");

@@ -93,6 +93,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const applyCurrentState = (state: CurrentAccountState) => {
     profileActivity.setActiveProfile(store.getActiveId());
     statusBar.setUnsavedIdentity(state.unsavedIdentity);
+    viewProvider.setCurrentSession(state);
     const key = state.unsavedIdentity ? identityLabel(state.unsavedIdentity) : undefined;
     if (key && key !== notifiedUnsavedKey) {
       notifiedUnsavedKey = key;

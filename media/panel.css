@@ -464,6 +464,60 @@ button:focus-visible {
   background: var(--vscode-menu-separatorBackground, var(--border));
 }
 
+/* ---- current session ------------------------------------------------ */
+
+#session:not(:empty) {
+  margin-top: 10px;
+}
+
+.session {
+  padding: 9px 10px 10px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.session.loggedOut {
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--border));
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+}
+
+.session-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-kicker {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.session-name {
+  margin-top: 4px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-note {
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.session-btn {
+  margin-top: 8px;
+  width: 100%;
+  justify-content: center;
+}
+
 /* ---- empty state ---------------------------------------------------- */
 
 #empty {

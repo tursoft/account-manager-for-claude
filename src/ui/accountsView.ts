@@ -1,7 +1,16 @@
 import * as vscode from "vscode";
 import { AccountStore } from "../accountStore";
+import { CurrentAccountState } from "../credentialSync";
 import { hasUsableOAuthCreds } from "../credentialValidation";
+import { identityLabel } from "../identity";
 import { requiresProfileReauthorization } from "../oauth";
+
+/** The Claude Code login of this window, when it is not one of the saved profiles. */
+interface CurrentSessionView {
+  status: "unsaved" | "loggedOut";
+  label?: string;
+  subscriptionType?: string;
+}
 
 interface ViewAccount {
   id: string;
@@ -19,11 +28,28 @@ interface ViewAccount {
 export class AccountsViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "tursoftClaudeSwitcher.accountsView";
   private view?: vscode.WebviewView;
+  private currentSession?: CurrentSessionView;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly store: AccountStore
   ) {}
+
+  /** Records the current Claude Code login so an unsaved one can be offered for saving. */
+  setCurrentSession(state: CurrentAccountState): void {
+    if (state.loggedIn === false) {
+      this.currentSession = { status: "loggedOut" };
+    } else if (state.loggedIn && !state.ownerId) {
+      this.currentSession = {
+        status: "unsaved",
+        label: state.unsavedIdentity ? identityLabel(state.unsavedIdentity) : undefined,
+        subscriptionType: state.subscriptionType,
+      };
+    } else {
+      this.currentSession = undefined;
+    }
+    this.refresh();
+  }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
@@ -35,6 +61,9 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage((msg: { type: string; id?: string; ids?: string[] }) => {
       switch (msg.type) {
+        case "loginCurrent":
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
+          break;
         case "reorder":
           if (Array.isArray(msg.ids)) {
             void this.store
@@ -123,7 +152,12 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         };
       })
     ).then((accounts) => {
-      void this.view?.webview.postMessage({ type: "state", accounts, warnThreshold });
+      void this.view?.webview.postMessage({
+        type: "state",
+        accounts,
+        warnThreshold,
+        currentSession: this.currentSession,
+      });
     });
   }
 
@@ -164,11 +198,11 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <p class="empty-title">No saved accounts</p>
     <p>Save the account Claude Code is logged in with, or log in to another one.</p>
     <div class="empty-actions">
-      <button id="emptyAddBtn" class="tb-btn primary">Save current</button>
       <button id="emptyLoginBtn" class="tb-btn">Add account</button>
     </div>
     <p class="hint">Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</p>
   </div>
+  <div id="session"></div>
   <div id="menu" class="hidden" role="menu"></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>

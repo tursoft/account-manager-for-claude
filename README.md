@@ -36,6 +36,9 @@ and re-login.
 - **Isolated reauthorization** — if a saved profile's credentials break, re-login happens in
   that profile's own `CLAUDE_CONFIG_DIR` instead of copying the currently active account.
 - **Status bar** — the active account and its usage % always in view.
+- **Current session hint** — if Claude Code is logged in with an account that is not saved yet,
+  it is shown at the bottom of the list with **Save to account list**; if nothing is logged in,
+  the panel says so. New accounts are named after their email and can be renamed later.
 - **Limit reset notifications** — get notified when a used-up session, weekly, or
   model-specific weekly limit becomes available again, with a one-click **Switch**.
 

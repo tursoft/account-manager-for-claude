@@ -38,6 +38,10 @@ export interface CurrentAccountState {
   ownerId?: string;
   /** A logged-in account that is not saved as a profile yet. */
   unsavedIdentity?: ClaudeAuthIdentity;
+  /** False when the credentials file holds no usable Claude login. */
+  loggedIn?: boolean;
+  /** Subscription type of the current login, when known. */
+  subscriptionType?: string;
 }
 
 /**
@@ -130,17 +134,18 @@ export class CredentialSync {
     const configDir = this.credentials.getConfigDir();
     const owner = await this.resolveFileOwner(configDir);
     if (!owner.creds) {
-      return { ownerId: this.store.getActiveId() };
+      return { ownerId: this.store.getActiveId(), loggedIn: false };
     }
+    const subscriptionType = owner.creds.subscriptionType;
 
     if (!owner.ownerId) {
       if (owner.verified) {
         await this.store.setActiveId(undefined);
-        return { unsavedIdentity: owner.identity };
+        return { unsavedIdentity: owner.identity, loggedIn: true, subscriptionType };
       }
       // Unknown owner (offline, expired token, no CLI): keep the remembered marker
       // but never import tokens that might belong to another account.
-      return { ownerId: this.store.getActiveId() };
+      return { ownerId: this.store.getActiveId(), loggedIn: true, subscriptionType };
     }
 
     const id = owner.ownerId;
@@ -154,7 +159,7 @@ export class CredentialSync {
       }
     }
     await this.captureOAuthAccount(id, configDir);
-    return { ownerId: id };
+    return { ownerId: id, loggedIn: true, subscriptionType };
   }
 
   /** Saves Claude Code's `oauthAccount` for a profile when it describes that account. */
