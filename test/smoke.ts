@@ -43,6 +43,10 @@ import {
   SortKey,
 } from "../src/listing";
 import { ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "../src/types";
+import { anthropicQueue, RequestQueue } from "../src/requestQueue";
+
+// Requests to Anthropic are spaced out in real use; the tests don't need the pause.
+anthropicQueue.setGap(0);
 
 let failures = 0;
 function check(name: string, cond: boolean): void {
@@ -558,6 +562,79 @@ async function runCredentialSyncTests(): Promise<void> {
   } finally {
     globalThis.fetch = originalFetch;
     delete process.env.CLAUDE_CONFIG_DIR;
+  }
+}
+
+async function runRequestQueueTests(): Promise<void> {
+  console.log("request queue:");
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const q = new RequestQueue(60);
+  const log: string[] = [];
+  const spans: [number, number][] = [];
+  const job = (name: string, ms: number, fail = false) => async () => {
+    const start = Date.now();
+    log.push(name + ":start");
+    await sleep(ms);
+    spans.push([start, Date.now()]);
+    log.push(name + ":end");
+    if (fail) throw new Error(name + " failed");
+    return name;
+  };
+  const results = await Promise.allSettled([q.run(job("a", 30)), q.run(job("b", 10, true)), q.run(job("c", 20))]);
+  check("requests run one at a time, in the order they were queued", log.join() === "a:start,a:end,b:start,b:end,c:start,c:end", log.join());
+  const gaps = spans.slice(1).map((s, i) => s[0] - spans[i][1]);
+  check("each request waits the gap after the previous one ended", gaps.every((g) => g >= 55), JSON.stringify(gaps));
+  check("a failing request rejects only its own caller", results[0].status === "fulfilled" && results[1].status === "rejected" && results[2].status === "fulfilled");
+  check("results come back to their callers", (results[0] as PromiseFulfilledResult<string>).value === "a" && (results[2] as PromiseFulfilledResult<string>).value === "c");
+  q.setGap(0);
+  const t0 = Date.now();
+  await q.run(job("d", 0));
+  check("the gap can be changed (0 = no pause)", Date.now() - t0 < 40 && q.gap === 0);
+  q.setGap(-5);
+  check("a negative gap counts as 0", q.gap === 0);
+
+  // The poller: three accounts are checked one after another, never in parallel, with the pause.
+  const originalFetch = globalThis.fetch;
+  const f = createSyncFixture();
+  const ids: string[] = [];
+  for (const n of ["p", "q", "r"]) {
+    const acc = await f.store.addFromCreds(n.toUpperCase(), creds(n + "1", 3_600_000));
+    ids.push(acc.id);
+  }
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const usageSpans: [number, number][] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes("/oauth/usage")) {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      const start = Date.now();
+      await sleep(15);
+      inFlight--;
+      usageSpans.push([start, Date.now()]);
+      return new Response(JSON.stringify({ five_hour: { utilization: 12, resets_at: null } }), { status: 200 });
+    }
+    if (url.includes("/oauth/profile")) {
+      return new Response("{}", { status: 404 });
+    }
+    return new Response("{}", { status: 404 });
+  }) as typeof fetch;
+  anthropicQueue.setGap(50);
+  try {
+    const poller = new UsagePoller(f.store, f.sync, () => 240, () => undefined);
+    // A full poll plus a card refresh and a re-check arriving at the same time.
+    await Promise.all([poller.pollAll(true), poller.pollOne(ids[0], true), poller.pollOne(ids[2], true)]);
+    check("usage requests never overlap, even from different callers", maxInFlight === 1, `max ${maxInFlight} at once`);
+    check("all requests were made (3 accounts + 2 extra refreshes)", usageSpans.length === 5, String(usageSpans.length));
+    const pauses = usageSpans.slice(1).map((s, i) => s[0] - usageSpans[i][1]);
+    check("there is a pause between consecutive usage requests", pauses.every((p) => p >= 45), JSON.stringify(pauses));
+    check("every account got its usage", ids.every((id) => f.store.get(id)?.lastUsage?.sessionPercent === 12));
+  } finally {
+    anthropicQueue.setGap(0);
+    globalThis.fetch = originalFetch;
+    delete process.env.CLAUDE_CONFIG_DIR;
+    fs.rmSync(f.root, { recursive: true, force: true });
   }
 }
 
@@ -1244,6 +1321,7 @@ runAccountStoreTests()
   .then(runUsageHistoryTests)
   .then(runClaudeLockTests)
   .then(runCredentialSyncTests)
+  .then(runRequestQueueTests)
   .then(runUsagePollerTests)
   .then(runSwitchServiceTests)
   .then(runTokenRefresherTests)

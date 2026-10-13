@@ -34,6 +34,7 @@ import { AnalyticsPanel } from "./ui/analyticsPanel";
 import { AvailabilityPanel } from "./ui/availabilityPanel";
 import { StatusBarController } from "./ui/statusBar";
 import { fetchUsage, MIN_POLL_INTERVAL_SECONDS, UsagePoller } from "./usage";
+import { anthropicQueue, DEFAULT_REQUEST_DELAY_SECONDS } from "./requestQueue";
 import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "./types";
 import { WarmupService } from "./warmup";
 
@@ -69,6 +70,13 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   const config = () => vscode.workspace.getConfiguration("accountManagerForClaude");
+
+  /** Requests to Anthropic run one at a time; this is the pause between them. */
+  const applyRequestDelay = () =>
+    anthropicQueue.setGap(
+      Math.max(0, config().get<number>("requestDelaySeconds", DEFAULT_REQUEST_DELAY_SECONDS)) * 1000
+    );
+  applyRequestDelay();
   const getInterval = () =>
     config().get<boolean>("autoRefresh", true) ? config().get<number>("pollIntervalSeconds", 240) : 0;
 
@@ -1043,6 +1051,9 @@ export function activate(context: vscode.ExtensionContext): void {
         e.affectsConfiguration("accountManagerForClaude.autoRefresh")
       ) {
         poller.restart();
+      }
+      if (e.affectsConfiguration("accountManagerForClaude.requestDelaySeconds")) {
+        applyRequestDelay();
       }
       if (e.affectsConfiguration("accountManagerForClaude.usageHistory")) {
         restartHistoryCollection();

@@ -247,6 +247,13 @@
           "minimum": 60,
           "markdownDescription": "How often (in seconds, minimum 60 = 1 minute) to check usage limits for each account when `#accountManagerForClaude.autoRefresh#` is on. The usage endpoint is rate-limited: short intervals with many accounts can hit HTTP 429, after which that account is paused for 5 minutes."
         },
+        "accountManagerForClaude.requestDelaySeconds": {
+          "type": "number",
+          "default": 2,
+          "minimum": 0,
+          "maximum": 60,
+          "markdownDescription": "Pause (in seconds) between requests to Anthropic. Accounts are checked one at a time, never in parallel, with this pause in between, so checking many accounts does not hit the rate limit (HTTP 429). Raise it if you still see 429 errors."
+        },
         "accountManagerForClaude.notifyOnLimitReset": {
           "type": "boolean",
           "default": true,

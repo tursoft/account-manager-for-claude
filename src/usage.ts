@@ -1,6 +1,7 @@
 import { AccountStore } from "./accountStore";
 import { CredentialSync, CurrentAccountState } from "./credentialSync";
 import { profileIdentity, sameIdentity } from "./identity";
+import { anthropicQueue } from "./requestQueue";
 import { OAuthCreds, UsageSnapshot, UsageWindow } from "./types";
 
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
@@ -153,8 +154,15 @@ export interface FetchResult {
   error?: string;
 }
 
-/** A single call to the usage endpoint for the given token. */
-export async function fetchUsage(creds: OAuthCreds): Promise<FetchResult> {
+/**
+ * A single call to the usage endpoint for the given token. Calls are queued: one at a time,
+ * with a pause between them (see requestQueue.ts), so checking many accounts does not hit 429.
+ */
+export function fetchUsage(creds: OAuthCreds): Promise<FetchResult> {
+  return anthropicQueue.run(() => fetchUsageNow(creds));
+}
+
+async function fetchUsageNow(creds: OAuthCreds): Promise<FetchResult> {
   try {
     const res = await fetch(USAGE_URL, {
       method: "GET",

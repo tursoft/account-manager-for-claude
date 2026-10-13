@@ -146,6 +146,7 @@ All settings start with `accountManagerForClaude.`.
 | --- | --- | --- |
 | `autoRefresh` | `true` | Check all accounts' usage limits regularly |
 | `pollIntervalSeconds` | `240` | Seconds between checks (minimum 60; short intervals with many accounts can hit rate limits) |
+| `requestDelaySeconds` | `2` | Pause between requests to Anthropic; accounts are checked one at a time, never in parallel |
 | `notifyOnLimitReset` | `true` | Notify when a used-up limit is available again |
 | `autoReloadAfterSwitch` | `false` | Reload the window automatically after switching |
 | `warnThresholdPercent` | `80` | Usage bars and the status bar turn red from this percent, and orange from 75% of it |
@@ -160,7 +161,9 @@ All settings start with `accountManagerForClaude.`.
 - **Switching** replaces `~/.claude/.credentials.json` and the cached account in `~/.claude.json`.
   A `.bak` copy lets you undo. Saved accounts are kept in VS Code's encrypted SecretStorage.
 - **Usage** comes from Anthropic's unofficial usage endpoint, the same source as `/usage`. It is
-  rate-limited, so checks run every 240 seconds by default, plus manual refresh.
+  rate-limited, so checks run every 240 seconds by default, plus manual refresh. Accounts are
+  checked one at a time with a 2-second pause between requests (`requestDelaySeconds`); an
+  account that still gets a rate-limit error is paused for 5 minutes.
 
 ### Token handling
 

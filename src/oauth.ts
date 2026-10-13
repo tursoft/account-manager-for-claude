@@ -1,4 +1,5 @@
 import * as crypto from "crypto";
+import { anthropicQueue } from "./requestQueue";
 import { ClaudeAuthIdentity, OAuthCreds } from "./types";
 
 /**
@@ -145,6 +146,11 @@ export async function fetchOAuthIdentity(
   if (!isNonEmptyString(accessToken)) {
     return undefined;
   }
+  // Queued with the usage requests: one request to Anthropic at a time.
+  return anthropicQueue.run(() => fetchOAuthIdentityNow(accessToken));
+}
+
+async function fetchOAuthIdentityNow(accessToken: string): Promise<ClaudeAuthIdentity | undefined> {
   try {
     const res = await fetch(OAUTH_PROFILE_URL, {
       method: "GET",
