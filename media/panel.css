@@ -227,6 +227,63 @@ button:focus-visible {
   color: var(--accent);
 }
 
+/* ---- drag & drop ---------------------------------------------------- */
+
+.grip {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  width: 4px;
+  height: 14px;
+  margin-top: -7px;
+  cursor: grab;
+  opacity: 0;
+  background-image: radial-gradient(circle, var(--muted) 1px, transparent 1.2px);
+  background-size: 4px 4px;
+  transition: opacity 0.15s ease;
+}
+
+.card:hover .grip {
+  opacity: 0.8;
+}
+
+.card.active .grip {
+  left: 3px;
+}
+
+.card.dragging {
+  opacity: 0.4;
+}
+
+#list.is-dragging .card:hover {
+  background: var(--surface);
+}
+
+#list.is-dragging .card:hover .quick {
+  opacity: 0;
+}
+
+.card.drop-before::after,
+.card.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+  pointer-events: none;
+}
+
+.card.drop-before::after {
+  top: -4px;
+}
+
+.card.drop-after::after {
+  bottom: -4px;
+}
+
 /* ---- meters --------------------------------------------------------- */
 
 .meters {

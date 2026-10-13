@@ -33,8 +33,15 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     };
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
-    webviewView.webview.onDidReceiveMessage((msg: { type: string; id?: string }) => {
+    webviewView.webview.onDidReceiveMessage((msg: { type: string; id?: string; ids?: string[] }) => {
       switch (msg.type) {
+        case "reorder":
+          if (Array.isArray(msg.ids)) {
+            void this.store
+              .reorder(msg.ids.filter((id) => typeof id === "string"))
+              .then(() => this.refresh());
+          }
+          break;
         case "ready":
           this.refresh();
           break;

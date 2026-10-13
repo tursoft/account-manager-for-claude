@@ -6,6 +6,8 @@
   const emptyEl = document.getElementById("empty");
   const menuEl = document.getElementById("menu");
   let menuAnchor = null;
+  let dragId = null;
+  let pendingRender = false;
 
   const ICONS = {
     more: '<circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/>',
@@ -18,6 +20,8 @@
     trash: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/>',
     plus: '<path d="M8 3v10M3 8h10"/>',
     personAdd: '<circle cx="6.5" cy="5.5" r="2.5"/><path d="M2 13.5c.5-2.5 2.3-3.5 4.5-3.5s4 1 4.5 3.5M12.5 5v4M10.5 7h4"/>',
+    up: '<path d="M8 13V3M4 7l4-4 4 4"/>',
+    down: '<path d="M8 3v10M4 9l4 4 4-4"/>',
   };
 
   function icon(name) {
@@ -51,7 +55,9 @@
     if (msg.type === "state") {
       state = msg;
       closeMenu();
-      render();
+      // Re-rendering mid-drag would destroy the dragged card; catch up on dragend.
+      if (dragId) pendingRender = true;
+      else render();
     }
   });
 
@@ -137,6 +143,11 @@
 
   function card(acc, warn) {
     const root = el("div", "card" + (acc.isActive ? " active" : "") + (acc.error ? " has-error" : ""));
+    root.dataset.id = acc.id;
+    root.draggable = true;
+    const grip = el("span", "grip");
+    grip.title = "Drag to reorder";
+    root.appendChild(grip);
 
     const head = el("div", "card-head");
     const dot = el("span", "dot");
@@ -196,6 +207,13 @@
     if (!acc.isActive) items.push({ icon: "hi", label: "Say Hi (warmup)", type: "sayHi" });
     items.push({ icon: "refresh", label: "Refresh usage", type: "refresh" });
     items.push(null);
+    const accounts = state.accounts || [];
+    const index = accounts.findIndex((a) => a.id === acc.id);
+    if (index > 0) items.push({ icon: "up", label: "Move up", run: () => move(acc.id, index - 1) });
+    if (index >= 0 && index < accounts.length - 1) {
+      items.push({ icon: "down", label: "Move down", run: () => move(acc.id, index + 1) });
+    }
+    if (accounts.length > 1) items.push(null);
     items.push({
       icon: "key",
       label: "Reauthorize…",
@@ -229,7 +247,8 @@
       b.append(icon(item.icon), el("span", "", item.label));
       b.addEventListener("click", () => {
         closeMenu();
-        post(item.type, acc.id);
+        if (item.run) item.run();
+        else post(item.type, acc.id);
       });
       menuEl.appendChild(b);
     }
@@ -286,6 +305,88 @@
     }
   });
 
+  // ---- reordering -------------------------------------------------------
+
+  let dropTarget = null;
+
+  /** Moves an account to `toIndex`, re-renders immediately and persists the order. */
+  function move(id, toIndex) {
+    const accounts = (state.accounts || []).slice();
+    const from = accounts.findIndex((a) => a.id === id);
+    if (from < 0) return;
+    const [acc] = accounts.splice(from, 1);
+    toIndex = Math.max(0, Math.min(accounts.length, toIndex));
+    accounts.splice(toIndex, 0, acc);
+    if (accounts.every((a, i) => a.id === state.accounts[i].id)) return;
+    state = { ...state, accounts };
+    render();
+    vscode.postMessage({ type: "reorder", ids: accounts.map((a) => a.id) });
+  }
+
+  function clearDropMarker() {
+    if (dropTarget) dropTarget.el.classList.remove("drop-before", "drop-after");
+    dropTarget = null;
+  }
+
+  listEl.addEventListener("dragstart", (e) => {
+    const cardEl = e.target.closest && e.target.closest(".card");
+    if (!cardEl) return;
+    closeMenu();
+    dragId = cardEl.dataset.id;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", dragId);
+    // Defer so the drag image is taken before the card fades.
+    requestAnimationFrame(() => cardEl.classList.add("dragging"));
+    listEl.classList.add("is-dragging");
+  });
+
+  listEl.addEventListener("dragover", (e) => {
+    if (!dragId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const cardEl = e.target.closest && e.target.closest(".card");
+    if (!cardEl || cardEl.dataset.id === dragId) {
+      if (cardEl) clearDropMarker();
+      return;
+    }
+    const r = cardEl.getBoundingClientRect();
+    const before = e.clientY < r.top + r.height / 2;
+    if (dropTarget && dropTarget.el === cardEl && dropTarget.before === before) return;
+    clearDropMarker();
+    cardEl.classList.add(before ? "drop-before" : "drop-after");
+    dropTarget = { el: cardEl, before };
+  });
+
+  listEl.addEventListener("drop", (e) => {
+    if (!dragId) return;
+    e.preventDefault();
+    if (dropTarget) {
+      const accounts = state.accounts || [];
+      const targetIndex = accounts.findIndex((a) => a.id === dropTarget.el.dataset.id);
+      const fromIndex = accounts.findIndex((a) => a.id === dragId);
+      let to = targetIndex + (dropTarget.before ? 0 : 1);
+      if (fromIndex < to) to -= 1;
+      const id = dragId;
+      endDrag();
+      move(id, to);
+    } else {
+      endDrag();
+    }
+  });
+
+  listEl.addEventListener("dragend", endDrag);
+
+  function endDrag() {
+    clearDropMarker();
+    dragId = null;
+    listEl.classList.remove("is-dragging");
+    for (const c of listEl.querySelectorAll(".dragging")) c.classList.remove("dragging");
+    if (pendingRender) {
+      pendingRender = false;
+      render();
+    }
+  }
+
   // ---- render -----------------------------------------------------------
 
   function render() {
@@ -303,7 +404,7 @@
 
   // Refresh countdowns every minute (but don't yank an open menu away).
   setInterval(() => {
-    if (!menuAnchor) render();
+    if (!menuAnchor && !dragId) render();
   }, 60000);
 
   vscode.postMessage({ type: "ready" });

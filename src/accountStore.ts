@@ -119,6 +119,27 @@ export class AccountStore {
     }
   }
 
+  /** Persists a new display order; ids missing from `orderedIds` keep their relative order at the end. */
+  async reorder(orderedIds: string[]): Promise<void> {
+    const profiles = this.profiles;
+    const rank = new Map(orderedIds.map((id, i) => [id, i]));
+    const sorted = [...profiles].sort(
+      (a, b) =>
+        (rank.get(a.id) ?? orderedIds.length + a.order) -
+        (rank.get(b.id) ?? orderedIds.length + b.order)
+    );
+    let changed = false;
+    sorted.forEach((p, i) => {
+      if (p.order !== i) {
+        p.order = i;
+        changed = true;
+      }
+    });
+    if (changed) {
+      await this.saveProfiles(profiles);
+    }
+  }
+
   async updateUsage(id: string, usage: UsageSnapshot): Promise<void> {
     const profiles = this.profiles;
     const p = profiles.find((x) => x.id === id);
