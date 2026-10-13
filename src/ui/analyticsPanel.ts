@@ -177,16 +177,23 @@ export class AnalyticsPanel {
     </div>
   </section>
 
-  <section class="accounts-bar">
-    <span class="label">Accounts</span>
-    <div id="accounts" class="chips"></div>
-    <button id="allBtn" class="link">All</button>
-    <button id="noneBtn" class="link">None</button>
-  </section>
-
   <section id="summary" class="summary"></section>
   <div id="emptyNotice" class="notice info hidden"><span id="emptyText"></span></div>
-  <section id="charts" class="charts"></section>
+
+  <div class="layout">
+    <aside class="legend-panel" aria-label="Accounts (legend)">
+      <div class="legend-head">
+        <span class="label">Accounts</span>
+        <span class="legend-actions">
+          <button id="allBtn" class="link">All</button>
+          <button id="noneBtn" class="link">None</button>
+        </span>
+      </div>
+      <div id="accounts" class="legend-list"></div>
+      <p class="legend-hint">Click an account to show or hide it in every chart.</p>
+    </aside>
+    <section id="charts" class="charts"></section>
+  </div>
 
   <script nonce="${nonce}" src="${script}"></script>
 </body>

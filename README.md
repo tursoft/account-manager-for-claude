@@ -244,7 +244,8 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
 (5h, weekly, Fable, ...):
 
 - ranges of 1 day, 1 week, 1 month, 3 months, everything kept, or a custom from/to;
-- one, several, or all accounts on the same chart, in the panel's account colors;
+- one shared legend at the left lists the accounts in their chart colors; click an account to show
+  or hide it in every chart (one, several, or all accounts can share a chart);
 - **Limit %** (how full each limit was) or **Usage** (how much of the limit was used in each
   interval, from the change between readings; a drop counts as a reset);
 - line, area, bar, stacked bar, pie, or doughnut charts.

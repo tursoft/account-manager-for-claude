@@ -178,20 +178,34 @@ function isSelected(id) {
   return ui.selected === null || ui.selected.includes(id);
 }
 
-function renderAccountChips(accounts) {
+/**
+ * The one legend for all charts: a vertical list at the left. Clicking an account
+ * shows or hides its data in every chart.
+ */
+function renderLegend(accounts, hasData) {
   const box = $("accounts");
   box.innerHTML = "";
   for (const acc of accounts) {
-    const chip = document.createElement("button");
-    chip.className = "chip" + (isSelected(acc.id) ? " on" : "");
-    chip.style.setProperty("--c", acc.color);
-    chip.title = acc.plan ? `${acc.label} (${acc.plan})` : acc.label;
+    const visible = isSelected(acc.id);
+    const item = document.createElement("button");
+    item.className = "legend-item" + (visible ? "" : " off");
+    item.setAttribute("aria-pressed", String(visible));
+    item.style.setProperty("--c", acc.color);
+    item.title = (acc.plan ? `${acc.label} (${acc.plan})` : acc.label) + (visible ? "\nClick to hide" : "\nClick to show");
     const dot = document.createElement("span");
     dot.className = "dot";
-    const name = document.createElement("span");
-    name.textContent = acc.label;
-    chip.append(dot, name);
-    chip.addEventListener("click", () => {
+    const text = document.createElement("span");
+    text.className = "text";
+    text.textContent = acc.label;
+    const meta = [acc.plan, hasData.has(acc.id) ? null : "no data in range"].filter(Boolean).join(" · ");
+    if (meta) {
+      const m = document.createElement("span");
+      m.className = "meta";
+      m.textContent = meta;
+      text.appendChild(m);
+    }
+    item.append(dot, text);
+    item.addEventListener("click", () => {
       const ids = ui.selected === null ? accounts.map((a) => a.id) : ui.selected.slice();
       const i = ids.indexOf(acc.id);
       if (i >= 0) ids.splice(i, 1);
@@ -200,7 +214,7 @@ function renderAccountChips(accounts) {
       persist();
       render();
     });
-    box.appendChild(chip);
+    box.appendChild(item);
   }
 }
 
@@ -244,7 +258,7 @@ function render() {
   $("summary").innerHTML = "";
 
   const accounts = allAccounts();
-  renderAccountChips(accounts);
+  renderLegend(accounts, new Set(data ? data.points.filter((p) => p.t >= data.from).map((p) => p.id) : []));
   if (!data) return;
 
   const { from, to } = data;
@@ -266,7 +280,7 @@ function render() {
     empty.classList.remove("hidden");
     $("emptyText").textContent =
       selected.length === 0
-        ? "No accounts selected. Pick one or more accounts above."
+        ? "No accounts selected. Click accounts in the legend to show them."
         : meta.enabled
           ? "No readings in this range yet. Data appears as usage is collected."
           : "No readings in this range. Turn on usage collection to start recording.";
@@ -336,7 +350,7 @@ function render() {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: "right", labels: { color: text, boxWidth: 10 } },
+            legend: { display: false },
             tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}%` } },
           },
         },
@@ -382,7 +396,7 @@ function render() {
             },
           },
           plugins: {
-            legend: { labels: { color: text, boxWidth: 10, usePointStyle: true } },
+            legend: { display: false },
             tooltip: {
               callbacks: {
                 label: (c) => (c.parsed.y === null ? null : ` ${c.dataset.label}: ${c.parsed.y}%`),
