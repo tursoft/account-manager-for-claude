@@ -204,7 +204,7 @@ export class AnalyticsPanel {
         </span>
       </div>
       <div id="accounts" class="legend-list"></div>
-      <p class="legend-hint">Click an account to show or hide it in every chart.</p>
+      <p class="legend-hint">Tick an account to show it in every chart; the name has its chart color.</p>
     </aside>
     <div class="chart-column">
       <section id="charts" class="charts"></section>

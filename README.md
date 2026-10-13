@@ -250,8 +250,9 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
 (5h, weekly, Fable, ...):
 
 - ranges of 1 day, 1 week, 1 month, 3 months, everything kept, or a custom from/to;
-- one shared legend at the left lists the accounts in their chart colors; click an account to show
-  or hide it in every chart (one, several, or all accounts can share a chart);
+- one shared legend at the left lists the accounts, each name in its chart color with a checkbox;
+  tick or untick an account to show or hide it in every chart (one, several, or all accounts can
+  share a chart);
 - **Used %** (how much of each limit was used) or **Available %** (how much was left); where a
   chart interval holds several readings, Used % shows the highest and Available % the lowest;
 - line, area, bar, stacked bar, pie, or doughnut charts; the vertical axis always spans 0-100%

@@ -185,17 +185,19 @@ function isSelected(id) {
  * shows or hides its data in every chart.
  */
 function renderLegend(accounts, hasData) {
-  const box = $("accounts");
-  box.innerHTML = "";
+  $("accounts").innerHTML = "";
   for (const acc of accounts) {
     const visible = isSelected(acc.id);
-    const item = document.createElement("button");
+    // A label around a real checkbox: keyboard and screen-reader friendly, and the name
+    // carries the account's chart color so the legend and the charts read the same.
+    const item = document.createElement("label");
     item.className = "legend-item" + (visible ? "" : " off");
-    item.setAttribute("aria-pressed", String(visible));
     item.style.setProperty("--c", acc.color);
-    item.title = (acc.plan ? `${acc.label} (${acc.plan})` : acc.label) + (visible ? "\nClick to hide" : "\nClick to show");
-    const dot = document.createElement("span");
-    dot.className = "dot";
+    item.title = (acc.plan ? `${acc.label} (${acc.plan})` : acc.label) + (visible ? "\nUntick to hide" : "\nTick to show");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = visible;
+    box.setAttribute("aria-label", `Show ${acc.label} in the charts`);
     const text = document.createElement("span");
     text.className = "text";
     text.textContent = acc.label;
@@ -206,8 +208,8 @@ function renderLegend(accounts, hasData) {
       m.textContent = meta;
       text.appendChild(m);
     }
-    item.append(dot, text);
-    item.addEventListener("click", () => {
+    item.append(box, text);
+    box.addEventListener("change", () => {
       const ids = ui.selected === null ? accounts.map((a) => a.id) : ui.selected.slice();
       const i = ids.indexOf(acc.id);
       if (i >= 0) ids.splice(i, 1);
@@ -216,7 +218,7 @@ function renderLegend(accounts, hasData) {
       persist();
       render();
     });
-    box.appendChild(item);
+    $("accounts").appendChild(item);
   }
 }
 
