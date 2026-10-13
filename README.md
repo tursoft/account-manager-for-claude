@@ -358,6 +358,8 @@ npm install
 | `npm run build:vsix` | production build plus `vsce package`: the installable `.vsix` |
 | `npm run install:vsix` | installs the built `.vsix` into your regular VS Code (`code --install-extension`) |
 | `npm run deploy` | `build:vsix` then `install:vsix`: one command after a code change |
+| `npm run publish` | typecheck + tests, then `vsce publish` of the version in `package.json` |
+| `npm run release` | typecheck + tests, then `vsce publish patch`: bump, commit, tag, publish |
 
 The webview pages (`webview/*.js`: the accounts panel, usage analytics, and availability
 calendar) are bundled by esbuild into `dist/webview/`, so run `npm run compile` (or `watch`) after
@@ -407,7 +409,9 @@ exclusions are configured in `.vscodeignore`.
 2. **Create a Personal Access Token** in Azure DevOps (<https://dev.azure.com> → *User settings →
    Personal access tokens*) with **Organization: All accessible organizations** and the scope
    **Marketplace → Manage**.
-3. **Log in** with vsce (it prompts for the token):
+3. **Make the token available** in one of two ways: log in once with vsce (it prompts for the
+   token and stores it), or put it in the `VSCE_PAT` environment variable, which is what a CI job
+   or a script-only workflow uses. Never commit the token.
 
    ```bash
    npx vsce login <publisher-id>
@@ -415,15 +419,17 @@ exclusions are configured in `.vscodeignore`.
 
 4. **Bump the version** in `package.json` and add an entry to `CHANGELOG.md`. Alternatively, let
    vsce bump the version for you (see the next step).
-5. **Publish**:
+5. **Publish** with the npm scripts, which run the typecheck and the smoke tests first and
+   stop if either fails:
 
    ```bash
-   npx vsce publish            # publishes the version in package.json
-   npx vsce publish patch      # or: bump patch/minor/major, commit, tag and publish
+   npm run publish             # publishes the version in package.json
+   npm run release             # or: bump the patch version, commit, tag and publish
    ```
 
-   `vscode:prepublish` runs the production build automatically. You can also upload a `.vsix`
-   built with `npm run build:vsix` manually on the publisher management page.
+   (`npx vsce publish minor` / `major` do the same for bigger bumps.) `vscode:prepublish` runs
+   the production build automatically. You can also upload a `.vsix` built with
+   `npm run build:vsix` manually on the publisher management page.
 
 The listing usually appears within a few minutes. The Marketplace shows `README.md` as the
 extension page, `CHANGELOG.md` as the changelog, and uses `icon` and `galleryBanner` from
