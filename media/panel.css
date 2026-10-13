@@ -164,6 +164,11 @@ button:focus-visible {
   border-color: var(--accent);
 }
 
+.icon-btn.on {
+  color: var(--accent);
+  opacity: 1;
+}
+
 .segmented {
   flex: 0 0 auto;
   display: inline-flex;

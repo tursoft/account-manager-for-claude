@@ -29,6 +29,9 @@
     close: '<path d="M4 4l8 8M12 4l-8 8"/>',
     search: '<circle cx="7" cy="7" r="4.25"/><path d="m10.2 10.2 3.3 3.3"/>',
     save: '<path d="M3 2.5h8l2 2v9H3z"/><path d="M5.5 2.5v3h4v-3M5.5 13.5v-4h5v4"/>',
+    sort: '<path d="M3 4.5h10M3 8h7M3 11.5h4"/>',
+    check: '<path d="M3.5 8.5 6.5 11.5 12.5 4.5"/>',
+    blank: '',
     signIn: '<path d="M9.5 2.5h3v11h-3M2.5 8h7M7 5.5 9.5 8 7 10.5"/>',
   };
 
@@ -200,10 +203,13 @@
   function card(acc, warn) {
     const root = el("div", "card" + (acc.isActive ? " active" : "") + (acc.error ? " has-error" : ""));
     root.dataset.id = acc.id;
-    root.draggable = true;
-    const grip = el("span", "grip");
-    grip.title = "Drag to reorder";
-    root.appendChild(grip);
+    // Dragging only makes sense in the user's own order.
+    root.draggable = filter.sort === "custom";
+    if (root.draggable) {
+      const grip = el("span", "grip");
+      grip.title = "Drag to reorder";
+      root.appendChild(grip);
+    }
 
     const head = el("div", "card-head");
     const dot = el("span", "dot");
@@ -273,11 +279,13 @@
     items.push(null);
     const accounts = state.accounts || [];
     const index = accounts.findIndex((a) => a.id === acc.id);
-    if (index > 0) items.push({ icon: "up", label: "Move up", run: () => move(acc.id, index - 1) });
-    if (index >= 0 && index < accounts.length - 1) {
-      items.push({ icon: "down", label: "Move down", run: () => move(acc.id, index + 1) });
+    if (filter.sort === "custom") {
+      if (index > 0) items.push({ icon: "up", label: "Move up", run: () => move(acc.id, index - 1) });
+      if (index >= 0 && index < accounts.length - 1) {
+        items.push({ icon: "down", label: "Move down", run: () => move(acc.id, index + 1) });
+      }
+      if (accounts.length > 1) items.push(null);
     }
-    if (accounts.length > 1) items.push(null);
     items.push({
       icon: "key",
       label: "Reauthorize…",
@@ -460,7 +468,7 @@
   const clearFiltersBtn = document.getElementById("clearFilters");
   const noMatchEl = document.getElementById("noMatch");
   const saved = vscode.getState() || {};
-  let filter = { text: saved.text || "", limit: saved.limit || "all" };
+  let filter = { text: saved.text || "", limit: saved.limit || "all", sort: saved.sort || "custom" };
 
   document.getElementById("searchIcon").appendChild(icon("search"));
   clearFiltersBtn.appendChild(icon("close"));
@@ -488,6 +496,75 @@
     b.addEventListener("click", () => setFilter({ limit: b.dataset.filter }));
   }
   clearFiltersBtn.addEventListener("click", clearFilters);
+
+  // ---- sorting ----------------------------------------------------------
+
+  const SORTS = [
+    { key: "custom", label: "Custom order (drag to reorder)" },
+    { key: "available", label: "Available first, then soonest available" },
+    { key: "remaining", label: "Most usage left first" },
+    { key: "reset", label: "Resetting soonest first" },
+    { key: "name", label: "Name A–Z" },
+  ];
+  const sortBtn = document.getElementById("sortBtn");
+  sortBtn.appendChild(icon("sort"));
+  sortBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu(
+      sortBtn,
+      "Sort accounts",
+      SORTS.map((s) => ({
+        icon: s.key === filter.sort ? "check" : "blank",
+        label: s.label,
+        run: () => setFilter({ sort: s.key }),
+      }))
+    );
+  });
+
+  /** Time (ms) at which every used-up limit of the account is available again; 0 = usable now. */
+  function availableAt(acc) {
+    const windows = acc.windows || [];
+    if (windows.length === 0) return Infinity;
+    let at = 0;
+    for (const w of windows) {
+      if (w.percent < 100) continue;
+      const t = w.resetsAt ? Date.parse(w.resetsAt) : NaN;
+      at = Math.max(at, Number.isFinite(t) ? t : Infinity);
+    }
+    return at;
+  }
+
+  /** Earliest upcoming reset of any limit; Infinity when unknown. */
+  function nextReset(acc) {
+    const times = (acc.windows || []).map((w) => (w.resetsAt ? Date.parse(w.resetsAt) : NaN)).filter(Number.isFinite);
+    return times.length ? Math.min(...times) : Infinity;
+  }
+
+  function headroom(acc) {
+    const windows = acc.windows || [];
+    return windows.length ? 100 - Math.max(...windows.map((w) => w.percent)) : -1;
+  }
+
+  /** Orders `list` by the chosen sort; ties keep the custom order (`order` = index in state.accounts). */
+  function sortAccounts(list, order) {
+    if (filter.sort === "custom") return list;
+    const byOrder = (a, b) => order.get(a.id) - order.get(b.id);
+    const cmp = {
+      available: (a, b) => {
+        const rank = (x) => (limitState(x) === "available" ? 0 : limitState(x) === "unknown" ? 1 : 2);
+        const r = rank(a) - rank(b);
+        if (r) return r;
+        if (rank(a) === 0) return headroom(b) - headroom(a);
+        if (rank(a) === 2) return availableAt(a) - availableAt(b) || 0;
+        return 0;
+      },
+      remaining: (a, b) => headroom(b) - headroom(a),
+      reset: (a, b) => nextReset(a) - nextReset(b) || 0,
+      name: (a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+    }[filter.sort];
+    // Infinity - Infinity is NaN, which `||` turns into 0 so ties fall back to custom order.
+    return list.slice().sort((a, b) => cmp(a, b) || byOrder(a, b));
+  }
   document.getElementById("noMatchClear").addEventListener("click", clearFilters);
 
   /** "limited" = some limit used up; "available" = usage known and every limit below 100%. */
@@ -514,6 +591,10 @@
       b.setAttribute("aria-checked", String(on));
     }
     clearFiltersBtn.classList.toggle("hidden", !filter.text && filter.limit === "all");
+    const sort = SORTS.find((s) => s.key === filter.sort) || SORTS[0];
+    sortBtn.title = "Sort: " + sort.label;
+    sortBtn.setAttribute("aria-label", sortBtn.title);
+    sortBtn.classList.toggle("on", filter.sort !== "custom");
   }
 
   const sessionEl = document.getElementById("session");
@@ -559,7 +640,8 @@
       return;
     }
     emptyEl.classList.add("hidden");
-    const visible = accounts.filter(matchesFilter);
+    const order = new Map(accounts.map((a, i) => [a.id, i]));
+    const visible = sortAccounts(accounts.filter(matchesFilter), order);
     noMatchEl.classList.toggle("hidden", visible.length > 0);
     for (const acc of visible) {
       const row = el("div", "row");

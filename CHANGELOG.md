@@ -11,6 +11,8 @@ First release of the Tursoft fork of
   dot for the active account, and a **⋯** menu per account instead of a row of buttons.
 - Drag and drop (or **Move up / Move down**) to reorder accounts; the order is remembered.
 - Text filter plus **All / Available / Limited** filter, with a button to clear filters.
+- Sort accounts by your custom order, availability (available first, then soonest to become
+  available), most usage left, soonest reset, or name. Drag and drop applies to the custom order.
 - Shows the current Claude Code session at the bottom when it is not saved yet (with **Save to
   account list**), or states that no account is logged in.
 - New accounts are saved under their email automatically, with a **Rename** shortcut, instead
