@@ -308,6 +308,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     </div>
   </div>
   <div id="session"></div>
+  <div id="stats" class="hidden" aria-label="Account statistics"></div>
   <div id="menu" class="hidden" role="menu"></div>
   <div id="about" class="hidden" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
     <div class="about-card">

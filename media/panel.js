@@ -732,6 +732,7 @@
     if (state.currentSession) sessionEl.appendChild(sessionBox(state.currentSession));
     const accounts = state.accounts || [];
     renderFilterBar(accounts.length);
+    renderStats(accounts);
     if (accounts.length === 0) {
       emptyEl.classList.remove("hidden");
       noMatchEl.classList.add("hidden");
@@ -749,6 +750,40 @@
     }
     revealActiveChange(accounts);
     applyBusy();
+  }
+
+  const statsEl = document.getElementById("stats");
+
+  /** Footer chips: totals, availability, and free 5h / model-specific limits. */
+  function renderStats(accounts) {
+    statsEl.innerHTML = "";
+    statsEl.classList.toggle("hidden", accounts.length === 0);
+    if (accounts.length === 0) return;
+    const visible = accounts.filter(matchesFilter).length;
+    const count = (pred) => accounts.filter(pred).length;
+    const freeWindow = (acc, test) => (acc.windows || []).some((w) => test(w) && w.percent < 100);
+    const chips = [
+      [accounts.length, "accounts", "Saved accounts"],
+      [visible, "shown", "Accounts matching the current filters"],
+      [count((a) => limitState(a) === "available"), "available", "Every limit below 100%", "ok"],
+      [count((a) => limitState(a) === "limited"), "limited", "At least one limit used up", "danger"],
+      [count((a) => freeWindow(a, (w) => w.kind === "session")), "5h free", "5-hour session limit below 100%"],
+    ];
+    const scopes = {};
+    for (const acc of accounts) Object.assign(scopes, scopesOf(acc));
+    for (const [key, name] of Object.entries(scopes).sort()) {
+      chips.push([
+        count((a) => freeWindow(a, (w) => w.kind === `weekly_${key}`)),
+        `${name} free`,
+        `${name} weekly limit below 100%`,
+      ]);
+    }
+    for (const [n, text, title, tone] of chips) {
+      const chip = el("span", "stat" + (tone ? " " + tone : ""));
+      chip.title = title;
+      chip.append(el("b", "", String(n)), el("span", "", " " + text));
+      statsEl.appendChild(chip);
+    }
   }
 
   /** Top progress bar while anything loads; shimmer and a spinning refresh icon on updating cards. */

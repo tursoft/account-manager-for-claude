@@ -197,6 +197,41 @@ button:focus-visible {
   background: var(--vscode-button-background);
 }
 
+/* ---- stats footer --------------------------------------------------- */
+
+#stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.stat {
+  padding: 1px 7px;
+  font-size: 10.5px;
+  line-height: 16px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.stat b {
+  color: var(--vscode-foreground);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat.ok b {
+  color: var(--ok);
+}
+
+.stat.danger b {
+  color: var(--danger);
+}
+
 /* ---- info and warning boxes ----------------------------------------- */
 
 .notice {
