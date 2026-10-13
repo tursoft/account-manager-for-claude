@@ -33,6 +33,8 @@ First release of the Tursoft fork of
 - Account names are colored by the 5h limit (green, orange from 60%, red from 80%), and red whenever
   a weekly limit is used up. The thresholds follow `warnThresholdPercent`, as the usage bars and the
   status bar do.
+- The reset time of a limit that is used up is colored: yellow under 10 minutes, orange under an
+  hour, red beyond a day (gray while some limit is left). Relative times now update every 30 seconds.
 - Optional usage history (collected every minute by default, kept 90 days, stored locally) and a
   **Usage analytics** page with per-limit charts over selectable ranges, accounts, chart types,
   and limit % or usage.

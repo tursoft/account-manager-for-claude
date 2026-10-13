@@ -41,7 +41,9 @@ and re-login.
   the time of the last update under the account's icon, which is green while the account has limit
   left, orange once a limit is used up, and gray when usage is unknown or the login expired. The
   account's name is colored by its 5h limit (green, orange from 60%, red from 80%) and is red
-  whenever a weekly limit is used up, since Claude then refuses sessions too. Drag
+  whenever a weekly limit is used up, since Claude then refuses sessions too. The reset time next
+  to a bar stays gray, except for a limit that is used up: yellow under 10 minutes, orange under
+  an hour, red beyond a day. Drag
   and drop to reorder; the order is
   remembered. Double-click an account's name to copy it (also in the availability calendar).
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with

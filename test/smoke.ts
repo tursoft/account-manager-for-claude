@@ -17,7 +17,7 @@ import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHi
 import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal, usageDelta } from "../src/historySeries";
 import { buildTimeline, Segment } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
-import { nameTone, nameToneDescription, toneOfPercent } from "../src/tone";
+import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
 import {
   DEFAULT_LISTING,
   extraFilterLabels,
@@ -1002,6 +1002,21 @@ function runAvatarTests(): void {
   check("the mark is one path with a ray per segment", /^<path d="(M[\d. ]+L[\d. ]+){12}"\/>$/.test(starburstGlyph(12)));
 }
 
+function runResetToneTests(): void {
+  console.log("reset time colors:");
+  const min = 60_000;
+  const hour = 60 * min;
+  check("under 10 minutes: yellow", resetTone(100, 9 * min) === "imminent" && resetTone(100, 0) === "imminent");
+  check("10 to 60 minutes: orange", resetTone(100, 10 * min) === "soon" && resetTone(100, 59 * min) === "soon");
+  check("1 hour to 1 day: no color", resetTone(100, 60 * min) === undefined && resetTone(100, 24 * hour) === undefined);
+  check("more than a day: red", resetTone(100, 24 * hour + 1) === "far" && resetTone(100, 6 * 24 * hour) === "far");
+  check(
+    "a limit with some left is never colored",
+    resetTone(99, 5 * min) === undefined && resetTone(60, 30 * min) === undefined && resetTone(24, 6 * 24 * hour) === undefined
+  );
+  check("a reset time already past counts as imminent", resetTone(100, -5 * min) === "imminent");
+}
+
 function runToneTests(): void {
   console.log("usage colors:");
   const w = (kind: string, percent: number, label?: string) => ({ kind, label: label ?? kind, percent });
@@ -1039,6 +1054,7 @@ runAvailabilityTests();
 runListingTests();
 runAvatarTests();
 runToneTests();
+runResetToneTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();

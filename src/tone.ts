@@ -56,3 +56,18 @@ export function nameToneDescription(acc: ToneAccount): string | undefined {
   if (percent === undefined) return undefined;
   return (acc.windows || []).some((w) => w.kind === "session") ? `5h limit: ${percent}% used` : `Most used limit: ${percent}%`;
 }
+
+export type ResetTone = "imminent" | "soon" | "far";
+
+/**
+ * Color of the time left until a limit resets: under 10 min yellow, under 1 h orange, over 1 day
+ * red, otherwise none. Only a limit that is used up (100%) gets a color; while some is left the
+ * reset time stays gray.
+ */
+export function resetTone(percent: number, msLeft: number): ResetTone | undefined {
+  if (percent < 100) return undefined;
+  if (msLeft < 10 * 60_000) return "imminent";
+  if (msLeft < 60 * 60_000) return "soon";
+  if (msLeft > 24 * 3_600_000) return "far";
+  return undefined;
+}

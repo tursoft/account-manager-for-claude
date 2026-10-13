@@ -750,6 +750,19 @@ button:focus-visible {
   color: var(--muted);
 }
 
+/* Time until a limit that is used up resets: under 10 min yellow, under 1 h orange, over 1 day red. */
+.reset.reset-imminent {
+  color: var(--warn);
+}
+
+.reset.reset-soon {
+  color: var(--orange);
+}
+
+.reset.reset-far {
+  color: var(--danger);
+}
+
 .bar {
   align-self: center;
   height: 4px;

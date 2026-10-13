@@ -1,5 +1,5 @@
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
-import { nameTone, nameToneDescription, toneOfPercent } from "../src/tone";
+import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
 import {
   extraFilterLabels,
   filtersActive,
@@ -168,7 +168,20 @@ import {
     if (isNaN(t)) return null;
     const diff = t - Date.now();
     const short = diff <= 0 ? "soon" : fmtDuration(diff);
-    return { short, title: `Resets ${diff <= 0 ? "soon" : "in " + short} · ${new Date(t).toLocaleString()}` };
+    return { short, ms: diff, title: `Resets ${diff <= 0 ? "soon" : "in " + short} · ${new Date(t).toLocaleString()}` };
+  }
+
+  /**
+   * Writes a reset time into `node`. The time of a limit that is used up is colored (under 10
+   * min yellow, under 1 h orange, over 1 day red); while some limit is left it stays gray.
+   */
+  function paintReset(node, iso, percent) {
+    const reset = fmtReset(iso);
+    node.textContent = reset ? reset.short : "";
+    node.classList.remove("reset-imminent", "reset-soon", "reset-far");
+    const tone = reset ? resetTone(percent, reset.ms) : undefined;
+    if (tone) node.classList.add("reset-" + tone);
+    return reset;
   }
 
   function fmtAgo(ts) {
@@ -179,6 +192,22 @@ import {
     if (m < 60) return `${m}m`;
     return `${Math.round(m / 60)}h`;
   }
+
+  /** Keeps the relative times ("3h 38m", "20s") and the reset colors current between state updates. */
+  function refreshTimes() {
+    for (const n of document.querySelectorAll("[data-reset]")) {
+      const reset = paintReset(n, n.dataset.reset, Number(n.dataset.percent));
+      if (reset) n.title = reset.title;
+    }
+    for (const n of document.querySelectorAll("[data-ago]")) {
+      const ago = fmtAgo(Number(n.dataset.ago));
+      if (ago) {
+        n.textContent = ago;
+        n.title = `Usage updated ${ago} ago`;
+      }
+    }
+  }
+  setInterval(refreshTimes, 30_000);
 
   function shortLabel(label) {
     if (/^session/i.test(label)) return "5h";
@@ -221,9 +250,11 @@ import {
     fill.style.width = Math.min(100, Math.max(0, w.percent)) + "%";
     bar.appendChild(fill);
 
-    const reset = fmtReset(w.resetsAt);
-    const resetEl = el("span", "reset", reset ? reset.short : "");
+    const resetEl = el("span", "reset");
+    const reset = paintReset(resetEl, w.resetsAt, w.percent);
     if (reset) {
+      resetEl.dataset.reset = w.resetsAt;
+      resetEl.dataset.percent = String(w.percent);
       resetEl.title = reset.title;
       row.title += ` · ${reset.title}`;
     }
@@ -305,6 +336,7 @@ import {
     const ago = fmtAgo(acc.fetchedAt);
     if (ago) {
       const agoEl = el("span", "ago", ago);
+      agoEl.dataset.ago = String(acc.fetchedAt);
       agoEl.title = `Usage updated ${ago} ago`;
       lead.appendChild(agoEl);
     }
