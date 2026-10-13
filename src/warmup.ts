@@ -90,7 +90,7 @@ export class WarmupService {
       };
     }
 
-    const cfg = vscode.workspace.getConfiguration("tursoftClaudeSwitcher");
+    const cfg = vscode.workspace.getConfiguration("accountManagerForClaude");
     const model = cfg.get<string>("sayHiModel", "haiku").trim() || "haiku";
     const prompt = cfg.get<string>("sayHiPrompt", "Hi").trim() || "Hi";
     const timeoutMs = Math.max(15, cfg.get<number>("sayHiTimeoutSeconds", 120)) * 1000;

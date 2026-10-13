@@ -68,7 +68,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.globalState
   );
 
-  const config = () => vscode.workspace.getConfiguration("tursoftClaudeSwitcher");
+  const config = () => vscode.workspace.getConfiguration("accountManagerForClaude");
   const getInterval = () =>
     config().get<boolean>("autoRefresh", true) ? config().get<number>("pollIntervalSeconds", 240) : 0;
 
@@ -92,7 +92,7 @@ export function activate(context: vscode.ExtensionContext): void {
         )
         .then((choice) => {
           if (choice === "Switch") {
-            void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", profileId);
+            void vscode.commands.executeCommand("accountManagerForClaude.switchAccount", profileId);
           }
         });
     },
@@ -171,7 +171,7 @@ export function activate(context: vscode.ExtensionContext): void {
         )
         .then((choice) => {
           if (choice === "Save as profile") {
-            void vscode.commands.executeCommand("tursoftClaudeSwitcher.addCurrentAccount");
+            void vscode.commands.executeCommand("accountManagerForClaude.addCurrentAccount");
           }
         });
     }
@@ -444,7 +444,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const offerRename = (id: string, message: string) => {
     void vscode.window.showInformationMessage(message, "Rename").then((choice) => {
       if (choice === "Rename") {
-        void vscode.commands.executeCommand("tursoftClaudeSwitcher.renameAccount", id);
+        void vscode.commands.executeCommand("accountManagerForClaude.renameAccount", id);
       }
     });
   };
@@ -486,7 +486,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (ranOut) {
           const kind = ranOut.kind === "session" || ranOut.kind.startsWith("weekly_") ? ranOut.kind : "session";
           viewProvider.showProposal(kind as "session" | `weekly_${string}`, true);
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.accountsView.focus");
+          void vscode.commands.executeCommand("accountManagerForClaude.accountsView.focus");
         }
       }
       if (historyEnabled()) {
@@ -528,7 +528,7 @@ export function activate(context: vscode.ExtensionContext): void {
   // --- Commands ---
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.addCurrentAccount", async () => {
+    vscode.commands.registerCommand("accountManagerForClaude.addCurrentAccount", async () => {
       const res = await switchService.captureCurrent();
       if (res.createdId) {
         offerRename(res.createdId, res.message);
@@ -545,11 +545,11 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.addAccount", () => addAccount())
+    vscode.commands.registerCommand("accountManagerForClaude.addAccount", () => addAccount())
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.switchAccount", async (id?: string) => {
+    vscode.commands.registerCommand("accountManagerForClaude.switchAccount", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Switch to account…"));
       if (!targetId) {
         return;
@@ -587,7 +587,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.refreshUsage", async (id?: string) => {
+    vscode.commands.registerCommand("accountManagerForClaude.refreshUsage", async (id?: string) => {
       if (id) {
         await poller.pollOne(id, true);
         refreshUI();
@@ -668,11 +668,11 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.refreshAll", refreshAll)
+    vscode.commands.registerCommand("accountManagerForClaude.refreshAll", refreshAll)
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.sayHi", async (id?: string) => {
+    vscode.commands.registerCommand("accountManagerForClaude.sayHi", async (id?: string) => {
       const targetIds = id ? [id] : await pickWarmupTargets(store);
       if (!targetIds || targetIds.length === 0) {
         return;
@@ -690,7 +690,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.openIndependentWindow", async (id?: string) => {
+    vscode.commands.registerCommand("accountManagerForClaude.openIndependentWindow", async (id?: string) => {
       const targetIds = id ? [id] : await pickWindowTargets(store);
       if (!targetIds || targetIds.length === 0) {
         return;
@@ -704,7 +704,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.login", async () => {
+    vscode.commands.registerCommand("accountManagerForClaude.login", async () => {
       // Save the outgoing login's latest rotation before Claude Code replaces it.
       await synchronizeCurrentProfile();
       await openClaudeLogin();
@@ -712,7 +712,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.browserLogin", async () => {
+    vscode.commands.registerCommand("accountManagerForClaude.browserLogin", async () => {
       await synchronizeCurrentProfile();
       const result = await authorizeInBrowser();
       if (result.ok) {
@@ -730,7 +730,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.reauthorizeProfile", async (id?: string) => {
+    vscode.commands.registerCommand("accountManagerForClaude.reauthorizeProfile", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Reauthorize profile..."));
       if (targetId) {
         await startProfileReauthorization(targetId);
@@ -740,7 +740,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "tursoftClaudeSwitcher.completeProfileReauthorization",
+      "accountManagerForClaude.completeProfileReauthorization",
       async (id?: string) => {
         const targetId = id ?? (await pickAccount(store, "Complete profile reauthorization..."));
         if (!targetId) {
@@ -757,7 +757,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.removeAccount", async (id?: string) => {
+    vscode.commands.registerCommand("accountManagerForClaude.removeAccount", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Remove account profile…"));
       if (!targetId) {
         return;
@@ -779,7 +779,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.renameAccount", async (id?: string) => {
+    vscode.commands.registerCommand("accountManagerForClaude.renameAccount", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Rename profile…"));
       if (!targetId) {
         return;
@@ -798,7 +798,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.undoSwitch", async () => {
+    vscode.commands.registerCommand("accountManagerForClaude.undoSwitch", async () => {
       const res = await switchService.undoSwitch();
       profileActivity.setActiveProfile(store.getActiveId());
       vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
@@ -835,13 +835,13 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.openAnalytics", () =>
+    vscode.commands.registerCommand("accountManagerForClaude.openAnalytics", () =>
       AnalyticsPanel.show(context.extensionUri, { store, history, getConfig: config })
     )
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.openAvailability", () =>
+    vscode.commands.registerCommand("accountManagerForClaude.openAvailability", () =>
       AvailabilityPanel.show(context.extensionUri, {
         store,
         history,
@@ -855,7 +855,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.clearUsageHistory", async () => {
+    vscode.commands.registerCommand("accountManagerForClaude.clearUsageHistory", async () => {
       const confirm = await vscode.window.showWarningMessage(
         "Delete all collected usage history? Charts and the availability calendar lose their past data.",
         { modal: true },
@@ -874,8 +874,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const LOCAL_ONLY_SETTINGS = new Set(["credentialsPath"]);
   const settingKeys = (): string[] =>
     Object.keys(context.extension.packageJSON.contributes?.configuration?.properties ?? {})
-      .filter((k) => k.startsWith("tursoftClaudeSwitcher."))
-      .map((k) => k.slice("tursoftClaudeSwitcher.".length))
+      .filter((k) => k.startsWith("accountManagerForClaude."))
+      .map((k) => k.slice("accountManagerForClaude.".length))
       .filter((k) => !LOCAL_ONLY_SETTINGS.has(k));
 
   /** Panel choices plus the user's own (global) extension settings. */
@@ -930,7 +930,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.backupAccounts", async () => {
+    vscode.commands.registerCommand("accountManagerForClaude.backupAccounts", async () => {
       if (store.list().length === 0) {
         vscode.window.showInformationMessage("There are no saved accounts to back up.");
         return;
@@ -972,7 +972,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.restoreAccounts", async () => {
+    vscode.commands.registerCommand("accountManagerForClaude.restoreAccounts", async () => {
       const picked = await vscode.window.showOpenDialog({
         title: "Restore account backup",
         canSelectMany: false,
@@ -1023,15 +1023,15 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.about", async () => {
-      await vscode.commands.executeCommand("tursoftClaudeSwitcher.accountsView.focus");
+    vscode.commands.registerCommand("accountManagerForClaude.about", async () => {
+      await vscode.commands.executeCommand("accountManagerForClaude.accountsView.focus");
       viewProvider.showAbout();
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("tursoftClaudeSwitcher.openPanel", () => {
-      void vscode.commands.executeCommand("tursoftClaudeSwitcher.accountsView.focus");
+    vscode.commands.registerCommand("accountManagerForClaude.openPanel", () => {
+      void vscode.commands.executeCommand("accountManagerForClaude.accountsView.focus");
     })
   );
 
@@ -1039,19 +1039,19 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (
-        e.affectsConfiguration("tursoftClaudeSwitcher.pollIntervalSeconds") ||
-        e.affectsConfiguration("tursoftClaudeSwitcher.autoRefresh")
+        e.affectsConfiguration("accountManagerForClaude.pollIntervalSeconds") ||
+        e.affectsConfiguration("accountManagerForClaude.autoRefresh")
       ) {
         poller.restart();
       }
-      if (e.affectsConfiguration("tursoftClaudeSwitcher.usageHistory")) {
+      if (e.affectsConfiguration("accountManagerForClaude.usageHistory")) {
         restartHistoryCollection();
         viewProvider.refresh(); // the panel's tracking notice follows the setting
       }
-      if (e.affectsConfiguration("tursoftClaudeSwitcher.warnThresholdPercent")) {
+      if (e.affectsConfiguration("accountManagerForClaude.warnThresholdPercent")) {
         refreshUI();
       }
-      if (e.affectsConfiguration("tursoftClaudeSwitcher.credentialsPath")) {
+      if (e.affectsConfiguration("accountManagerForClaude.credentialsPath")) {
         watchCredentialsFile();
         onCredentialsFileChanged();
       }

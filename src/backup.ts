@@ -33,7 +33,7 @@ export interface BackupEntry {
 export interface BackupSettings {
   /** Panel choices: sort order and filters. */
   view?: Record<string, unknown>;
-  /** User-level `tursoftClaudeSwitcher.*` settings, keyed without the prefix. */
+  /** User-level `accountManagerForClaude.*` settings, keyed without the prefix. */
   config?: Record<string, unknown>;
 }
 

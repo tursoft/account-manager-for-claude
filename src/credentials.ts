@@ -29,7 +29,7 @@ export class CredentialsManager {
     }
 
     const override = vscode.workspace
-      .getConfiguration("tursoftClaudeSwitcher")
+      .getConfiguration("accountManagerForClaude")
       .get<string>("credentialsPath", "")
       .trim();
     if (override) {

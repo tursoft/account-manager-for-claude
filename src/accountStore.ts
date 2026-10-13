@@ -8,9 +8,9 @@ import { hasIdentity, profileIdentity, profileMatchesIdentity } from "./identity
 import { tokenFingerprint } from "./oauth";
 import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "./types";
 
-const PROFILES_KEY = "tursoftClaudeSwitcher.profiles";
-const ACTIVE_KEY = "tursoftClaudeSwitcher.activeId";
-const SECRET_PREFIX = "tursoftClaudeSwitcher.account.";
+const PROFILES_KEY = "accountManagerForClaude.profiles";
+const ACTIVE_KEY = "accountManagerForClaude.activeId";
+const SECRET_PREFIX = "accountManagerForClaude.account.";
 
 /**
  * Stores account profiles. Metadata (list, order, last usage snapshot) is kept in

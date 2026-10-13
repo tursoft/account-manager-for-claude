@@ -41,16 +41,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "tursoftClaudeSwitcher",
+          "id": "accountManagerForClaude",
           "title": "MultiAccount",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "tursoftClaudeSwitcher": [
+      "accountManagerForClaude": [
         {
-          "id": "tursoftClaudeSwitcher.accountsView",
+          "id": "accountManagerForClaude.accountsView",
           "name": "Accounts",
           "type": "webview"
         }
@@ -58,102 +58,102 @@
     },
     "commands": [
       {
-        "command": "tursoftClaudeSwitcher.addCurrentAccount",
+        "command": "accountManagerForClaude.addCurrentAccount",
         "title": "Claude: Save current account as profile",
         "icon": "$(add)"
       },
       {
-        "command": "tursoftClaudeSwitcher.addAccount",
+        "command": "accountManagerForClaude.addAccount",
         "title": "Claude: Add another account (isolated login)",
         "icon": "$(person-add)"
       },
       {
-        "command": "tursoftClaudeSwitcher.switchAccount",
+        "command": "accountManagerForClaude.switchAccount",
         "title": "Claude: Switch account",
         "icon": "$(arrow-swap)"
       },
       {
-        "command": "tursoftClaudeSwitcher.refreshAll",
+        "command": "accountManagerForClaude.refreshAll",
         "title": "Claude: Refresh accounts, current login and limits",
         "icon": "$(refresh)"
       },
       {
-        "command": "tursoftClaudeSwitcher.refreshUsage",
+        "command": "accountManagerForClaude.refreshUsage",
         "title": "Claude: Refresh usage limits",
         "icon": "$(refresh)"
       },
       {
-        "command": "tursoftClaudeSwitcher.sayHi",
+        "command": "accountManagerForClaude.sayHi",
         "title": "Claude: Say Hi on account",
         "icon": "$(comment)"
       },
       {
-        "command": "tursoftClaudeSwitcher.openIndependentWindow",
+        "command": "accountManagerForClaude.openIndependentWindow",
         "title": "Claude: Open independent account window",
         "icon": "$(window)"
       },
       {
-        "command": "tursoftClaudeSwitcher.login",
+        "command": "accountManagerForClaude.login",
         "title": "Claude: Log in from terminal (replaces the current account)",
         "icon": "$(sign-in)"
       },
       {
-        "command": "tursoftClaudeSwitcher.browserLogin",
+        "command": "accountManagerForClaude.browserLogin",
         "title": "Claude: Authorize in browser (without CLI)",
         "icon": "$(globe)"
       },
       {
-        "command": "tursoftClaudeSwitcher.reauthorizeProfile",
+        "command": "accountManagerForClaude.reauthorizeProfile",
         "title": "Claude: Reauthorize account profile",
         "icon": "$(sign-in)"
       },
       {
-        "command": "tursoftClaudeSwitcher.completeProfileReauthorization",
+        "command": "accountManagerForClaude.completeProfileReauthorization",
         "title": "Claude: Complete profile reauthorization",
         "icon": "$(pass)"
       },
       {
-        "command": "tursoftClaudeSwitcher.removeAccount",
+        "command": "accountManagerForClaude.removeAccount",
         "title": "Claude: Remove account profile"
       },
       {
-        "command": "tursoftClaudeSwitcher.renameAccount",
+        "command": "accountManagerForClaude.renameAccount",
         "title": "Claude: Rename account profile"
       },
       {
-        "command": "tursoftClaudeSwitcher.undoSwitch",
+        "command": "accountManagerForClaude.undoSwitch",
         "title": "Claude: Undo last switch"
       },
       {
-        "command": "tursoftClaudeSwitcher.openPanel",
+        "command": "accountManagerForClaude.openPanel",
         "title": "Claude: Show accounts panel"
       },
       {
-        "command": "tursoftClaudeSwitcher.backupAccounts",
+        "command": "accountManagerForClaude.backupAccounts",
         "title": "Claude: Back up account list (password-protected ZIP)",
         "icon": "$(archive)"
       },
       {
-        "command": "tursoftClaudeSwitcher.restoreAccounts",
+        "command": "accountManagerForClaude.restoreAccounts",
         "title": "Claude: Restore account list from backup",
         "icon": "$(history)"
       },
       {
-        "command": "tursoftClaudeSwitcher.about",
+        "command": "accountManagerForClaude.about",
         "title": "Claude: About Account Manager for Claude",
         "icon": "$(info)"
       },
       {
-        "command": "tursoftClaudeSwitcher.clearUsageHistory",
+        "command": "accountManagerForClaude.clearUsageHistory",
         "title": "Claude: Delete collected usage history"
       },
       {
-        "command": "tursoftClaudeSwitcher.openAnalytics",
+        "command": "accountManagerForClaude.openAnalytics",
         "title": "Claude: Show usage analytics",
         "icon": "$(graph)"
       },
       {
-        "command": "tursoftClaudeSwitcher.openAvailability",
+        "command": "accountManagerForClaude.openAvailability",
         "title": "Claude: Show account availability calendar",
         "icon": "$(calendar)"
       }
@@ -161,144 +161,144 @@
     "menus": {
       "view/title": [
         {
-          "command": "tursoftClaudeSwitcher.openAnalytics",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.openAnalytics",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "navigation@1"
         },
         {
-          "command": "tursoftClaudeSwitcher.openAvailability",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.openAvailability",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "navigation@2"
         },
         {
-          "command": "tursoftClaudeSwitcher.refreshAll",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.refreshAll",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "navigation@3"
         },
         {
-          "command": "tursoftClaudeSwitcher.addCurrentAccount",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.addCurrentAccount",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "1_accounts@1"
         },
         {
-          "command": "tursoftClaudeSwitcher.addAccount",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.addAccount",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "1_accounts@2"
         },
         {
-          "command": "tursoftClaudeSwitcher.browserLogin",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.browserLogin",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "1_accounts@3"
         },
         {
-          "command": "tursoftClaudeSwitcher.reauthorizeProfile",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.reauthorizeProfile",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "1_accounts@4"
         },
         {
-          "command": "tursoftClaudeSwitcher.sayHi",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.sayHi",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "2_tools@1"
         },
         {
-          "command": "tursoftClaudeSwitcher.openIndependentWindow",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.openIndependentWindow",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "2_tools@2"
         },
         {
-          "command": "tursoftClaudeSwitcher.backupAccounts",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.backupAccounts",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "3_backup@1"
         },
         {
-          "command": "tursoftClaudeSwitcher.restoreAccounts",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.restoreAccounts",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "3_backup@2"
         },
         {
-          "command": "tursoftClaudeSwitcher.about",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "command": "accountManagerForClaude.about",
+          "when": "view == accountManagerForClaude.accountsView",
           "group": "9_about@1"
         }
       ],
       "commandPalette": [
         {
-          "command": "tursoftClaudeSwitcher.removeAccount"
+          "command": "accountManagerForClaude.removeAccount"
         },
         {
-          "command": "tursoftClaudeSwitcher.renameAccount"
+          "command": "accountManagerForClaude.renameAccount"
         }
       ]
     },
     "configuration": {
       "title": "Account Manager for Claude",
       "properties": {
-        "tursoftClaudeSwitcher.autoRefresh": {
+        "accountManagerForClaude.autoRefresh": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Regularly check the usage limits of all saved accounts (every `#tursoftClaudeSwitcher.pollIntervalSeconds#` seconds). When disabled, usage is only checked at startup, on manual refresh, and when a used-up limit is due to reset."
+          "markdownDescription": "Regularly check the usage limits of all saved accounts (every `#accountManagerForClaude.pollIntervalSeconds#` seconds). When disabled, usage is only checked at startup, on manual refresh, and when a used-up limit is due to reset."
         },
-        "tursoftClaudeSwitcher.pollIntervalSeconds": {
+        "accountManagerForClaude.pollIntervalSeconds": {
           "type": "number",
           "default": 240,
           "minimum": 60,
-          "markdownDescription": "How often (in seconds, minimum 60 = 1 minute) to check usage limits for each account when `#tursoftClaudeSwitcher.autoRefresh#` is on. The usage endpoint is rate-limited: short intervals with many accounts can hit HTTP 429, after which that account is paused for 5 minutes."
+          "markdownDescription": "How often (in seconds, minimum 60 = 1 minute) to check usage limits for each account when `#accountManagerForClaude.autoRefresh#` is on. The usage endpoint is rate-limited: short intervals with many accounts can hit HTTP 429, after which that account is paused for 5 minutes."
         },
-        "tursoftClaudeSwitcher.notifyOnLimitReset": {
+        "accountManagerForClaude.notifyOnLimitReset": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "Show a notification when a used-up limit (session, weekly, or a model-specific weekly limit) of a saved account becomes available again."
         },
-        "tursoftClaudeSwitcher.autoReloadAfterSwitch": {
+        "accountManagerForClaude.autoReloadAfterSwitch": {
           "type": "boolean",
           "default": false,
           "markdownDescription": "Automatically reload the VS Code window after switching accounts (required for Claude Code to pick up the new account). When disabled, the extension asks first."
         },
-        "tursoftClaudeSwitcher.credentialsPath": {
+        "accountManagerForClaude.credentialsPath": {
           "type": "string",
           "default": "",
           "markdownDescription": "Path to the Claude Code `.credentials.json` file. Empty = default `~/.claude/.credentials.json`."
         },
-        "tursoftClaudeSwitcher.warnThresholdPercent": {
+        "accountManagerForClaude.warnThresholdPercent": {
           "type": "number",
           "default": 80,
           "minimum": 1,
           "maximum": 100,
           "markdownDescription": "Usage threshold (%) from which limit bars and the status bar turn red. They turn orange from 75% of it (60% by default)."
         },
-        "tursoftClaudeSwitcher.claudeCommand": {
+        "accountManagerForClaude.claudeCommand": {
           "type": "string",
           "default": "claude",
           "markdownDescription": "Claude Code CLI command used for login and Say Hi warmups. Use the full path to `claude.cmd`/`claude.exe` if VS Code cannot find `claude` in PATH."
         },
-        "tursoftClaudeSwitcher.sayHiModel": {
+        "accountManagerForClaude.sayHiModel": {
           "type": "string",
           "default": "haiku",
           "markdownDescription": "Model passed to `claude -p` for Say Hi warmups. `haiku` is the low-cost/default warmup choice."
         },
-        "tursoftClaudeSwitcher.sayHiPrompt": {
+        "accountManagerForClaude.sayHiPrompt": {
           "type": "string",
           "default": "Hi",
           "markdownDescription": "Prompt used by Say Hi warmups."
         },
-        "tursoftClaudeSwitcher.sayHiTimeoutSeconds": {
+        "accountManagerForClaude.sayHiTimeoutSeconds": {
           "type": "number",
           "default": 120,
           "minimum": 15,
           "markdownDescription": "Maximum time to wait for a Say Hi warmup command."
         },
-        "tursoftClaudeSwitcher.usageHistory.enabled": {
+        "accountManagerForClaude.usageHistory.enabled": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Collect a usage reading of every saved account every `#tursoftClaudeSwitcher.usageHistory.intervalSeconds#` seconds and keep it on this computer, for the usage analytics charts and the availability calendar. Readings that repeat the previous values are not stored again (except every 15 minutes)."
+          "markdownDescription": "Collect a usage reading of every saved account every `#accountManagerForClaude.usageHistory.intervalSeconds#` seconds and keep it on this computer, for the usage analytics charts and the availability calendar. Readings that repeat the previous values are not stored again (except every 15 minutes)."
         },
-        "tursoftClaudeSwitcher.usageHistory.intervalSeconds": {
+        "accountManagerForClaude.usageHistory.intervalSeconds": {
           "type": "number",
           "default": 60,
           "minimum": 60,
-          "markdownDescription": "How often (in seconds, minimum 60) usage is read while `#tursoftClaudeSwitcher.usageHistory.enabled#` is on. Short periods with many accounts can hit the usage endpoint's rate limit (HTTP 429), which pauses that account for 5 minutes."
+          "markdownDescription": "How often (in seconds, minimum 60) usage is read while `#accountManagerForClaude.usageHistory.enabled#` is on. Short periods with many accounts can hit the usage endpoint's rate limit (HTTP 429), which pauses that account for 5 minutes."
         },
-        "tursoftClaudeSwitcher.usageHistory.retentionDays": {
+        "accountManagerForClaude.usageHistory.retentionDays": {
           "type": "number",
           "default": 90,
           "minimum": 1,

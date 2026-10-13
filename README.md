@@ -80,7 +80,7 @@ and re-login.
 - Claude Code CLI is optional for browser authorization, account switching, and usage checks.
   It is still required for **Say Hi**, CLI-based identity checks, and using Claude Code itself.
 - For CLI-only features, the `claude` command must be available in VS Code's PATH, or
-  `tursoftClaudeSwitcher.claudeCommand` must point to the full path of `claude`, `claude.exe`, or
+  `accountManagerForClaude.claudeCommand` must point to the full path of `claude`, `claude.exe`, or
   `claude.cmd`.
 - On Windows PowerShell, Claude Code CLI can be installed with:
 
@@ -178,16 +178,16 @@ the account on each computer separately instead of copying credential files betw
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `tursoftClaudeSwitcher.autoRefresh` | `true` | regularly check usage limits of all accounts |
-| `tursoftClaudeSwitcher.pollIntervalSeconds` | `240` | check interval in seconds (min 60; short intervals with many accounts can hit HTTP 429) |
-| `tursoftClaudeSwitcher.notifyOnLimitReset` | `true` | notify when a used-up limit becomes available again |
-| `tursoftClaudeSwitcher.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
-| `tursoftClaudeSwitcher.credentialsPath` | `""` | override the path to `.credentials.json` |
-| `tursoftClaudeSwitcher.warnThresholdPercent` | `80` | warning threshold (%): usage bars and the status bar turn red from it and orange from 75% of it |
-| `tursoftClaudeSwitcher.claudeCommand` | `claude` | CLI command used for CLI login and Say Hi; set the full path if VS Code cannot find it |
-| `tursoftClaudeSwitcher.sayHiModel` | `haiku` | model alias passed to `claude -p` |
-| `tursoftClaudeSwitcher.sayHiPrompt` | `Hi` | prompt used by Say Hi |
-| `tursoftClaudeSwitcher.sayHiTimeoutSeconds` | `120` | Say Hi timeout |
+| `accountManagerForClaude.autoRefresh` | `true` | regularly check usage limits of all accounts |
+| `accountManagerForClaude.pollIntervalSeconds` | `240` | check interval in seconds (min 60; short intervals with many accounts can hit HTTP 429) |
+| `accountManagerForClaude.notifyOnLimitReset` | `true` | notify when a used-up limit becomes available again |
+| `accountManagerForClaude.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
+| `accountManagerForClaude.credentialsPath` | `""` | override the path to `.credentials.json` |
+| `accountManagerForClaude.warnThresholdPercent` | `80` | warning threshold (%): usage bars and the status bar turn red from it and orange from 75% of it |
+| `accountManagerForClaude.claudeCommand` | `claude` | CLI command used for CLI login and Say Hi; set the full path if VS Code cannot find it |
+| `accountManagerForClaude.sayHiModel` | `haiku` | model alias passed to `claude -p` |
+| `accountManagerForClaude.sayHiPrompt` | `Hi` | prompt used by Say Hi |
+| `accountManagerForClaude.sayHiTimeoutSeconds` | `120` | Say Hi timeout |
 
 ## Troubleshooting Say Hi
 
@@ -202,7 +202,7 @@ Claude Code CLI. Try these in order:
 irm https://claude.ai/install.ps1 | iex
 ```
 
-4. If the command exists but VS Code still cannot see it, set `tursoftClaudeSwitcher.claudeCommand` to the
+4. If the command exists but VS Code still cannot see it, set `accountManagerForClaude.claudeCommand` to the
    full path, for example `C:\Users\you\AppData\Roaming\npm\claude.cmd` or the path returned by
    `where claude`.
 
@@ -223,7 +223,7 @@ account. Independent windows avoid that by setting both:
       "value": "C:\\Users\\you\\.claude-user2"
     }
   ],
-  "tursoftClaudeSwitcher.credentialsPath": "C:\\Users\\you\\.claude-user2\\.credentials.json"
+  "accountManagerForClaude.credentialsPath": "C:\\Users\\you\\.claude-user2\\.credentials.json"
 }
 ```
 
@@ -259,7 +259,7 @@ directories would each try to spend the same single-use refresh token.
 
 ![Usage analytics: bar charts by level, used or available, legend, folding, capacity utilization](docs/analytics.gif)
 
-Turn on `tursoftClaudeSwitcher.usageHistory.enabled` (or the **Collect usage history** switch at the
+Turn on `accountManagerForClaude.usageHistory.enabled` (or the **Collect usage history** switch at the
 top of the analytics page, which also turns it off) to record every saved account's limits once a minute (`usageHistory.intervalSeconds`).
 Readings stay on this computer, in the extension's storage; unchanged readings are stored only
 every 15 minutes, and data older than `usageHistory.retentionDays` (90) is deleted.

@@ -15,7 +15,7 @@ export class StatusBarController {
 
   constructor(private readonly store: AccountStore) {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    this.item.command = "tursoftClaudeSwitcher.switchAccount";
+    this.item.command = "accountManagerForClaude.switchAccount";
     this.item.show();
   }
 
@@ -63,7 +63,7 @@ export class StatusBarController {
     // used: green below 75% of the warning threshold (60% by default), orange up to it (80%),
     // red from it. The same thresholds color the usage bars and the account names.
     const warn = vscode.workspace
-      .getConfiguration("tursoftClaudeSwitcher")
+      .getConfiguration("accountManagerForClaude")
       .get<number>("warnThresholdPercent", 80);
     const highest = usage?.windows.length ? Math.max(...usage.windows.map((w) => w.percent)) : undefined;
     const colors = { ok: "charts.green", warn: "charts.orange", danger: "charts.red" } as const;

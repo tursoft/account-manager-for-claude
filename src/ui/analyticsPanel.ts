@@ -24,7 +24,7 @@ export class AnalyticsPanel {
       return;
     }
     const panel = vscode.window.createWebviewPanel(
-      "tursoftClaudeSwitcher.analytics",
+      "accountManagerForClaude.analytics",
       "Usage analytics",
       vscode.ViewColumn.Active,
       {
@@ -55,7 +55,7 @@ export class AnalyticsPanel {
     panel.webview.onDidReceiveMessage((msg) => void this.onMessage(msg), undefined, this.disposables);
     vscode.workspace.onDidChangeConfiguration(
       (e) => {
-        if (e.affectsConfiguration("tursoftClaudeSwitcher.usageHistory")) {
+        if (e.affectsConfiguration("accountManagerForClaude.usageHistory")) {
           void this.postMeta();
         }
       },

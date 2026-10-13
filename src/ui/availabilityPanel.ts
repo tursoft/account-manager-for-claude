@@ -30,7 +30,7 @@ export class AvailabilityPanel {
       return;
     }
     const panel = vscode.window.createWebviewPanel(
-      "tursoftClaudeSwitcher.availability",
+      "accountManagerForClaude.availability",
       "Account availability",
       vscode.ViewColumn.Active,
       {
@@ -101,7 +101,7 @@ export class AvailabilityPanel {
       }
       case "switch":
         if (typeof msg.id === "string") {
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", msg.id);
+          void vscode.commands.executeCommand("accountManagerForClaude.switchAccount", msg.id);
         }
         break;
     }

@@ -48,7 +48,7 @@ interface ViewAccount {
 
 /** Activity bar panel: list of accounts with usage limits and actions. */
 export class AccountsViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = "tursoftClaudeSwitcher.accountsView";
+  public static readonly viewType = "accountManagerForClaude.accountsView";
   private view?: vscode.WebviewView;
   private currentSession?: CurrentSessionView;
   private currentWindows?: ViewWindow[];
@@ -62,7 +62,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     private readonly memento: vscode.Memento
   ) {}
 
-  private static readonly VIEW_SETTINGS_KEY = "tursoftClaudeSwitcher.viewSettings";
+  private static readonly VIEW_SETTINGS_KEY = "accountManagerForClaude.viewSettings";
   /** Bumped when settings change outside the panel (a restore), so the panel adopts them. */
   private viewSettingsRev = 0;
   /** The panel's search text; kept in memory only (it is not a saved setting). */
@@ -163,19 +163,19 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           break;
         }
         case "loginCurrent":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
+          void vscode.commands.executeCommand("accountManagerForClaude.login");
           break;
         case "enableTracking":
           void vscode.workspace
-            .getConfiguration("tursoftClaudeSwitcher")
+            .getConfiguration("accountManagerForClaude")
             .update("usageHistory.enabled", true, vscode.ConfigurationTarget.Global)
             .then(() => this.refresh());
           break;
         case "backup":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.backupAccounts");
+          void vscode.commands.executeCommand("accountManagerForClaude.backupAccounts");
           break;
         case "restore":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.restoreAccounts");
+          void vscode.commands.executeCommand("accountManagerForClaude.restoreAccounts");
           break;
         case "openLink":
           if (msg.url && ABOUT_LINKS.has(msg.url)) {
@@ -210,44 +210,44 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           }
           break;
         case "switch":
-          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("accountManagerForClaude.switchAccount", msg.id);
           break;
         case "openWindow":
           if (msg.id) {
-            void vscode.commands.executeCommand("tursoftClaudeSwitcher.openIndependentWindow", msg.id);
+            void vscode.commands.executeCommand("accountManagerForClaude.openIndependentWindow", msg.id);
           }
           break;
         case "refresh":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.refreshUsage", msg.id);
+          void vscode.commands.executeCommand("accountManagerForClaude.refreshUsage", msg.id);
           break;
         case "refreshAll":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.refreshAll");
+          void vscode.commands.executeCommand("accountManagerForClaude.refreshAll");
           break;
         case "sayHi":
-          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.sayHi", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("accountManagerForClaude.sayHi", msg.id);
           break;
         case "sayHiAll":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.sayHi");
+          void vscode.commands.executeCommand("accountManagerForClaude.sayHi");
           break;
         case "add":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.addCurrentAccount");
+          void vscode.commands.executeCommand("accountManagerForClaude.addCurrentAccount");
           break;
         case "login":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.addAccount");
+          void vscode.commands.executeCommand("accountManagerForClaude.addAccount");
           break;
         case "reauthorize":
           if (msg.id) {
-            void vscode.commands.executeCommand("tursoftClaudeSwitcher.reauthorizeProfile", msg.id);
+            void vscode.commands.executeCommand("accountManagerForClaude.reauthorizeProfile", msg.id);
           }
           break;
         case "remove":
-          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.removeAccount", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("accountManagerForClaude.removeAccount", msg.id);
           break;
         case "rename":
-          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.renameAccount", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("accountManagerForClaude.renameAccount", msg.id);
           break;
         case "undo":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.undoSwitch");
+          void vscode.commands.executeCommand("accountManagerForClaude.undoSwitch");
           break;
       }
       }
@@ -264,7 +264,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     const activeId = this.store.getActiveId();
     const profiles = this.store.list();
     const warnThreshold = vscode.workspace
-      .getConfiguration("tursoftClaudeSwitcher")
+      .getConfiguration("accountManagerForClaude")
       .get<number>("warnThresholdPercent", 80);
 
     void Promise.all(
@@ -301,7 +301,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         busy: this.busy,
         viewSettings: this.getViewSettings(),
         trackingEnabled: vscode.workspace
-          .getConfiguration("tursoftClaudeSwitcher")
+          .getConfiguration("accountManagerForClaude")
           .get<boolean>("usageHistory.enabled", false),
         viewSettingsRev: this.viewSettingsRev,
       });
