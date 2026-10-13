@@ -193,7 +193,22 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <button id="sayHiBtn" class="icon-btn" title="Say Hi on all inactive accounts" aria-label="Say Hi on all inactive accounts"></button>
     <button id="refreshBtn" class="icon-btn" title="Refresh usage limits" aria-label="Refresh usage limits"></button>
   </div>
+  <div id="filters" class="hidden">
+    <label class="search">
+      <span id="searchIcon"></span>
+      <input id="searchInput" type="text" placeholder="Filter accounts" spellcheck="false" aria-label="Filter accounts" />
+    </label>
+    <div class="segmented" role="radiogroup" aria-label="Limit filter">
+      <button data-filter="all" role="radio" title="All accounts">All</button>
+      <button data-filter="available" role="radio" title="Accounts with all limits below 100%">Available</button>
+      <button data-filter="limited" role="radio" title="Accounts with at least one limit used up">Limited</button>
+    </div>
+    <button id="clearFilters" class="icon-btn" title="Clear filters" aria-label="Clear filters"></button>
+  </div>
   <div id="list"></div>
+  <div id="noMatch" class="hidden">
+    No accounts match the filters. <button id="noMatchClear" class="link-btn">Clear filters</button>
+  </div>
   <div id="empty" class="hidden">
     <p class="empty-title">No saved accounts</p>
     <p>Save the account Claude Code is logged in with, or log in to another one.</p>

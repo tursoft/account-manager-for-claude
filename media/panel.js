@@ -22,6 +22,8 @@
     personAdd: '<circle cx="6.5" cy="5.5" r="2.5"/><path d="M2 13.5c.5-2.5 2.3-3.5 4.5-3.5s4 1 4.5 3.5M12.5 5v4M10.5 7h4"/>',
     up: '<path d="M8 13V3M4 7l4-4 4 4"/>',
     down: '<path d="M8 3v10M4 9l4 4 4-4"/>',
+    close: '<path d="M4 4l8 8M12 4l-8 8"/>',
+    search: '<circle cx="7" cy="7" r="4.25"/><path d="m10.2 10.2 3.3 3.3"/>',
     save: '<path d="M3 2.5h8l2 2v9H3z"/><path d="M5.5 2.5v3h4v-3M5.5 13.5v-4h5v4"/>',
     signIn: '<path d="M9.5 2.5h3v11h-3M2.5 8h7M7 5.5 9.5 8 7 10.5"/>',
   };
@@ -391,6 +393,69 @@
 
   // ---- render -----------------------------------------------------------
 
+  // ---- filters ----------------------------------------------------------
+
+  const filtersEl = document.getElementById("filters");
+  const searchInput = document.getElementById("searchInput");
+  const clearFiltersBtn = document.getElementById("clearFilters");
+  const noMatchEl = document.getElementById("noMatch");
+  const saved = vscode.getState() || {};
+  let filter = { text: saved.text || "", limit: saved.limit || "all" };
+
+  document.getElementById("searchIcon").appendChild(icon("search"));
+  clearFiltersBtn.appendChild(icon("close"));
+  searchInput.value = filter.text;
+
+  function setFilter(next) {
+    filter = { ...filter, ...next };
+    vscode.setState(filter);
+    render();
+  }
+
+  function clearFilters() {
+    searchInput.value = "";
+    setFilter({ text: "", limit: "all" });
+  }
+
+  searchInput.addEventListener("input", () => setFilter({ text: searchInput.value }));
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && searchInput.value) {
+      e.stopPropagation();
+      clearFilters();
+    }
+  });
+  for (const b of filtersEl.querySelectorAll("[data-filter]")) {
+    b.addEventListener("click", () => setFilter({ limit: b.dataset.filter }));
+  }
+  clearFiltersBtn.addEventListener("click", clearFilters);
+  document.getElementById("noMatchClear").addEventListener("click", clearFilters);
+
+  /** "limited" = some limit used up; "available" = usage known and every limit below 100%. */
+  function limitState(acc) {
+    const windows = acc.windows || [];
+    if (windows.some((w) => w.percent >= 100)) return "limited";
+    return windows.length > 0 ? "available" : "unknown";
+  }
+
+  function matchesFilter(acc) {
+    if (filter.limit !== "all" && limitState(acc) !== filter.limit) return false;
+    const q = filter.text.trim().toLowerCase();
+    if (!q) return true;
+    return [acc.label, acc.subscriptionType, acc.isActive ? "active" : ""]
+      .filter(Boolean)
+      .some((s) => s.toLowerCase().includes(q));
+  }
+
+  function renderFilterBar(total) {
+    filtersEl.classList.toggle("hidden", total === 0);
+    for (const b of filtersEl.querySelectorAll("[data-filter]")) {
+      const on = b.dataset.filter === filter.limit;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-checked", String(on));
+    }
+    clearFiltersBtn.classList.toggle("hidden", !filter.text && filter.limit === "all");
+  }
+
   const sessionEl = document.getElementById("session");
 
   /** Info box for a Claude Code login that is not in the list (or no login at all). */
@@ -427,12 +492,16 @@
     sessionEl.innerHTML = "";
     if (state.currentSession) sessionEl.appendChild(sessionBox(state.currentSession));
     const accounts = state.accounts || [];
+    renderFilterBar(accounts.length);
     if (accounts.length === 0) {
       emptyEl.classList.remove("hidden");
+      noMatchEl.classList.add("hidden");
       return;
     }
     emptyEl.classList.add("hidden");
-    for (const acc of accounts) {
+    const visible = accounts.filter(matchesFilter);
+    noMatchEl.classList.toggle("hidden", visible.length > 0);
+    for (const acc of visible) {
       listEl.appendChild(card(acc, state.warnThreshold || 80));
     }
   }
