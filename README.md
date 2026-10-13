@@ -214,6 +214,8 @@ If the extension says `claude` is not recognized:
 
 - **No telemetry.** The extension collects no data and sends nothing to its author, publisher,
   or any third-party server.
+- **Sidebar ad.** The panel shows a small ad for [BestJobFinder](https://bestjobfinder.net). It
+  loads nothing from the network; clicking it opens the site in your browser.
 - **Network requests go only to Anthropic**, for token refresh, usage limits, and identifying an
   account (`/api/oauth/profile`, the same call Claude Code makes after login).
 - Saved accounts are kept in VS Code's encrypted SecretStorage. Credentials are written only to

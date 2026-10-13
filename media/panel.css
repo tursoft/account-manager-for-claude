@@ -1323,3 +1323,148 @@ button:focus-visible {
 .empty-footnote code {
   font-size: 10px;
 }
+
+/* ---- BestJobFinder sidebar banner, sticky at the bottom of the panel ------ */
+
+.bjf-wrap {
+  position: sticky;
+  bottom: 0;
+  margin-top: 12px;
+  padding-bottom: 8px;
+}
+
+.bjf-banner {
+  position: relative;
+  display: block;
+  padding: 6px 10px 10px;
+  border-radius: 8px;
+  background:
+    radial-gradient(90% 60% at 100% 100%, rgba(56, 189, 248, 0.14), transparent 60%),
+    radial-gradient(90% 60% at 0% 100%, rgba(108, 59, 224, 0.18), transparent 60%),
+    #020916; /* matches the logo's background */
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #ffffff;
+  font-family: "Poppins", var(--vscode-font-family, -apple-system, "Segoe UI", sans-serif);
+  text-decoration: none;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.bjf-banner:hover {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25), 0 6px 18px rgba(108, 59, 224, 0.25);
+  transform: translateY(-1px);
+}
+
+.bjf-banner:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #38bdf8);
+  outline-offset: 2px;
+}
+
+.bjf-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.bjf-logo {
+  display: block;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.bjf-wordmark {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+
+.bjf-pipe {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 1px;
+  margin: 4px 6px 4px 8px;
+  background: linear-gradient(180deg, transparent, rgba(167, 139, 250, 0.7), rgba(56, 189, 248, 0.7), transparent);
+}
+
+.bjf-slogan {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.bjf-slogan .ai {
+  background: linear-gradient(90deg, #a78bfa, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bjf-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(90deg, #6c3be0, #4f46e5 55%, #2563eb);
+  box-sizing: border-box;
+  transition: filter 0.15s ease;
+}
+
+.bjf-banner:hover .bjf-cta {
+  filter: brightness(1.12);
+}
+
+.bjf-cta svg {
+  transition: transform 0.15s ease;
+}
+
+.bjf-banner:hover .bjf-cta svg {
+  transform: translateX(2px);
+}
+
+/* A narrow sidebar: the slogan wraps instead of being cut off. */
+@media (max-width: 380px) {
+  .bjf-row {
+    padding-right: 14px; /* room for the AD label */
+  }
+
+  .bjf-slogan {
+    white-space: normal;
+    font-size: 13px;
+    line-height: 1.25;
+  }
+}
+
+@media (max-width: 270px) {
+  .bjf-wordmark,
+  .bjf-pipe {
+    display: none;
+  }
+}
+
+.bjf-ad-label {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.45);
+}

@@ -67,6 +67,19 @@ import {
     vscode.postMessage(id ? { type, id } : { type });
   }
 
+  // The sidebar banner opens its site in the browser through the extension (an allowlisted link).
+  const bjfBanner = document.getElementById("bjfBanner");
+  if (bjfBanner) {
+    bjfBanner.addEventListener("click", (e) => {
+      e.preventDefault();
+      vscode.postMessage({ type: "openLink", url: bjfBanner.dataset.link });
+    });
+    // A logo file that is missing should not show as a broken image.
+    for (const img of bjfBanner.querySelectorAll("img")) {
+      img.addEventListener("error", () => img.remove());
+    }
+  }
+
   /** Double-clicking a name copies it; the extension writes the clipboard and answers "copied". */
   function copyOnDoubleClick(node, id) {
     node.addEventListener("mousedown", (e) => {
