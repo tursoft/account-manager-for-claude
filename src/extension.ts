@@ -23,7 +23,7 @@ import { ProfileActivityRegistry } from "./profileActivity";
 import { SwitchService } from "./switchService";
 import { AccountsViewProvider } from "./ui/accountsView";
 import { StatusBarController } from "./ui/statusBar";
-import { UsagePoller } from "./usage";
+import { fetchUsage, MIN_POLL_INTERVAL_SECONDS, UsagePoller } from "./usage";
 import { AccountProfile, ClaudeAuthIdentity, OAuthCreds } from "./types";
 import { WarmupService } from "./warmup";
 
@@ -92,11 +92,54 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // --- Current account tracking ---
 
+  // Usage of an unsaved current login (it has no profile, so the poller never sees it).
+  let currentUsageAt = 0;
+  let currentUsageBackoffUntil = 0;
+  let currentUsageBusy = false;
+  const refreshCurrentUsage = async (unsaved: boolean) => {
+    if (!unsaved) {
+      currentUsageAt = 0;
+      return;
+    }
+    const now = Date.now();
+    if (currentUsageBusy || now < currentUsageBackoffUntil || now - currentUsageAt < MIN_POLL_INTERVAL_SECONDS * 1000) {
+      return;
+    }
+    const creds = credentials.readCurrent();
+    if (!creds) {
+      return;
+    }
+    currentUsageBusy = true;
+    try {
+      const result = await fetchUsage(creds);
+      currentUsageAt = Date.now();
+      if (result.retryAfter) {
+        currentUsageBackoffUntil = result.retryAfter;
+      }
+      viewProvider.setCurrentUsage(result.snapshot?.windows);
+    } finally {
+      currentUsageBusy = false;
+    }
+  };
+
+  let currentUnsaved = false;
+  const currentUsageTimer = setInterval(
+    () => {
+      if (getInterval() > 0) {
+        void refreshCurrentUsage(currentUnsaved);
+      }
+    },
+    MIN_POLL_INTERVAL_SECONDS * 1000
+  );
+  context.subscriptions.push({ dispose: () => clearInterval(currentUsageTimer) });
+
   let notifiedUnsavedKey: string | undefined;
   const applyCurrentState = (state: CurrentAccountState) => {
     profileActivity.setActiveProfile(store.getActiveId());
     statusBar.setUnsavedIdentity(state.unsavedIdentity);
     viewProvider.setCurrentSession(state);
+    currentUnsaved = Boolean(state.loggedIn && !state.ownerId);
+    void refreshCurrentUsage(currentUnsaved);
     const key = state.unsavedIdentity ? identityLabel(state.unsavedIdentity) : undefined;
     if (key && key !== notifiedUnsavedKey) {
       notifiedUnsavedKey = key;

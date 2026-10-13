@@ -10,6 +10,8 @@ interface CurrentSessionView {
   status: "unsaved" | "loggedOut";
   label?: string;
   subscriptionType?: string;
+  /** Usage limits of the unsaved login, when they could be fetched. */
+  windows?: ViewWindow[];
 }
 
 /** Links the About sheet may open; anything else from the webview is ignored. */
@@ -20,12 +22,19 @@ const ABOUT_LINKS = new Set([
   "https://github.com/KrzysztofZander/claude-account-switcher",
 ]);
 
+interface ViewWindow {
+  label: string;
+  percent: number;
+  severity: string;
+  resetsAt: string | null;
+}
+
 interface ViewAccount {
   id: string;
   label: string;
   subscriptionType?: string;
   isActive: boolean;
-  windows: { label: string; percent: number; severity: string; resetsAt: string | null }[];
+  windows: ViewWindow[];
   error?: string;
   fetchedAt?: number;
   retryAfter?: number;
@@ -37,6 +46,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "tursoftClaudeSwitcher.accountsView";
   private view?: vscode.WebviewView;
   private currentSession?: CurrentSessionView;
+  private currentWindows?: ViewWindow[];
   private aboutPending = false;
 
   constructor(
@@ -58,6 +68,15 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     } else {
       this.currentSession = undefined;
     }
+    if (this.currentSession?.status !== "unsaved") {
+      this.currentWindows = undefined;
+    }
+    this.refresh();
+  }
+
+  /** Usage limits of the unsaved current login, shown like an account's limits. */
+  setCurrentUsage(windows: ViewWindow[] | undefined): void {
+    this.currentWindows = windows;
     this.refresh();
   }
 
@@ -192,7 +211,10 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         type: "state",
         accounts,
         warnThreshold,
-        currentSession: this.currentSession,
+        currentSession: this.currentSession && {
+          ...this.currentSession,
+          windows: this.currentWindows,
+        },
         version: this.version,
       });
     });

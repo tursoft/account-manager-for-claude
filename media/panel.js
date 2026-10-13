@@ -611,6 +611,11 @@
       const name = el("div", "session-name", session.label || "Unidentified account");
       name.title = name.textContent;
       box.append(name, el("div", "session-note", "Not in your account list yet."));
+      if (session.windows && session.windows.length) {
+        const meters = el("div", "meters");
+        for (const w of session.windows) meters.appendChild(meter(w, state.warnThreshold || 80));
+        box.appendChild(meters);
+      }
       const save = el("button", "tb-btn primary session-btn");
       save.append(icon("save"), el("span", "", "Save to account list"));
       save.addEventListener("click", () => post("add"));
