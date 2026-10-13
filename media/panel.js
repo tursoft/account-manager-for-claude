@@ -170,7 +170,7 @@
       head.appendChild(iconButton("swap", "Switch to this account", () => post("switch", acc.id), "quick"));
     }
     head.appendChild(
-      iconButton("more", "More actions", (btn) => toggleMenu(btn, acc), "menu-btn")
+      iconButton("more", "More actions", (btn) => toggleMenu(btn, acc.label, accountMenuItems(acc)), "menu-btn")
     );
     root.appendChild(head);
 
@@ -200,12 +200,13 @@
 
   // ---- dropdown menu ----------------------------------------------------
 
-  function menuItems(acc) {
+  function accountMenuItems(acc) {
+    const act = (type) => () => post(type, acc.id);
     const items = [];
-    if (!acc.isActive) items.push({ icon: "swap", label: "Switch to this account", type: "switch" });
-    items.push({ icon: "window", label: "Open in independent window", type: "openWindow" });
-    if (!acc.isActive) items.push({ icon: "hi", label: "Say Hi (warmup)", type: "sayHi" });
-    items.push({ icon: "refresh", label: "Refresh usage", type: "refresh" });
+    if (!acc.isActive) items.push({ icon: "swap", label: "Switch to this account", run: act("switch") });
+    items.push({ icon: "window", label: "Open in independent window", run: act("openWindow") });
+    if (!acc.isActive) items.push({ icon: "hi", label: "Say Hi (warmup)", run: act("sayHi") });
+    items.push({ icon: "refresh", label: "Refresh usage", run: act("refresh") });
     items.push(null);
     const accounts = state.accounts || [];
     const index = accounts.findIndex((a) => a.id === acc.id);
@@ -217,24 +218,25 @@
     items.push({
       icon: "key",
       label: "Reauthorize…",
-      type: "reauthorize",
+      run: act("reauthorize"),
       accent: acc.needsReauthorization,
     });
-    items.push({ icon: "edit", label: "Rename…", type: "rename" });
-    items.push({ icon: "trash", label: "Remove profile…", type: "remove", danger: true });
+    items.push({ icon: "edit", label: "Rename…", run: act("rename") });
+    items.push({ icon: "trash", label: "Remove profile…", run: act("remove"), danger: true });
     return items;
   }
 
-  function toggleMenu(anchor, acc) {
+  /** Opens a dropdown under `anchor`; `items` are {icon, label, run, danger?, accent?} or null separators. */
+  function toggleMenu(anchor, title, items) {
     if (menuAnchor === anchor) {
       closeMenu();
       return;
     }
     closeMenu();
     menuEl.innerHTML = "";
-    menuEl.appendChild(el("div", "menu-title", acc.label));
+    menuEl.appendChild(el("div", "menu-title", title));
 
-    for (const item of menuItems(acc)) {
+    for (const item of items) {
       if (!item) {
         menuEl.appendChild(el("div", "menu-sep"));
         continue;
@@ -247,8 +249,7 @@
       b.append(icon(item.icon), el("span", "", item.label));
       b.addEventListener("click", () => {
         closeMenu();
-        if (item.run) item.run();
-        else post(item.type, acc.id);
+        item.run();
       });
       menuEl.appendChild(b);
     }
