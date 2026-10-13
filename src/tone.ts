@@ -36,25 +36,28 @@ export function sessionPercent(acc: ToneAccount): number | undefined {
 }
 
 /**
- * Tone of an account's name: its 5h session limit, except that a used-up weekly limit makes it
- * red whatever the 5h limit says (Claude refuses sessions then too). Undefined when nothing is
- * known or the login expired, so the usage cannot be trusted.
+ * Tone of an account's name: green while the 5h limit has room, red once the 5h limit or a weekly
+ * limit (the general one or a model's, such as Fable) is used up, since Claude then refuses
+ * sessions too. Undefined when nothing is known or the login expired, so the usage cannot be trusted.
  */
-export function nameTone(acc: ToneAccount, warnThreshold = 80): Tone | undefined {
+export function nameTone(acc: ToneAccount): "ok" | "danger" | undefined {
   if (acc.needsReauthorization) return undefined;
-  if (consumedWeekly(acc)) return "danger";
-  const percent = sessionPercent(acc);
-  return percent === undefined ? undefined : toneOfPercent(percent, warnThreshold);
+  const windows = acc.windows || [];
+  if (windows.length === 0) return undefined;
+  return windows.some((w) => w.percent >= 100) ? "danger" : "ok";
 }
 
 /** A line for the name's tooltip explaining its color. */
 export function nameToneDescription(acc: ToneAccount): string | undefined {
   if (acc.needsReauthorization) return undefined;
+  const windows = acc.windows || [];
   const weekly = consumedWeekly(acc);
   if (weekly) return `${weekly.label || "Weekly limit"} used up: sessions are blocked too`;
+  const used = windows.find((w) => w.percent >= 100);
+  if (used) return used.kind === "session" ? "5h limit used up" : `${used.label || "A limit"} used up`;
   const percent = sessionPercent(acc);
   if (percent === undefined) return undefined;
-  return (acc.windows || []).some((w) => w.kind === "session") ? `5h limit: ${percent}% used` : `Most used limit: ${percent}%`;
+  return windows.some((w) => w.kind === "session") ? `5h limit: ${percent}% used` : `Most used limit: ${percent}%`;
 }
 
 export type ResetTone = "imminent" | "soon" | "far";

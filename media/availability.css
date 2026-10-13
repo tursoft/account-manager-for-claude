@@ -7,7 +7,6 @@
   --ok: var(--vscode-charts-green, #3fb950);
   --warn: var(--vscode-charts-yellow, #d29922);
   --danger: var(--vscode-charts-red, #f85149);
-  --orange: var(--vscode-charts-orange, #d18616);
   --claude: #d97757;
   --label-w: 210px;
   --radius: 8px;
@@ -763,15 +762,10 @@ button.link {
   transform: translate(-50%, 0);
 }
 
-/* Account names are colored by the 5h limit (red while a weekly limit is used up). */
+/* Account names: green while the 5h limit has room, red once the 5h or a weekly limit is used up. */
 .name.tone-ok,
 .now-name.tone-ok {
   color: var(--ok);
-}
-
-.name.tone-warn,
-.now-name.tone-warn {
-  color: var(--orange);
 }
 
 .name.tone-danger,

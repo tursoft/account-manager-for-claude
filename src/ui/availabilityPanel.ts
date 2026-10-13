@@ -12,8 +12,6 @@ export interface AvailabilityDeps {
   history: UsageHistory;
   /** The accounts panel's sort and filters, which the calendar starts from. */
   getInitialListing: () => ListingSettings;
-  /** The warning threshold (%) the usage colors are based on. */
-  getWarnThreshold: () => number;
   /** Saves a new custom order of the accounts (the same order the accounts panel uses). */
   reorder: (ids: string[]) => Promise<void>;
 }
@@ -84,7 +82,6 @@ export class AvailabilityPanel {
           now,
           points,
           accounts: await this.accounts(),
-          warnThreshold: this.deps.getWarnThreshold(),
         });
         break;
       }

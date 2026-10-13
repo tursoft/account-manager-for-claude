@@ -274,7 +274,7 @@
           "default": 80,
           "minimum": 1,
           "maximum": 100,
-          "markdownDescription": "Usage threshold (%) from which limit bars, account names, and the status bar turn red. They turn orange from 75% of it (60% by default)."
+          "markdownDescription": "Usage threshold (%) from which limit bars and the status bar turn red. They turn orange from 75% of it (60% by default)."
         },
         "tursoftClaudeSwitcher.claudeCommand": {
           "type": "string",

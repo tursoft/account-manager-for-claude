@@ -283,8 +283,8 @@ import {
     // Avatar on the left inside the card; everything else stacks in the body.
     const body = el("div", "card-body");
     const head = el("div", "card-head");
-    // The name's color follows the 5h limit (red whenever a weekly limit is used up).
-    const tone = nameTone(acc, warn);
+    // Green while the 5h limit has room; red once the 5h or a weekly limit is used up.
+    const tone = nameTone(acc);
     const name = el("span", "name" + (tone ? ` tone-${tone}` : ""), acc.label);
     name.title = [acc.label, nameToneDescription(acc), acc.isActive ? "Active in Claude Code" : "", "Double-click to copy"]
       .filter(Boolean)
@@ -717,7 +717,7 @@ import {
 
     if (session.status === "unsaved") {
       const usage = { windows: session.windows || [] };
-      const tone = nameTone(usage, state.warnThreshold || 80);
+      const tone = nameTone(usage);
       const name = el("div", "session-name" + (tone ? ` tone-${tone}` : ""), session.label || "Unidentified account");
       name.title = [name.textContent, nameToneDescription(usage), "Double-click to copy"].filter(Boolean).join("\n");
       if (session.label) copyOnDoubleClick(name); // no id: the unsaved current login

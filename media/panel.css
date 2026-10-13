@@ -452,15 +452,10 @@ button:focus-visible {
   min-height: 22px;
 }
 
-/* Account names are colored by the 5h limit (red while a weekly limit is used up). */
+/* Account names: green while the 5h limit has room, red once the 5h or a weekly limit is used up. */
 .name.tone-ok,
 .session-name.tone-ok {
   color: var(--ok);
-}
-
-.name.tone-warn,
-.session-name.tone-warn {
-  color: var(--orange);
 }
 
 .name.tone-danger,

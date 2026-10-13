@@ -1022,26 +1022,28 @@ function runToneTests(): void {
   const w = (kind: string, percent: number, label?: string) => ({ kind, label: label ?? kind, percent });
   const acc = (windows: ReturnType<typeof w>[], needsReauthorization = false) => ({ windows, needsReauthorization });
   check(
-    "default thresholds: 59 ok, 60 warn, 79 warn, 80 danger, 100 danger",
+    "bar thresholds: 59 ok, 60 warn, 79 warn, 80 danger, 100 danger",
     [59, 60, 79, 80, 100].map((p) => toneOfPercent(p)).join() === "ok,warn,warn,danger,danger"
   );
   check("a custom threshold scales both steps", toneOfPercent(67, 90) === "ok" && toneOfPercent(68, 90) === "warn" && toneOfPercent(90, 90) === "danger");
   check(
-    "the name follows the 5h limit",
-    nameTone(acc([w("session", 7)])) === "ok" && nameTone(acc([w("session", 65)])) === "warn" && nameTone(acc([w("session", 100)])) === "danger"
+    "the name is green while the 5h limit has room, even at 65% or 99%",
+    nameTone(acc([w("session", 7)])) === "ok" && nameTone(acc([w("session", 65)])) === "ok" && nameTone(acc([w("session", 99)])) === "ok"
   );
+  check("the name is red once the 5h limit is used up", nameTone(acc([w("session", 100)])) === "danger");
   check("other limits below 100% do not change it", nameTone(acc([w("session", 7), w("weekly_fable", 99)])) === "ok");
   check(
     "a used-up weekly limit makes the name red although 5h is free",
     nameTone(acc([w("session", 0), w("weekly_fable", 100, "Weekly (Fable)")])) === "danger"
   );
   check("the general weekly limit counts too", nameTone(acc([w("session", 10), w("weekly_all", 100)])) === "danger");
-  check("without a 5h reading the most used limit decides", nameTone(acc([w("weekly_all", 65)])) === "warn");
+  check("without a 5h reading it is green until a limit is used up", nameTone(acc([w("weekly_all", 65)])) === "ok" && nameTone(acc([w("weekly_all", 100)])) === "danger");
   check("no usage data: no color", nameTone(acc([])) === undefined);
   check("an expired login gets no color", nameTone(acc([w("session", 100)], true)) === undefined);
   check(
     "the tooltip line explains the color",
     nameToneDescription(acc([w("session", 7)])) === "5h limit: 7% used" &&
+      nameToneDescription(acc([w("session", 100)])) === "5h limit used up" &&
       nameToneDescription(acc([w("session", 0), w("weekly_fable", 100, "Weekly (Fable)")])) === "Weekly (Fable) used up: sessions are blocked too" &&
       nameToneDescription(acc([w("weekly_all", 30)])) === "Most used limit: 30%" &&
       nameToneDescription(acc([])) === undefined

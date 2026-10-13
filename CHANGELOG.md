@@ -30,9 +30,9 @@ First release of the Tursoft fork of
 - Double-click an account's name to copy it (in the panel and the availability calendar).
 - The account icon shows the limit state: green while a limit is left, orange once one is used up,
   gray when usage is unknown or the login expired.
-- Account names are colored by the 5h limit (green, orange from 60%, red from 80%), and red whenever
-  a weekly limit is used up. The thresholds follow `warnThresholdPercent`, as the usage bars and the
-  status bar do.
+- Account names are green while the 5h limit has room and red once the 5h limit or a weekly limit
+  (the general one or a model's, such as Fable) is used up. The usage bars and the status bar keep
+  their thresholds from `warnThresholdPercent`.
 - The reset time of a limit that is used up is colored: yellow under 10 minutes, orange under an
   hour, red beyond a day (gray while some limit is left). Relative times now update every 30 seconds.
 - Optional usage history (collected every minute by default, kept 90 days, stored locally) and a

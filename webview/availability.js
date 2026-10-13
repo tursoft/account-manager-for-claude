@@ -31,12 +31,9 @@ let listing = { ...DEFAULT_LISTING };
 let anchor = startOfDay(Date.now());
 let data = null;
 
-/** The warning threshold (%) the usage colors are based on; set in the extension's settings. */
-const warnLimit = () => (data && data.warnThreshold) || 80;
-
-/** Tone class and tooltip for an account's name, from its 5h limit (red while a weekly limit is used up). */
+/** Tone class and tooltip for an account's name: green while the 5h limit has room, red once the 5h or a weekly limit is used up. */
 function nameStyle(acc, extraTitle) {
-  const tone = nameTone(acc, warnLimit());
+  const tone = nameTone(acc);
   return {
     className: tone ? ` tone-${tone}` : "",
     title: [extraTitle, nameToneDescription(acc), "Double-click to copy"].filter(Boolean).join("\n"),
