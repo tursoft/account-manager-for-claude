@@ -43,7 +43,8 @@ body {
   stroke-linejoin: round;
 }
 
-.ico circle[r="1.2"] {
+.ico circle[r="1.2"],
+.ico .solid {
   fill: currentColor;
   stroke: none;
 }
@@ -606,6 +607,121 @@ button:focus-visible {
   margin-top: 8px;
   width: 100%;
   justify-content: center;
+}
+
+/* ---- about sheet ---------------------------------------------------- */
+
+#about {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 10px;
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--vscode-sideBar-background, #000) 55%, transparent);
+  backdrop-filter: blur(2px);
+  animation: fade-in 0.15s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.about-card {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  max-width: 320px;
+  padding: 18px 16px 14px;
+  text-align: center;
+  border: 1px solid var(--vscode-menu-border, var(--border));
+  border-radius: 10px;
+  background: var(--vscode-editorWidget-background, var(--vscode-menu-background));
+  box-shadow: 0 10px 30px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.35));
+  animation: menu-in 0.18s ease-out;
+}
+
+.about-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.about-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.about-card h2 {
+  margin: 8px 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.about-version {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.about-desc {
+  margin: 10px 0 12px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.about-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 10px;
+  margin: 0;
+  padding: 10px 0;
+  text-align: left;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.about-meta dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.about-meta dd {
+  margin: 0;
+  font-size: 11.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.about-card a {
+  color: var(--vscode-textLink-foreground, var(--accent));
+  text-decoration: none;
+}
+
+.about-card a:hover {
+  text-decoration: underline;
+}
+
+.about-fork {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.about-license {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
 }
 
 /* ---- empty state ---------------------------------------------------- */

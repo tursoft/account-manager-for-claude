@@ -48,7 +48,8 @@ export function activate(context: vscode.ExtensionContext): void {
     profileActivity
   );
   const statusBar = new StatusBarController(store);
-  const viewProvider = new AccountsViewProvider(context.extensionUri, store);
+  const extensionVersion = String(context.extension.packageJSON.version ?? "");
+  const viewProvider = new AccountsViewProvider(context.extensionUri, store, extensionVersion);
 
   const config = () => vscode.workspace.getConfiguration("tursoftClaudeSwitcher");
   const getInterval = () =>
@@ -630,6 +631,13 @@ export function activate(context: vscode.ExtensionContext): void {
       profileActivity.setActiveProfile(store.getActiveId());
       vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
       refreshUI();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.about", async () => {
+      await vscode.commands.executeCommand("tursoftClaudeSwitcher.accountsView.focus");
+      viewProvider.showAbout();
     })
   );
 

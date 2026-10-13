@@ -12,6 +12,14 @@ interface CurrentSessionView {
   subscriptionType?: string;
 }
 
+/** Links the About sheet may open; anything else from the webview is ignored. */
+const ABOUT_LINKS = new Set([
+  "https://tursoft.net",
+  "mailto:tursoft@gmail.com",
+  "https://github.com/tursoft/claude-account-switcher",
+  "https://github.com/KrzysztofZander/claude-account-switcher",
+]);
+
 interface ViewAccount {
   id: string;
   label: string;
@@ -29,10 +37,12 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "tursoftClaudeSwitcher.accountsView";
   private view?: vscode.WebviewView;
   private currentSession?: CurrentSessionView;
+  private aboutPending = false;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly store: AccountStore
+    private readonly store: AccountStore,
+    private readonly version: string
   ) {}
 
   /** Records the current Claude Code login so an unsaved one can be offered for saving. */
@@ -51,6 +61,15 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     this.refresh();
   }
 
+  /** Opens the About sheet in the panel (once the view is visible). */
+  showAbout(): void {
+    if (this.view) {
+      void this.view.webview.postMessage({ type: "showAbout" });
+    } else {
+      this.aboutPending = true;
+    }
+  }
+
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
     webviewView.webview.options = {
@@ -59,10 +78,16 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     };
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
-    webviewView.webview.onDidReceiveMessage((msg: { type: string; id?: string; ids?: string[] }) => {
+    webviewView.webview.onDidReceiveMessage(
+      (msg: { type: string; id?: string; ids?: string[]; url?: string }) => {
       switch (msg.type) {
         case "loginCurrent":
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
+          break;
+        case "openLink":
+          if (msg.url && ABOUT_LINKS.has(msg.url)) {
+            void vscode.env.openExternal(vscode.Uri.parse(msg.url));
+          }
           break;
         case "reorder":
           if (Array.isArray(msg.ids)) {
@@ -73,6 +98,10 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           break;
         case "ready":
           this.refresh();
+          if (this.aboutPending) {
+            this.aboutPending = false;
+            void webviewView.webview.postMessage({ type: "showAbout" });
+          }
           break;
         case "switch":
           if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", msg.id);
@@ -115,7 +144,8 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.undoSwitch");
           break;
       }
-    });
+      }
+    );
 
     this.refresh();
   }
@@ -157,6 +187,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         accounts,
         warnThreshold,
         currentSession: this.currentSession,
+        version: this.version,
       });
     });
   }
@@ -169,8 +200,12 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, "media", "panel.css")
     );
+    const iconUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, "media", "icon.png")
+    );
     const csp = [
       "default-src 'none'",
+      `img-src ${webview.cspSource}`,
       `style-src ${webview.cspSource}`,
       `script-src 'nonce-${nonce}'`,
       `font-src ${webview.cspSource}`,
@@ -192,6 +227,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <span class="spacer"></span>
     <button id="sayHiBtn" class="icon-btn" title="Say Hi on all inactive accounts" aria-label="Say Hi on all inactive accounts"></button>
     <button id="refreshBtn" class="icon-btn" title="Refresh usage limits" aria-label="Refresh usage limits"></button>
+    <button id="aboutBtn" class="icon-btn" title="About" aria-label="About"></button>
   </div>
   <div id="filters" class="hidden">
     <label class="search">
@@ -219,6 +255,31 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   </div>
   <div id="session"></div>
   <div id="menu" class="hidden" role="menu"></div>
+  <div id="about" class="hidden" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <div class="about-card">
+      <button id="aboutClose" class="icon-btn about-close" title="Close" aria-label="Close"></button>
+      <img class="about-logo" src="${iconUri}" alt="" />
+      <h2 id="aboutTitle">Tursoft Claude Multi-Account Switcher</h2>
+      <p class="about-version">Version <span id="aboutVersion"></span></p>
+      <p class="about-desc">Quickly switch between Claude accounts in Claude Code, with live usage limits.</p>
+      <dl class="about-meta">
+        <dt>Author</dt>
+        <dd>Muhammet Turşak</dd>
+        <dt>Email</dt>
+        <dd><a href="#" data-link="mailto:tursoft@gmail.com">tursoft@gmail.com</a></dd>
+        <dt>Website</dt>
+        <dd><a href="#" data-link="https://tursoft.net">tursoft.net</a></dd>
+        <dt>Source</dt>
+        <dd><a href="#" data-link="https://github.com/tursoft/claude-account-switcher">tursoft/claude-account-switcher</a></dd>
+      </dl>
+      <p class="about-fork">
+        Forked from
+        <a href="#" data-link="https://github.com/KrzysztofZander/claude-account-switcher">KrzysztofZander/claude-account-switcher</a>
+        by Krzysztof Zander. Thanks for the original work!
+      </p>
+      <p class="about-license">MIT License</p>
+    </div>
+  </div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

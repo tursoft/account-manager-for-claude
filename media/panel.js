@@ -22,6 +22,7 @@
     personAdd: '<circle cx="6.5" cy="5.5" r="2.5"/><path d="M2 13.5c.5-2.5 2.3-3.5 4.5-3.5s4 1 4.5 3.5M12.5 5v4M10.5 7h4"/>',
     up: '<path d="M8 13V3M4 7l4-4 4 4"/>',
     down: '<path d="M8 3v10M4 9l4 4 4-4"/>',
+    info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.2V11"/><circle cx="8" cy="5" r=".6" class="solid"/>',
     close: '<path d="M4 4l8 8M12 4l-8 8"/>',
     search: '<circle cx="7" cy="7" r="4.25"/><path d="m10.2 10.2 3.3 3.3"/>',
     save: '<path d="M3 2.5h8l2 2v9H3z"/><path d="M5.5 2.5v3h4v-3M5.5 13.5v-4h5v4"/>',
@@ -53,9 +54,47 @@
   bindToolbar("refreshBtn", "refreshAll", "refresh");
   bindToolbar("emptyLoginBtn", "login");
 
+  // ---- about sheet ------------------------------------------------------
+
+  const aboutEl = document.getElementById("about");
+  const aboutBtn = document.getElementById("aboutBtn");
+  const aboutClose = document.getElementById("aboutClose");
+  aboutBtn.appendChild(icon("info"));
+  aboutClose.appendChild(icon("close"));
+
+  function showAbout() {
+    closeMenu();
+    document.getElementById("aboutVersion").textContent = state.version || "";
+    aboutEl.classList.remove("hidden");
+    aboutClose.focus();
+  }
+
+  function hideAbout() {
+    if (aboutEl.classList.contains("hidden")) return;
+    aboutEl.classList.add("hidden");
+    aboutBtn.focus();
+  }
+
+  aboutBtn.addEventListener("click", showAbout);
+  aboutClose.addEventListener("click", hideAbout);
+  aboutEl.addEventListener("click", (e) => {
+    if (e.target === aboutEl) hideAbout();
+  });
+  for (const a of aboutEl.querySelectorAll("a[data-link]")) {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      vscode.postMessage({ type: "openLink", url: a.dataset.link });
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") hideAbout();
+  });
+
   window.addEventListener("message", (event) => {
     const msg = event.data;
-    if (msg.type === "state") {
+    if (msg.type === "showAbout") {
+      showAbout();
+    } else if (msg.type === "state") {
       state = msg;
       closeMenu();
       // Re-rendering mid-drag would destroy the dragged card; catch up on dragend.

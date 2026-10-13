@@ -135,6 +135,7 @@ the account on each computer separately instead of copying credential files betw
 | `Claude: Complete profile reauthorization` | imports the completed isolated login into that same profile |
 | `Claude: Undo last switch` | restores the previous account from `.bak` |
 | `Claude: Remove / Rename account profile` | manage profiles |
+| `Claude: About Tursoft Claude Multi-Account Switcher` | shows version, author, and fork information |
 
 ## Settings
 

@@ -122,6 +122,12 @@
       {
         "command": "tursoftClaudeSwitcher.openPanel",
         "title": "Claude: Show accounts panel"
+      },
+      {
+      {
+        "command": "tursoftClaudeSwitcher.about",
+        "title": "Claude: About Tursoft Claude Multi-Account Switcher",
+        "icon": "$(info)"
       }
     ],
     "menus": {
@@ -160,6 +166,11 @@
           "command": "tursoftClaudeSwitcher.reauthorizeProfile",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@6"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.about",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "navigation@9"
         }
       ],
       "commandPalette": [
