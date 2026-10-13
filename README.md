@@ -43,6 +43,8 @@ and re-login.
   the panel says so. New accounts are named after their email and can be renamed later.
 - **Limit reset notifications** — get notified when a used-up session, weekly, or
   model-specific weekly limit becomes available again, with a one-click **Switch**.
+- **Backup / restore** — export the account list (including tokens) to an AES-256
+  password-protected ZIP and restore it later or on another machine.
 
 ## Requirements
 
@@ -135,6 +137,8 @@ the account on each computer separately instead of copying credential files betw
 | `Claude: Complete profile reauthorization` | imports the completed isolated login into that same profile |
 | `Claude: Undo last switch` | restores the previous account from `.bak` |
 | `Claude: Remove / Rename account profile` | manage profiles |
+| `Claude: Back up account list (password-protected ZIP)` | saves all profiles and their tokens to an encrypted ZIP |
+| `Claude: Restore account list from backup` | merges a backup into the list (never replaces newer tokens) |
 | `Claude: About Tursoft Claude Multi-Account Switcher` | shows version, author, and fork information |
 
 ## Settings
@@ -218,6 +222,7 @@ directories would each try to spend the same single-use refresh token.
 - Currently the file-based `.credentials.json` model is supported (Windows/Linux). The macOS
   Keychain is not supported yet.
 
+## Backup and restore
 ## Development
 
 ### Prerequisites

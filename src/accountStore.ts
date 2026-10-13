@@ -4,7 +4,7 @@ import {
   sameNonEmptyToken,
   shouldPreferCredentialCandidate,
 } from "./credentialValidation";
-import { hasIdentity, profileMatchesIdentity } from "./identity";
+import { hasIdentity, profileIdentity, profileMatchesIdentity } from "./identity";
 import { tokenFingerprint } from "./oauth";
 import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "./types";
 
@@ -117,6 +117,49 @@ export class AccountStore {
       p.label = label;
       await this.saveProfiles(profiles);
     }
+  }
+
+  /** All profiles (in display order) with their stored tokens, for backups. */
+  async exportAll(): Promise<{ profile: AccountProfile; creds: OAuthCreds | null }[]> {
+    return Promise.all(
+      this.list().map(async (profile) => ({ profile, creds: await this.getCreds(profile.id) }))
+    );
+  }
+
+  /**
+   * Merges backed-up profiles into the list. A profile that already exists (same id
+   * or same account identity) only takes the backup's tokens when they are a newer
+   * generation, so restoring an old backup never rolls a live login back. Missing
+   * profiles are appended in backup order.
+   */
+  async restore(
+    entries: { profile: AccountProfile; creds: OAuthCreds | null }[]
+  ): Promise<{ added: number; updated: number; unchanged: number }> {
+    const result = { added: 0, updated: 0, unchanged: 0 };
+    for (const { profile, creds } of entries) {
+      const identity = profileIdentity(profile);
+      const existing =
+        this.get(profile.id) ?? (identity ? this.findByIdentity(identity) : undefined);
+      if (existing) {
+        if (creds && (await this.updateCredsIfNewer(existing.id, creds))) {
+          result.updated++;
+        } else {
+          result.unchanged++;
+        }
+        continue;
+      }
+
+      const profiles = this.profiles;
+      const maxOrder = profiles.reduce((m, p) => Math.max(m, p.order), -1);
+      const { lastUsage: _lastUsage, ...rest } = profile;
+      profiles.push({ ...rest, order: maxOrder + 1 });
+      await this.saveProfiles(profiles);
+      if (creds) {
+        await this.setCreds(profile.id, creds);
+      }
+      result.added++;
+    }
+    return result;
   }
 
   /** Persists a new display order; ids missing from `orderedIds` keep their relative order at the end. */

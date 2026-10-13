@@ -5,6 +5,7 @@ import { parseUsage, UsagePoller } from "../src/usage";
 import { CredentialsManager } from "../src/credentials";
 import { requiresProfileReauthorization, TokenRefresher } from "../src/oauth";
 import { AccountStore } from "../src/accountStore";
+import { createBackupZip, readBackupZip } from "../src/backup";
 import { buildBrowserAuthorizationUrl, parseBrowserTokenResponse } from "../src/browserOAuth";
 import { claudeLockPaths, withClaudeConfigLocks } from "../src/claudeLock";
 import { CredentialSync } from "../src/credentialSync";
@@ -679,6 +680,55 @@ async function runTokenRefresherTests(): Promise<void> {
   }
 }
 
+async function runBackupTests(): Promise<void> {
+  console.log("backup / restore / reorder:");
+  const creds = (access: string, expiresAt: number): OAuthCreds => ({
+    accessToken: access,
+    refreshToken: access + "-refresh",
+    expiresAt,
+    subscriptionType: "pro",
+  });
+  const source = createStore();
+  const a = await source.addFromCreds("A", creds("a1", 1000), {
+    identity: { accountUuid: "acc-a", email: "a@example.com" },
+  });
+  const b = await source.addFromCreds("B", creds("b1", 1000), {
+    identity: { accountUuid: "acc-b", email: "b@example.com" },
+  });
+  await source.updateUsage(a.id, { fetchedAt: 1, windows: [], sessionPercent: 5, weeklyPercent: 5 });
+
+  await source.reorder([b.id, a.id]);
+  check("reorder persists the new order", source.list().map((p) => p.label).join() === "B,A");
+
+  const zip = await createBackupZip(await source.exportAll(), "correct horse");
+  check("backup is a ZIP archive", zip[0] === 0x50 && zip[1] === 0x4b);
+  check("backup does not contain plain-text tokens", !Buffer.from(zip).toString("latin1").includes("a1-refresh"));
+
+  let wrongPassword = "";
+  try {
+    await readBackupZip(zip, "wrong password");
+  } catch (e) {
+    wrongPassword = (e as Error).message;
+  }
+  check("wrong backup password is rejected", wrongPassword === "Wrong password.");
+
+  const entries = await readBackupZip(zip, "correct horse");
+  check("backup round-trips all accounts", entries.length === 2);
+  check("backup omits usage snapshots", entries.every((e) => e.profile.lastUsage === undefined));
+
+  const fresh = createStore();
+  const first = await fresh.restore(entries);
+  check("restore adds missing accounts", first.added === 2 && fresh.list().length === 2);
+  check("restore keeps backup order", fresh.list().map((p) => p.label).join() === "B,A");
+  check("restore stores tokens", (await fresh.getCreds(a.id))?.accessToken === "a1");
+
+  // The live profile has rotated since the backup: an old backup must not roll it back.
+  await fresh.updateCreds(a.id, creds("a2", 2000));
+  const second = await fresh.restore(entries);
+  check("restore does not duplicate existing accounts", second.added === 0 && fresh.list().length === 2);
+  check("restore keeps newer live tokens", (await fresh.getCreds(a.id))?.accessToken === "a2");
+}
+
 function runLimitResetTests(): void {
   console.log("limit reset detection:");
   const snap = (windows: [string, number][]): UsageSnapshot => ({
@@ -703,6 +753,7 @@ runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();
 runAccountStoreTests()
+  .then(runBackupTests)
   .then(runClaudeLockTests)
   .then(runCredentialSyncTests)
   .then(runUsagePollerTests)

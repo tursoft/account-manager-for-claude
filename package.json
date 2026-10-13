@@ -124,6 +124,15 @@
         "title": "Claude: Show accounts panel"
       },
       {
+        "command": "tursoftClaudeSwitcher.backupAccounts",
+        "title": "Claude: Back up account list (password-protected ZIP)",
+        "icon": "$(archive)"
+      },
+      {
+        "command": "tursoftClaudeSwitcher.restoreAccounts",
+        "title": "Claude: Restore account list from backup",
+        "icon": "$(history)"
+      },
       {
         "command": "tursoftClaudeSwitcher.about",
         "title": "Claude: About Tursoft Claude Multi-Account Switcher",
@@ -171,6 +180,16 @@
           "command": "tursoftClaudeSwitcher.about",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@9"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.backupAccounts",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "backup@1"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.restoreAccounts",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "backup@2"
         }
       ],
       "commandPalette": [
@@ -257,5 +276,8 @@
     "@vscode/vsce": "^3.2.0",
     "esbuild": "^0.24.0",
     "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "^2.23.0"
   }
 }

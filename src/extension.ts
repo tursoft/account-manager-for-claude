@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
+import * as os from "os";
 import * as vscode from "vscode";
 import { AccountStore } from "./accountStore";
 import { AccountWindowService } from "./accountWindow";
@@ -13,6 +14,7 @@ import {
 import { CredentialSync, CurrentAccountState } from "./credentialSync";
 import { hasUsableOAuthCreds, sameNonEmptyToken } from "./credentialValidation";
 import { CredentialsManager } from "./credentials";
+import { BackupError, createBackupZip, MIN_BACKUP_PASSWORD_LENGTH, readBackupZip } from "./backup";
 import { defaultProfileLabel, identityLabel, profileIdentity, sameIdentity } from "./identity";
 import { getAccountConfigDir } from "./isolatedConfig";
 import { LimitResetNotifier } from "./limitNotifier";
@@ -631,6 +633,122 @@ export function activate(context: vscode.ExtensionContext): void {
       profileActivity.setActiveProfile(store.getActiveId());
       vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
       refreshUI();
+    })
+  );
+
+  // --- Backup / restore ---
+
+  const askBackupPassword = async (confirm: boolean): Promise<string | undefined> => {
+    const password = await vscode.window.showInputBox({
+      title: confirm ? "Back up accounts: choose a password" : "Restore accounts: backup password",
+      prompt: confirm
+        ? "The backup contains login tokens. Anyone with the file and this password can use your accounts."
+        : "Password used when the backup was created",
+      password: true,
+      ignoreFocusOut: true,
+      validateInput: (v) =>
+        confirm && v.length < MIN_BACKUP_PASSWORD_LENGTH
+          ? `Use at least ${MIN_BACKUP_PASSWORD_LENGTH} characters`
+          : v.length === 0
+            ? "Enter the password"
+            : undefined,
+    });
+    if (!password || !confirm) {
+      return password;
+    }
+    const again = await vscode.window.showInputBox({
+      title: "Back up accounts: confirm password",
+      password: true,
+      ignoreFocusOut: true,
+      validateInput: (v) => (v === password ? undefined : "Passwords do not match"),
+    });
+    return again === password ? password : undefined;
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.backupAccounts", async () => {
+      if (store.list().length === 0) {
+        vscode.window.showInformationMessage("There are no saved accounts to back up.");
+        return;
+      }
+      // Pull the newest token rotation of the current login into the vault first.
+      await synchronizeCurrentProfile();
+      const password = await askBackupPassword(true);
+      if (!password) {
+        return;
+      }
+      const date = new Date().toISOString().slice(0, 10);
+      const target = await vscode.window.showSaveDialog({
+        title: "Save account backup",
+        defaultUri: vscode.Uri.joinPath(
+          vscode.Uri.file(os.homedir()),
+          `claude-accounts-${date}.zip`
+        ),
+        filters: { "ZIP archive": ["zip"] },
+      });
+      if (!target) {
+        return;
+      }
+      try {
+        const entries = await store.exportAll();
+        const zip = await createBackupZip(entries, password, extensionVersion);
+        await vscode.workspace.fs.writeFile(target, zip);
+        vscode.window.showInformationMessage(
+          `Backed up ${entries.length} account(s) to ${target.fsPath}. Keep the file and its password safe.`
+        );
+      } catch (e) {
+        vscode.window.showErrorMessage(`Backup failed: ${(e as Error).message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.restoreAccounts", async () => {
+      const picked = await vscode.window.showOpenDialog({
+        title: "Restore account backup",
+        canSelectMany: false,
+        filters: { "ZIP archive": ["zip"] },
+      });
+      if (!picked?.[0]) {
+        return;
+      }
+      let data: Uint8Array;
+      try {
+        data = await vscode.workspace.fs.readFile(picked[0]);
+      } catch (e) {
+        vscode.window.showErrorMessage(`Could not read the backup: ${(e as Error).message}`);
+        return;
+      }
+
+      for (;;) {
+        const password = await askBackupPassword(false);
+        if (!password) {
+          return;
+        }
+        try {
+          const entries = await readBackupZip(data, password);
+          const res = await store.restore(entries);
+          await synchronizeCurrentProfile();
+          vscode.window.showInformationMessage(
+            `Restore finished: ${res.added} added, ${res.updated} updated with newer tokens, ` +
+              `${res.unchanged} already up to date.`
+          );
+          refreshUI();
+          void poller.pollAll(true);
+          return;
+        } catch (e) {
+          const message = e instanceof BackupError ? e.message : `Restore failed: ${(e as Error).message}`;
+          if (message === "Wrong password.") {
+            const retry = await vscode.window.showWarningMessage("Wrong password.", "Try again");
+            if (retry === "Try again") {
+              continue;
+            }
+            return;
+          }
+          vscode.window.showErrorMessage(message);
+          return;
+        }
+      }
     })
   );
 

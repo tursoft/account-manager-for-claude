@@ -22,6 +22,9 @@
     personAdd: '<circle cx="6.5" cy="5.5" r="2.5"/><path d="M2 13.5c.5-2.5 2.3-3.5 4.5-3.5s4 1 4.5 3.5M12.5 5v4M10.5 7h4"/>',
     up: '<path d="M8 13V3M4 7l4-4 4 4"/>',
     down: '<path d="M8 3v10M4 9l4 4 4-4"/>',
+    archive: '<rect x="2" y="3" width="12" height="3" rx="1"/><path d="M3 6v6.5a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5V6M6.5 8.5h3"/>',
+    download: '<path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/>',
+    upload: '<path d="M8 10.5v-8M4.5 6 8 2.5 11.5 6M3 13.5h10"/>',
     info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.2V11"/><circle cx="8" cy="5" r=".6" class="solid"/>',
     close: '<path d="M4 4l8 8M12 4l-8 8"/>',
     search: '<circle cx="7" cy="7" r="4.25"/><path d="m10.2 10.2 3.3 3.3"/>',
@@ -53,6 +56,17 @@
   bindToolbar("sayHiBtn", "sayHiAll", "hi");
   bindToolbar("refreshBtn", "refreshAll", "refresh");
   bindToolbar("emptyLoginBtn", "login");
+  bindToolbar("emptyRestoreBtn", "restore");
+
+  const toolsBtn = document.getElementById("toolsBtn");
+  toolsBtn.appendChild(icon("archive"));
+  toolsBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu(toolsBtn, "Account list", [
+      { icon: "download", label: "Back up accounts…", run: () => post("backup") },
+      { icon: "upload", label: "Restore from backup…", run: () => post("restore") },
+    ]);
+  });
 
   // ---- about sheet ------------------------------------------------------
 

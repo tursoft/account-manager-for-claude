@@ -84,6 +84,12 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         case "loginCurrent":
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
           break;
+        case "backup":
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.backupAccounts");
+          break;
+        case "restore":
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.restoreAccounts");
+          break;
         case "openLink":
           if (msg.url && ABOUT_LINKS.has(msg.url)) {
             void vscode.env.openExternal(vscode.Uri.parse(msg.url));
@@ -227,6 +233,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <span class="spacer"></span>
     <button id="sayHiBtn" class="icon-btn" title="Say Hi on all inactive accounts" aria-label="Say Hi on all inactive accounts"></button>
     <button id="refreshBtn" class="icon-btn" title="Refresh usage limits" aria-label="Refresh usage limits"></button>
+    <button id="toolsBtn" class="icon-btn" title="Backup and restore" aria-label="Backup and restore" aria-haspopup="menu"></button>
     <button id="aboutBtn" class="icon-btn" title="About" aria-label="About"></button>
   </div>
   <div id="filters" class="hidden">
@@ -250,6 +257,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <p>Save the account Claude Code is logged in with, or log in to another one.</p>
     <div class="empty-actions">
       <button id="emptyLoginBtn" class="tb-btn">Add account</button>
+      <button id="emptyRestoreBtn" class="tb-btn">Restore backup…</button>
     </div>
     <p class="hint">Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</p>
   </div>
