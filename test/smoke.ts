@@ -16,6 +16,17 @@ import { findResetWindows } from "../src/limitNotifier";
 import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHistory";
 import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal, usageDelta } from "../src/historySeries";
 import { buildTimeline, Segment } from "../src/availability";
+import {
+  DEFAULT_LISTING,
+  extraFilterLabels,
+  filtersActive,
+  ListAccount,
+  matchesListing,
+  normalizeListing,
+  scopesOf,
+  sortAccounts,
+  SortKey,
+} from "../src/listing";
 import { ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "../src/types";
 
 let failures = 0;
@@ -904,9 +915,67 @@ function runAvailabilityTests(): void {
   check("next available at the blocking reset", t.nextAvailableAt === 6 * h);
 }
 
+function runListingTests(): void {
+  console.log("account listing (sort and filters):");
+  const h = 3_600_000;
+  const now = Date.now();
+  const win = (kind: string, label: string, percent: number, resetIn?: number) => ({
+    kind,
+    label,
+    percent,
+    resetsAt: resetIn === undefined ? null : new Date(now + resetIn).toISOString(),
+  });
+  const accounts: ListAccount[] = [
+    { id: "limitedLate", label: "Limited late", subscriptionType: "pro", windows: [win("session", "Session (5h)", 100, 50 * h)] },
+    {
+      id: "avail30",
+      label: "Avail 30%",
+      subscriptionType: "Team",
+      windows: [win("session", "Session (5h)", 30, 3 * h), win("weekly_fable", "Weekly (Fable)", 20, 100 * h)],
+    },
+    { id: "unknown", label: "Unknown", windows: [] },
+    {
+      id: "limitedSoon",
+      label: "Limited soon",
+      subscriptionType: "max",
+      windows: [win("session", "Session (5h)", 100, 2 * h), win("weekly_all", "Weekly (all)", 40, 1 * h)],
+    },
+    { id: "avail80", label: "Avail 80%", subscriptionType: "free", isActive: true, windows: [win("session", "Session (5h)", 80, 10 * h)] },
+  ];
+  const order = new Map(accounts.map((a, i) => [a.id, i]));
+  const sorted = (sort: SortKey) => sortAccounts(accounts, order, sort).map((a) => a.id).join(">");
+  const shown = (patch: Partial<typeof DEFAULT_LISTING>) =>
+    accounts.filter((a) => matchesListing(a, { ...DEFAULT_LISTING, ...patch })).map((a) => a.id).join();
+
+  check("custom keeps the user's order", sorted("custom") === "limitedLate>avail30>unknown>limitedSoon>avail80");
+  check("available first: most headroom, unknown, then soonest to free up", sorted("available") === "avail30>avail80>unknown>limitedSoon>limitedLate");
+  check("most usage left first, ties in custom order", sorted("remaining") === "avail30>avail80>limitedLate>limitedSoon>unknown");
+  check("resetting soonest first, unknown last", sorted("reset") === "limitedSoon>avail30>avail80>limitedLate>unknown");
+  check("plan: team, max, pro, free, unknown", sorted("plan") === "avail30>limitedSoon>limitedLate>avail80>unknown");
+  check("name A-Z ignores case", sorted("name") === "avail30>avail80>limitedLate>limitedSoon>unknown");
+  check("sorting does not change the input", accounts.map((a) => a.id).join() === "limitedLate,avail30,unknown,limitedSoon,avail80");
+
+  check("filter: available", shown({ limit: "available" }) === "avail30,avail80");
+  check("filter: limited", shown({ limit: "limited" }) === "limitedLate,limitedSoon");
+  check("filter: plan", shown({ plan: "team" }) === "avail30");
+  check("filter: with a Fable limit", shown({ scope: "has:fable" }) === "avail30");
+  check("filter: without a Fable limit", shown({ scope: "no:fable" }) === "limitedLate,unknown,limitedSoon,avail80");
+  check("filter: text matches the plan, name, and 'active'", shown({ text: "TEAM" }) === "avail30" && shown({ text: "late" }) === "limitedLate" && shown({ text: "active" }) === "avail80");
+  check("filters combine", shown({ limit: "available", plan: "free" }) === "avail80");
+  check("scopes list model limits, not the general weekly one", JSON.stringify(scopesOf(accounts[1])) === '{"fable":"Fable"}' && Object.keys(scopesOf(accounts[3])).length === 0);
+
+  check("normalize accepts good settings", JSON.stringify(normalizeListing({ text: "x", limit: "limited", plan: " Pro ", scope: "has:fable", sort: "plan" })) ===
+    JSON.stringify({ text: "x", limit: "limited", plan: "pro", scope: "has:fable", sort: "plan" }));
+  check("normalize falls back per field", JSON.stringify(normalizeListing({ sort: "bogus", limit: 3, scope: "weird", plan: "", text: 5 })) === JSON.stringify(DEFAULT_LISTING));
+  check("normalize survives junk", JSON.stringify(normalizeListing(null)) === JSON.stringify(DEFAULT_LISTING) && JSON.stringify(normalizeListing("x")) === JSON.stringify(DEFAULT_LISTING));
+  check("filter descriptions", extraFilterLabels({ ...DEFAULT_LISTING, plan: "team", scope: "no:fable" }).join() === "Team,without fable limit");
+  check("sort alone is not a filter", !filtersActive({ ...DEFAULT_LISTING, sort: "name" }) && filtersActive({ ...DEFAULT_LISTING, text: "a" }));
+}
+
 runProfileActivityTests();
 runHistorySeriesTests();
 runAvailabilityTests();
+runListingTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();

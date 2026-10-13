@@ -18,10 +18,10 @@ async function main() {
     logLevel: "info",
   });
 
-  // Scripts of the full-page views (analytics, availability); they run in the
-  // webview, so they are bundled for the browser with their libraries.
+  // Scripts of the webview pages (accounts panel, analytics, availability); they run in
+  // the webview, so they are bundled for the browser with their libraries.
   const webviews = await esbuild.context({
-    entryPoints: ["webview/analytics.js", "webview/availability.js"],
+    entryPoints: ["webview/panel.js", "webview/analytics.js", "webview/availability.js"],
     bundle: true,
     format: "iife",
     minify: production,

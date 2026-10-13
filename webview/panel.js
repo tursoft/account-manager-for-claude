@@ -1,3 +1,16 @@
+import {
+  extraFilterLabels,
+  filtersActive,
+  limitState,
+  matchesListing,
+  normalizeListing,
+  planName,
+  planOf,
+  scopesOf,
+  SORTS,
+  sortAccounts,
+} from "../src/listing";
+
 (function () {
   const vscode = acquireVsCodeApi();
   let state = { accounts: [], warnThreshold: 80 };
@@ -518,20 +531,15 @@
 
   // ---- render -----------------------------------------------------------
 
-  // ---- filters ----------------------------------------------------------
+  // ---- filters and sorting ------------------------------------------------
+  // The rules (what matches, how each sort orders) live in src/listing.ts, shared
+  // with the availability calendar.
 
   const filtersEl = document.getElementById("filters");
   const searchInput = document.getElementById("searchInput");
   const clearFiltersBtn = document.getElementById("clearFilters");
   const noMatchEl = document.getElementById("noMatch");
-  const saved = vscode.getState() || {};
-  let filter = {
-    text: saved.text || "",
-    limit: saved.limit || "all",
-    plan: saved.plan || "all",
-    scope: saved.scope || "any",
-    sort: saved.sort || "custom",
-  };
+  let filter = normalizeListing(vscode.getState());
 
   document.getElementById("searchIcon").appendChild(icon("search"));
   clearFiltersBtn.appendChild(icon("close"));
@@ -564,9 +572,8 @@
       vscode.postMessage({ type: "viewSettings", settings: persistedFilter() });
       return;
     }
-    for (const k of ["limit", "plan", "scope", "sort"]) {
-      if (typeof incoming[k] === "string") filter[k] = incoming[k];
-    }
+    const { limit, plan, scope, sort } = normalizeListing(incoming);
+    filter = { ...filter, limit, plan, scope, sort };
     vscode.setState(filter);
   }
 
@@ -586,26 +593,6 @@
     b.addEventListener("click", () => setFilter({ limit: b.dataset.filter }));
   }
   clearFiltersBtn.addEventListener("click", clearFilters);
-
-  /** Account type, lower-cased ("pro", "max", "team", ...); "unknown" when not reported. */
-  function planOf(acc) {
-    return (acc.subscriptionType || "").trim().toLowerCase() || "unknown";
-  }
-
-  function planName(plan) {
-    return plan === "unknown" ? "Unknown plan" : plan.charAt(0).toUpperCase() + plan.slice(1);
-  }
-
-  /** Scoped (model-specific) weekly limits of an account, e.g. {fable: "Fable"}. */
-  function scopesOf(acc) {
-    const scopes = {};
-    for (const w of acc.windows || []) {
-      const key = /^weekly_(.+)$/.exec(w.kind || "")?.[1];
-      if (!key || key === "all") continue;
-      scopes[key] = /\((.+)\)/.exec(w.label || "")?.[1] || key;
-    }
-    return scopes;
-  }
 
   const moreFiltersBtn = document.getElementById("moreFiltersBtn");
   moreFiltersBtn.appendChild(icon("funnel"));
@@ -631,16 +618,6 @@
     toggleMenu(moreFiltersBtn, "Filter accounts", items);
   });
 
-  // ---- sorting ----------------------------------------------------------
-
-  const SORTS = [
-    { key: "custom", label: "Custom order (drag to reorder)" },
-    { key: "available", label: "Available first, then soonest available" },
-    { key: "remaining", label: "Most usage left first" },
-    { key: "reset", label: "Resetting soonest first" },
-    { key: "plan", label: "Plan (Enterprise, Team, Max, Pro, Free)" },
-    { key: "name", label: "Name A–Z" },
-  ];
   const sortBtn = document.getElementById("sortBtn");
   sortBtn.appendChild(icon("sort"));
   sortBtn.addEventListener("click", (e) => {
@@ -656,82 +633,7 @@
     );
   });
 
-  /** Time (ms) at which every used-up limit of the account is available again; 0 = usable now. */
-  function availableAt(acc) {
-    const windows = acc.windows || [];
-    if (windows.length === 0) return Infinity;
-    let at = 0;
-    for (const w of windows) {
-      if (w.percent < 100) continue;
-      const t = w.resetsAt ? Date.parse(w.resetsAt) : NaN;
-      at = Math.max(at, Number.isFinite(t) ? t : Infinity);
-    }
-    return at;
-  }
-
-  /** Earliest upcoming reset of any limit; Infinity when unknown. */
-  function nextReset(acc) {
-    const times = (acc.windows || []).map((w) => (w.resetsAt ? Date.parse(w.resetsAt) : NaN)).filter(Number.isFinite);
-    return times.length ? Math.min(...times) : Infinity;
-  }
-
-  function headroom(acc) {
-    const windows = acc.windows || [];
-    return windows.length ? 100 - Math.max(...windows.map((w) => w.percent)) : -1;
-  }
-
-  const PLAN_ORDER = ["enterprise", "team", "max", "pro", "free"];
-
-  /** Larger plans first; plans not in PLAN_ORDER after them, unknown last. */
-  function planRank(acc) {
-    const plan = planOf(acc);
-    const i = PLAN_ORDER.indexOf(plan);
-    return i >= 0 ? i : plan === "unknown" ? PLAN_ORDER.length + 1 : PLAN_ORDER.length;
-  }
-
-  /** Orders `list` by the chosen sort; ties keep the custom order (`order` = index in state.accounts). */
-  function sortAccounts(list, order) {
-    if (filter.sort === "custom") return list;
-    const byOrder = (a, b) => order.get(a.id) - order.get(b.id);
-    const cmp = {
-      available: (a, b) => {
-        const rank = (x) => (limitState(x) === "available" ? 0 : limitState(x) === "unknown" ? 1 : 2);
-        const r = rank(a) - rank(b);
-        if (r) return r;
-        if (rank(a) === 0) return headroom(b) - headroom(a);
-        if (rank(a) === 2) return availableAt(a) - availableAt(b) || 0;
-        return 0;
-      },
-      remaining: (a, b) => headroom(b) - headroom(a),
-      reset: (a, b) => nextReset(a) - nextReset(b) || 0,
-      plan: (a, b) => planRank(a) - planRank(b),
-      name: (a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
-    }[filter.sort];
-    // Infinity - Infinity is NaN, which `||` turns into 0 so ties fall back to custom order.
-    return list.slice().sort((a, b) => cmp(a, b) || byOrder(a, b));
-  }
   document.getElementById("noMatchClear").addEventListener("click", clearFilters);
-
-  /** "limited" = some limit used up; "available" = usage known and every limit below 100%. */
-  function limitState(acc) {
-    const windows = acc.windows || [];
-    if (windows.some((w) => w.percent >= 100)) return "limited";
-    return windows.length > 0 ? "available" : "unknown";
-  }
-
-  function matchesFilter(acc) {
-    if (filter.limit !== "all" && limitState(acc) !== filter.limit) return false;
-    if (filter.plan !== "all" && planOf(acc) !== filter.plan) return false;
-    if (filter.scope !== "any") {
-      const [mode, key] = filter.scope.split(":");
-      if ((key in scopesOf(acc)) !== (mode === "has")) return false;
-    }
-    const q = filter.text.trim().toLowerCase();
-    if (!q) return true;
-    return [acc.label, acc.subscriptionType, acc.isActive ? "active" : ""]
-      .filter(Boolean)
-      .some((s) => s.toLowerCase().includes(q));
-  }
 
   function renderFilterBar(total) {
     filtersEl.classList.toggle("hidden", total === 0);
@@ -740,19 +642,11 @@
       b.classList.toggle("on", on);
       b.setAttribute("aria-checked", String(on));
     }
-    const extra = [];
-    if (filter.plan !== "all") extra.push(planName(filter.plan));
-    if (filter.scope !== "any") {
-      const [mode, key] = filter.scope.split(":");
-      extra.push(`${mode === "has" ? "with" : "without"} ${key} limit`);
-    }
+    const extra = extraFilterLabels(filter);
     moreFiltersBtn.classList.toggle("on", extra.length > 0);
     moreFiltersBtn.title = extra.length ? "Filter: " + extra.join(", ") : "Filter by plan or model limit";
     moreFiltersBtn.setAttribute("aria-label", moreFiltersBtn.title);
-    clearFiltersBtn.classList.toggle(
-      "hidden",
-      !filter.text && filter.limit === "all" && extra.length === 0
-    );
+    clearFiltersBtn.classList.toggle("hidden", !filtersActive(filter));
     const sort = SORTS.find((s) => s.key === filter.sort) || SORTS[0];
     sortBtn.title = "Sort: " + sort.label;
     sortBtn.setAttribute("aria-label", sortBtn.title);
@@ -810,7 +704,7 @@
     }
     emptyEl.classList.add("hidden");
     const order = new Map(accounts.map((a, i) => [a.id, i]));
-    const visible = sortAccounts(accounts.filter(matchesFilter), order);
+    const visible = sortAccounts(accounts.filter((a) => matchesListing(a, filter)), order, filter.sort);
     noMatchEl.classList.toggle("hidden", visible.length > 0);
     for (const acc of visible) {
       listEl.appendChild(card(acc, state.warnThreshold || 80));
@@ -853,7 +747,7 @@
     statsEl.classList.toggle("hidden", accounts.length === 0);
     if (accounts.length === 0) return;
 
-    const visible = accounts.filter(matchesFilter).length;
+    const visible = accounts.filter((a) => matchesListing(a, filter)).length;
     // An expired login cannot be used, whatever its last usage said.
     const usable = accounts.filter((a) => !a.needsReauthorization && (a.windows || []).length > 0);
     const count = (pred) => accounts.filter(pred).length;

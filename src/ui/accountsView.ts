@@ -130,7 +130,10 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     this.view = webviewView;
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "media")],
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.extensionUri, "media"),
+        vscode.Uri.joinPath(this.extensionUri, "dist", "webview"),
+      ],
     };
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
@@ -269,7 +272,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   private getHtml(webview: vscode.Webview): string {
     const nonce = getNonce();
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, "media", "panel.js")
+      vscode.Uri.joinPath(this.extensionUri, "dist", "webview", "panel.js")
     );
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, "media", "panel.css")

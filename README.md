@@ -304,8 +304,10 @@ npm install
 | `npm run typecheck` | runs `tsc --noEmit`; esbuild does not type-check |
 | `npm run test:smoke` | runs the smoke tests in `test/` |
 
-The webview UI (`media/panel.js`, `media/panel.css`) is plain JS/CSS and is loaded as-is, so it
-needs no build step.
+The webview pages (`webview/*.js`: the accounts panel, usage analytics, and availability
+calendar) are bundled by esbuild into `dist/webview/`, so run `npm run compile` (or `watch`) after
+editing them; only the stylesheets in `media/` are loaded as-is. Logic shared by pages, such as
+sorting and filtering the account list, lives in `src/` and is imported by the page scripts.
 
 ### Run and debug in VS Code
 
