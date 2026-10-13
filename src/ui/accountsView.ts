@@ -54,8 +54,25 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly store: AccountStore,
-    private readonly version: string
+    private readonly version: string,
+    private readonly memento: vscode.Memento
   ) {}
+
+  private static readonly VIEW_SETTINGS_KEY = "tursoftClaudeSwitcher.viewSettings";
+  /** Bumped when settings change outside the panel (a restore), so the panel adopts them. */
+  private viewSettingsRev = 0;
+
+  /** Panel choices (sort and filters), kept here so backups can include them. */
+  getViewSettings(): Record<string, unknown> {
+    return this.memento.get<Record<string, unknown>>(AccountsViewProvider.VIEW_SETTINGS_KEY) ?? {};
+  }
+
+  /** Replaces the panel choices (from a restored backup) and pushes them to the panel. */
+  async applyViewSettings(settings: Record<string, unknown>): Promise<void> {
+    await this.memento.update(AccountsViewProvider.VIEW_SETTINGS_KEY, settings);
+    this.viewSettingsRev++;
+    this.refresh();
+  }
 
   /** Records the current Claude Code login so an unsaved one can be offered for saving. */
   setCurrentSession(state: CurrentAccountState): void {
@@ -116,7 +133,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(
-      (msg: { type: string; id?: string; ids?: string[]; url?: string }) => {
+      (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown }) => {
       switch (msg.type) {
         case "loginCurrent":
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
@@ -130,6 +147,11 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         case "openLink":
           if (msg.url && ABOUT_LINKS.has(msg.url)) {
             void vscode.env.openExternal(vscode.Uri.parse(msg.url));
+          }
+          break;
+        case "viewSettings":
+          if (msg.settings && typeof msg.settings === "object" && !Array.isArray(msg.settings)) {
+            void this.memento.update(AccountsViewProvider.VIEW_SETTINGS_KEY, msg.settings);
           }
           break;
         case "reorder":
@@ -235,6 +257,8 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         },
         version: this.version,
         busy: this.busy,
+        viewSettings: this.getViewSettings(),
+        viewSettingsRev: this.viewSettingsRev,
       });
     });
   }

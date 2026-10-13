@@ -20,7 +20,8 @@ First release of the Tursoft fork of
   account list**), or states that no account is logged in.
 - New accounts are saved under their email automatically, with a **Rename** shortcut, instead
   of asking for a name first.
-- Password-protected (AES-256 ZIP) backup and restore of the account list.
+- Password-protected (AES-256 ZIP) backup and restore of the account list, including the panel's
+  sort and filter choices and the extension settings. Backup names carry a timestamp.
 - Notifications when a used-up session, weekly, or model-specific weekly limit becomes available
   again; a re-check is scheduled at each limit's reset time.
 - `autoRefresh` setting to turn regular checks on or off; the polling interval can now go down to

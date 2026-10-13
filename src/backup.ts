@@ -29,12 +29,26 @@ export interface BackupEntry {
   creds: OAuthCreds | null;
 }
 
+/** Preferences carried in a backup besides the accounts. */
+export interface BackupSettings {
+  /** Panel choices: sort order and filters. */
+  view?: Record<string, unknown>;
+  /** User-level `tursoftClaudeSwitcher.*` settings, keyed without the prefix. */
+  config?: Record<string, unknown>;
+}
+
+export interface BackupContents {
+  accounts: BackupEntry[];
+  settings?: BackupSettings;
+}
+
 interface BackupFile {
   format: typeof FORMAT;
   version: number;
   createdAt: string;
   extensionVersion?: string;
   accounts: BackupEntry[];
+  settings?: BackupSettings;
 }
 
 export class BackupError extends Error {}
@@ -42,7 +56,8 @@ export class BackupError extends Error {}
 export async function createBackupZip(
   entries: BackupEntry[],
   password: string,
-  extensionVersion?: string
+  extensionVersion?: string,
+  settings?: BackupSettings
 ): Promise<Uint8Array> {
   const file: BackupFile = {
     format: FORMAT,
@@ -54,6 +69,7 @@ export async function createBackupZip(
       const { lastUsage: _lastUsage, ...rest } = profile;
       return { profile: rest as AccountProfile, creds };
     }),
+    settings,
   };
   const writer = new ZipWriter(new Uint8ArrayWriter(), {
     password,
@@ -63,7 +79,7 @@ export async function createBackupZip(
   return writer.close();
 }
 
-export async function readBackupZip(data: Uint8Array, password: string): Promise<BackupEntry[]> {
+export async function readBackupZip(data: Uint8Array, password: string): Promise<BackupContents> {
   let text: string;
   const reader = new ZipReader(new Uint8ArrayReader(data));
   try {
@@ -101,8 +117,19 @@ export async function readBackupZip(data: Uint8Array, password: string): Promise
   if (typeof parsed.version !== "number" || parsed.version > FORMAT_VERSION) {
     throw new BackupError("The backup was made by a newer version of the extension; update it first.");
   }
-  return parsed.accounts.filter(
+  const accounts = parsed.accounts.filter(
     (a): a is BackupEntry =>
       Boolean(a && a.profile && typeof a.profile.id === "string" && typeof a.profile.label === "string")
   );
+  const settings = isRecord(parsed.settings)
+    ? {
+        view: isRecord(parsed.settings.view) ? parsed.settings.view : undefined,
+        config: isRecord(parsed.settings.config) ? parsed.settings.config : undefined,
+      }
+    : undefined;
+  return { accounts, settings };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

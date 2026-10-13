@@ -14,7 +14,13 @@ import {
 import { CredentialSync, CurrentAccountState } from "./credentialSync";
 import { hasUsableOAuthCreds, sameNonEmptyToken } from "./credentialValidation";
 import { CredentialsManager } from "./credentials";
-import { BackupError, createBackupZip, MIN_BACKUP_PASSWORD_LENGTH, readBackupZip } from "./backup";
+import {
+  BackupError,
+  BackupSettings,
+  createBackupZip,
+  MIN_BACKUP_PASSWORD_LENGTH,
+  readBackupZip,
+} from "./backup";
 import { defaultProfileLabel, identityLabel, profileIdentity, sameIdentity } from "./identity";
 import { getAccountConfigDir } from "./isolatedConfig";
 import { LimitResetNotifier } from "./limitNotifier";
@@ -51,7 +57,12 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   const statusBar = new StatusBarController(store);
   const extensionVersion = String(context.extension.packageJSON.version ?? "");
-  const viewProvider = new AccountsViewProvider(context.extensionUri, store, extensionVersion);
+  const viewProvider = new AccountsViewProvider(
+    context.extensionUri,
+    store,
+    extensionVersion,
+    context.globalState
+  );
 
   const config = () => vscode.workspace.getConfiguration("tursoftClaudeSwitcher");
   const getInterval = () =>
@@ -769,6 +780,38 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // --- Backup / restore ---
 
+  // Machine-specific settings stay out of backups.
+  const LOCAL_ONLY_SETTINGS = new Set(["credentialsPath"]);
+  const settingKeys = (): string[] =>
+    Object.keys(context.extension.packageJSON.contributes?.configuration?.properties ?? {})
+      .filter((k) => k.startsWith("tursoftClaudeSwitcher."))
+      .map((k) => k.slice("tursoftClaudeSwitcher.".length))
+      .filter((k) => !LOCAL_ONLY_SETTINGS.has(k));
+
+  /** Panel choices plus the user's own (global) extension settings. */
+  const collectBackupSettings = (): BackupSettings => {
+    const values: Record<string, unknown> = {};
+    for (const key of settingKeys()) {
+      const value = config().inspect(key)?.globalValue;
+      if (value !== undefined) {
+        values[key] = value;
+      }
+    }
+    return { view: viewProvider.getViewSettings(), config: values };
+  };
+
+  const restoreBackupSettings = async (settings: BackupSettings | undefined) => {
+    if (settings?.view) {
+      await viewProvider.applyViewSettings(settings.view);
+    }
+    const known = new Set(settingKeys());
+    for (const [key, value] of Object.entries(settings?.config ?? {})) {
+      if (known.has(key)) {
+        await config().update(key, value, vscode.ConfigurationTarget.Global);
+      }
+    }
+  };
+
   const askBackupPassword = async (confirm: boolean): Promise<string | undefined> => {
     const password = await vscode.window.showInputBox({
       title: confirm ? "Back up accounts: choose a password" : "Restore accounts: backup password",
@@ -827,7 +870,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       try {
         const entries = await store.exportAll();
-        const zip = await createBackupZip(entries, password, extensionVersion);
+        const zip = await createBackupZip(entries, password, extensionVersion, collectBackupSettings());
         await vscode.workspace.fs.writeFile(target, zip);
         vscode.window.showInformationMessage(
           `Backed up ${entries.length} account(s) to ${target.fsPath}. Keep the file and its password safe.`
@@ -862,8 +905,9 @@ export function activate(context: vscode.ExtensionContext): void {
           return;
         }
         try {
-          const entries = await readBackupZip(data, password);
+          const { accounts: entries, settings } = await readBackupZip(data, password);
           const res = await store.restore(entries);
+          await restoreBackupSettings(settings);
           await synchronizeCurrentProfile();
           vscode.window.showInformationMessage(
             `Restore finished: ${res.added} added, ${res.updated} updated with newer tokens, ` +

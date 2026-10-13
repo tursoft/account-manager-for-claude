@@ -700,7 +700,10 @@ async function runBackupTests(): Promise<void> {
   await source.reorder([b.id, a.id]);
   check("reorder persists the new order", source.list().map((p) => p.label).join() === "B,A");
 
-  const zip = await createBackupZip(await source.exportAll(), "correct horse");
+  const zip = await createBackupZip(await source.exportAll(), "correct horse", "0.0.0", {
+    view: { sort: "available", plan: "pro" },
+    config: { pollIntervalSeconds: 120 },
+  });
   check("backup is a ZIP archive", zip[0] === 0x50 && zip[1] === 0x4b);
   check("backup does not contain plain-text tokens", !Buffer.from(zip).toString("latin1").includes("a1-refresh"));
 
@@ -712,7 +715,12 @@ async function runBackupTests(): Promise<void> {
   }
   check("wrong backup password is rejected", wrongPassword === "Wrong password.");
 
-  const entries = await readBackupZip(zip, "correct horse");
+  const contents = await readBackupZip(zip, "correct horse");
+  const entries = contents.accounts;
+  check(
+    "backup round-trips view and extension settings",
+    contents.settings?.view?.sort === "available" && contents.settings?.config?.pollIntervalSeconds === 120
+  );
   check("backup round-trips all accounts", entries.length === 2);
   check("backup omits usage snapshots", entries.every((e) => e.profile.lastUsage === undefined));
 

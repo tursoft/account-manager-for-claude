@@ -233,7 +233,9 @@ directories would each try to spend the same single-use refresh token.
 Use **Back up** / **Restore** in the panel's **⋯** title menu (or the commands above). The
 backup is a standard ZIP whose single entry `accounts.json` is AES-256 encrypted with your
 password, so it can also be opened with 7-Zip. It contains **login tokens**: anyone with the file
-and the password can use those accounts, so store it like a password.
+and the password can use those accounts, so store it like a password. The backup also keeps
+the panel's sort and filter choices and your user-level extension settings (except
+`credentialsPath`, which is specific to each machine); restoring applies them.
 
 Restoring merges the backup into the current list. Missing accounts are added. For accounts that
 already exist, the backup's tokens are used only if they are newer. Refresh tokens rotate, so

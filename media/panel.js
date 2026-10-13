@@ -109,6 +109,7 @@
     } else if (msg.type === "state") {
       state = msg;
       if (msg.busy) busy = msg.busy;
+      syncViewSettings(msg);
       closeMenu();
       // Re-rendering mid-drag would destroy the dragged card; catch up on dragend.
       if (dragId) pendingRender = true;
@@ -495,10 +496,37 @@
   clearFiltersBtn.appendChild(icon("close"));
   searchInput.value = filter.text;
 
+  /** The choices worth keeping (and backing up); the search text is transient. */
+  function persistedFilter() {
+    const { text: _text, ...rest } = filter;
+    return rest;
+  }
+
   function setFilter(next) {
     filter = { ...filter, ...next };
     vscode.setState(filter);
+    vscode.postMessage({ type: "viewSettings", settings: persistedFilter() });
     render();
+  }
+
+  /**
+   * The extension keeps the sort and filter choices (so backups include them).
+   * Adopt them on the first state and after a restore; otherwise hand it ours.
+   */
+  let appliedSettingsRev;
+  function syncViewSettings(msg) {
+    if (appliedSettingsRev === msg.viewSettingsRev) return;
+    const first = appliedSettingsRev === undefined;
+    appliedSettingsRev = msg.viewSettingsRev;
+    const incoming = msg.viewSettings || {};
+    if (first && Object.keys(incoming).length === 0) {
+      vscode.postMessage({ type: "viewSettings", settings: persistedFilter() });
+      return;
+    }
+    for (const k of ["limit", "plan", "scope", "sort"]) {
+      if (typeof incoming[k] === "string") filter[k] = incoming[k];
+    }
+    vscode.setState(filter);
   }
 
   function clearFilters() {
