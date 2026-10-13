@@ -197,15 +197,45 @@ button:focus-visible {
   background: var(--vscode-button-background);
 }
 
-#noMatch {
-  padding: 14px 6px;
-  text-align: center;
-  font-size: 11.5px;
-  color: var(--muted);
+/* ---- info and warning boxes ----------------------------------------- */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 8px 0;
+  padding: 6px 9px;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--vscode-foreground);
+  border: 1px solid var(--notice-color);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--notice-color) 10%, transparent);
 }
 
-#noMatch .link-btn {
-  font-size: 11.5px;
+.notice .ico {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  color: var(--notice-color);
+}
+
+.notice.info {
+  --notice-color: var(--vscode-editorInfo-foreground, var(--accent));
+}
+
+.notice.warn {
+  --notice-color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.notice code {
+  font-size: 10.5px;
+}
+
+.notice .link-btn {
+  font-size: 11px;
 }
 
 /* ---- account card --------------------------------------------------- */
@@ -862,8 +892,4 @@ button:focus-visible {
   justify-content: center;
   gap: 6px;
   margin: 12px 0;
-}
-
-.hint {
-  font-size: 11px;
 }

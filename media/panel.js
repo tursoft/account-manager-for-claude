@@ -31,6 +31,8 @@
     sort: '<path d="M3 4.5h10M3 8h7M3 11.5h4"/>',
     check: '<path d="M3.5 8.5 6.5 11.5 12.5 4.5"/>',
     blank: '',
+    info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.3V11M8 4.9v.2"/>',
+    warning: '<path d="M8 2.3 14.2 13H1.8z"/><path d="M8 6.4v3.2M8 11.2v.2"/>',
     signIn: '<path d="M9.5 2.5h3v11h-3M2.5 8h7M7 5.5 9.5 8 7 10.5"/>',
   };
 
@@ -55,6 +57,9 @@
   }
   bindToolbar("addBtn", "add", "plus");
   bindToolbar("loginBtn", "login", "personAdd");
+  // Info and warning boxes declare their icon in markup.
+  for (const n of document.querySelectorAll(".notice[data-icon]")) n.prepend(icon(n.dataset.icon));
+
   bindToolbar("emptyLoginBtn", "login");
   bindToolbar("emptyRestoreBtn", "restore");
 

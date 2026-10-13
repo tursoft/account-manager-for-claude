@@ -289,17 +289,21 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <div class="skeleton"></div>
     <div class="skeleton"></div>
   </div>
-  <div id="noMatch" class="hidden">
-    No accounts match the filters. <button id="noMatchClear" class="link-btn">Clear filters</button>
+  <div id="noMatch" class="notice info hidden" data-icon="info">
+    <span>No accounts match the filters. <button id="noMatchClear" class="link-btn">Clear filters</button></span>
   </div>
   <div id="empty" class="hidden">
     <p class="empty-title">No saved accounts</p>
-    <p>Save the account Claude Code is logged in with, or log in to another one.</p>
+    <div class="notice info" data-icon="info">
+      <span>Save the account Claude Code is logged in with, or log in to another one.</span>
+    </div>
     <div class="empty-actions">
       <button id="emptyLoginBtn" class="tb-btn">Add account</button>
       <button id="emptyRestoreBtn" class="tb-btn">Restore backup…</button>
     </div>
-    <p class="hint">Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</p>
+    <div class="notice warn" role="note" data-icon="warning">
+      <span>Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</span>
+    </div>
   </div>
   <div id="session"></div>
   <div id="menu" class="hidden" role="menu"></div>
