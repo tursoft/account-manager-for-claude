@@ -24,7 +24,7 @@ import { SwitchService } from "./switchService";
 import { AccountsViewProvider } from "./ui/accountsView";
 import { StatusBarController } from "./ui/statusBar";
 import { fetchUsage, MIN_POLL_INTERVAL_SECONDS, UsagePoller } from "./usage";
-import { AccountProfile, ClaudeAuthIdentity, OAuthCreds } from "./types";
+import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "./types";
 import { WarmupService } from "./warmup";
 
 const LOGIN_WATCH_TIMEOUT_MS = 15 * 60_000;
@@ -124,6 +124,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   let currentUnsaved = false;
+  let lastCurrentState: CurrentAccountState | undefined;
   const currentUsageTimer = setInterval(
     () => {
       if (getInterval() > 0) {
@@ -139,6 +140,7 @@ export function activate(context: vscode.ExtensionContext): void {
     profileActivity.setActiveProfile(store.getActiveId());
     statusBar.setUnsavedIdentity(state.unsavedIdentity);
     viewProvider.setCurrentSession(state);
+    lastCurrentState = state;
     currentUnsaved = Boolean(state.loggedIn && !state.ownerId);
     void refreshCurrentUsage(currentUnsaved);
     const key = state.unsavedIdentity ? identityLabel(state.unsavedIdentity) : undefined;
@@ -514,6 +516,11 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!targetId) {
         return;
       }
+      // Picking from the list is already a deliberate choice; a single click on a
+      // Switch button (panel, notification) asks first.
+      if (id && !(await confirmSwitch(targetId))) {
+        return;
+      }
       let res = await switchService.switchTo(targetId);
       if (!res.ok && res.reauthProfileId) {
         const completed = await completeProfileReauthorization(res.reauthProfileId, true);
@@ -551,6 +558,55 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     })
   );
+
+  /** "5h 30% · 7d 12% · Fable 4%" for a usage snapshot. */
+  const usageSummary = (snapshot: UsageSnapshot | undefined): string => {
+    const windows = snapshot?.windows ?? [];
+    if (windows.length === 0) {
+      return "usage unknown";
+    }
+    return windows
+      .map((w) => {
+        const scope = /^Weekly \((.+)\)$/.exec(w.label)?.[1];
+        const short = w.kind === "session" ? "5h" : scope && scope !== "all" ? scope : "7d";
+        return `${short} ${w.percent}%`;
+      })
+      .join(" · ");
+  };
+
+  const describeProfile = (profileId: string): string => {
+    const p = store.get(profileId);
+    if (!p) {
+      return "Unknown account";
+    }
+    const plan = p.subscriptionType ? ` (${p.subscriptionType})` : "";
+    return `${p.label}${plan} — ${usageSummary(p.lastUsage)}`;
+  };
+
+  /** Asks before switching, naming the current and the target account. */
+  const confirmSwitch = async (targetId: string): Promise<boolean> => {
+    const activeId = store.getActiveId();
+    let from: string;
+    let note = "";
+    if (lastCurrentState?.loggedIn === false) {
+      from = "No account logged in";
+    } else if (lastCurrentState?.unsavedIdentity || (lastCurrentState?.loggedIn && !activeId)) {
+      const who = lastCurrentState?.unsavedIdentity ? identityLabel(lastCurrentState.unsavedIdentity) : "Unknown account";
+      from = `${who} (not saved)`;
+      note =
+        "\n\nThe current login is not in your account list. Save it first if you want to switch back to it later.";
+    } else if (activeId) {
+      from = describeProfile(activeId);
+    } else {
+      from = "Unknown account";
+    }
+    const choice = await vscode.window.showInformationMessage(
+      `Switch Claude Code to "${store.get(targetId)?.label ?? targetId}"?`,
+      { modal: true, detail: `From:  ${from}\nTo:      ${describeProfile(targetId)}${note}` },
+      "Switch"
+    );
+    return choice === "Switch";
+  };
 
   // Reloads everything the panel shows: the detected login, the account list, and
   // the limits of every account and of an unsaved current login.
