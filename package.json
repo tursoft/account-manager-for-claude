@@ -147,54 +147,54 @@
     "menus": {
       "view/title": [
         {
-          "command": "tursoftClaudeSwitcher.addCurrentAccount",
+          "command": "tursoftClaudeSwitcher.refreshAll",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@1"
         },
         {
-          "command": "tursoftClaudeSwitcher.refreshAll",
+          "command": "tursoftClaudeSwitcher.addCurrentAccount",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "navigation@2"
-        },
-        {
-          "command": "tursoftClaudeSwitcher.sayHi",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "navigation@3"
-        },
-        {
-          "command": "tursoftClaudeSwitcher.openIndependentWindow",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "navigation@4"
+          "group": "1_accounts@1"
         },
         {
           "command": "tursoftClaudeSwitcher.addAccount",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "navigation@5"
+          "group": "1_accounts@2"
         },
         {
           "command": "tursoftClaudeSwitcher.browserLogin",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "navigation@5.5"
+          "group": "1_accounts@3"
         },
         {
           "command": "tursoftClaudeSwitcher.reauthorizeProfile",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "navigation@6"
+          "group": "1_accounts@4"
         },
         {
-          "command": "tursoftClaudeSwitcher.about",
+          "command": "tursoftClaudeSwitcher.sayHi",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "navigation@9"
+          "group": "2_tools@1"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.openIndependentWindow",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "2_tools@2"
         },
         {
           "command": "tursoftClaudeSwitcher.backupAccounts",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "backup@1"
+          "group": "3_backup@1"
         },
         {
           "command": "tursoftClaudeSwitcher.restoreAccounts",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "backup@2"
+          "group": "3_backup@2"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.about",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "9_about@1"
         }
       ],
       "commandPalette": [

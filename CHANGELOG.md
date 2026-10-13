@@ -24,6 +24,8 @@ First release of the Tursoft fork of
 - `autoRefresh` setting to turn regular checks on or off; the polling interval can now go down to
   60 seconds.
 - About sheet with author and fork information.
+- The view title shows only **Refresh**, which reloads the account list, the current login,
+  and all limits; every other action is in its **⋯** menu.
 
 ## 0.3.0
 

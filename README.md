@@ -229,7 +229,7 @@ directories would each try to spend the same single-use refresh token.
 
 ## Backup and restore
 
-Use the archive icon in the panel (or the commands above) to back up the account list. The
+Use **Back up** / **Restore** in the panel's **⋯** title menu (or the commands above). The
 backup is a standard ZIP whose single entry `accounts.json` is AES-256 encrypted with your
 password, so it can also be opened with 7-Zip. It contains **login tokens**: anyone with the file
 and the password can use those accounts, so store it like a password.

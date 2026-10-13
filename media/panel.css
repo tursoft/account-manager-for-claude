@@ -43,8 +43,7 @@ body {
   stroke-linejoin: round;
 }
 
-.ico circle[r="1.2"],
-.ico .solid {
+.ico circle[r="1.2"] {
   fill: currentColor;
   stroke: none;
 }

@@ -252,11 +252,6 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   <div id="toolbar">
     <button id="addBtn" class="tb-btn primary" title="Save the account Claude Code is logged in with">Save current</button>
     <button id="loginBtn" class="tb-btn" title="Log in to another Claude account in an isolated login (the current account is not touched)">Add</button>
-    <span class="spacer"></span>
-    <button id="sayHiBtn" class="icon-btn" title="Say Hi on all inactive accounts" aria-label="Say Hi on all inactive accounts"></button>
-    <button id="refreshBtn" class="icon-btn" title="Refresh usage limits" aria-label="Refresh usage limits"></button>
-    <button id="toolsBtn" class="icon-btn" title="Backup and restore" aria-label="Backup and restore" aria-haspopup="menu"></button>
-    <button id="aboutBtn" class="icon-btn" title="About" aria-label="About"></button>
   </div>
   <div id="filters" class="hidden">
     <label class="search">
