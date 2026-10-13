@@ -200,6 +200,79 @@ button:focus-visible {
   background: var(--vscode-button-background);
 }
 
+/* ---- proposing an account --------------------------------------------- */
+
+.propose-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.proposal {
+  margin: 8px 0 0;
+}
+
+.proposal-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.proposal-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.proposal-kicker {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--notice-color);
+}
+
+.proposal-close {
+  width: 18px;
+  height: 18px;
+  margin: -2px -4px -2px 0;
+}
+
+.proposal-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.proposal-name .avatar {
+  width: 20px;
+  height: 20px;
+}
+
+.proposal-name .avatar .provider-mark {
+  width: 13px;
+  height: 13px;
+}
+
+.proposal-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proposal-reason {
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+.proposal-switch {
+  margin-top: 8px;
+}
+
 /* ---- toast ("Copied ...") ----------------------------------------------- */
 
 .toast {

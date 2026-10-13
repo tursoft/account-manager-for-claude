@@ -1,4 +1,5 @@
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
+import { limitName, noProposalReason, propose } from "../src/propose";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
 import {
   extraFilterLabels,
@@ -136,6 +137,8 @@ import {
     const msg = event.data;
     if (msg.type === "showAbout") {
       showAbout();
+    } else if (msg.type === "propose") {
+      showProposal(msg.kind, Boolean(msg.automatic));
     } else if (msg.type === "copied") {
       showToast(msg.ok ? `Copied “${msg.name}”` : "Could not copy to the clipboard");
     } else if (msg.type === "busy") {
@@ -766,6 +769,7 @@ import {
     }
     revealActiveChange(accounts);
     applyBusy();
+    renderProposal();
   }
 
   const statsEl = document.getElementById("stats");
@@ -866,6 +870,72 @@ import {
   function byKind(acc, test) {
     const windows = (acc.windows || []).filter((w) => test(w.kind || ""));
     return windows.length ? windows : null;
+  }
+
+  // ---- proposing an account ----------------------------------------------
+
+  const proposeBar = document.getElementById("proposeBar");
+  const proposalEl = document.getElementById("proposal");
+  let shownProposal = null; // { kind, automatic }
+
+  for (const b of proposeBar.querySelectorAll("[data-propose]")) {
+    b.addEventListener("click", () => showProposal(b.dataset.propose, false));
+  }
+
+  /** Shows the best account for `kind` with a one-sentence reason and a Switch button. */
+  function showProposal(kind, automatic) {
+    shownProposal = { kind, automatic };
+    renderProposal();
+    proposalEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function hideProposal() {
+    shownProposal = null;
+    renderProposal();
+  }
+
+  function renderProposal() {
+    proposalEl.innerHTML = "";
+    const accounts = state.accounts || [];
+    proposeBar.classList.toggle("hidden", accounts.length === 0);
+    proposeBar.querySelector("[data-propose=weekly_fable]").classList.toggle("hidden", !accounts.some((a) => (a.windows || []).some((w) => w.kind === "weekly_fable")));
+    if (!shownProposal || accounts.length === 0) {
+      proposalEl.classList.add("hidden");
+      return;
+    }
+    const { kind, automatic } = shownProposal;
+    const name = limitName(kind);
+    const result = propose(accounts, kind);
+    proposalEl.classList.remove("hidden");
+    proposalEl.className = "proposal " + (result ? "notice info" : "notice warn");
+
+    const body = el("div", "proposal-body");
+    const head = el("div", "proposal-head");
+    head.appendChild(
+      el("span", "proposal-kicker", automatic ? `Your ${name} limit is used up — next account` : `Proposed account for ${name}`)
+    );
+    const close = iconButton("close", "Dismiss", hideProposal, "proposal-close");
+    head.appendChild(close);
+    body.appendChild(head);
+
+    if (!result) {
+      body.appendChild(el("div", "proposal-reason", noProposalReason(accounts, kind)));
+    } else {
+      const who = el("div", "proposal-name");
+      who.append(avatar(result.account), el("span", "", result.account.label));
+      body.append(who, el("div", "proposal-reason", result.reason));
+      if (!result.account.isActive) {
+        const sw = el("button", "tb-btn primary proposal-switch");
+        sw.append(icon("swap"), el("span", "", `Switch to ${result.account.label}`));
+        sw.title = `Switch Claude Code to ${result.account.label}`;
+        sw.addEventListener("click", () => {
+          post("switch", result.account.id);
+          hideProposal();
+        });
+        body.appendChild(sw);
+      }
+    }
+    proposalEl.append(icon(result ? "info" : "warning"), body);
   }
 
   /** Top progress bar while anything loads; shimmer and a spinning refresh icon on updating cards. */

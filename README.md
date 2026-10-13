@@ -46,6 +46,10 @@ and re-login.
   an hour, red beyond a day. Drag
   and drop to reorder; the order is
   remembered. Double-click an account's name to copy it (also in the availability calendar).
+- **Propose account** / **Propose for Fable** (below the footer) — picks the account with the most
+  of that limit available (a later reset wins a tie; accounts with any limit used up, or an
+  expired login, are skipped) and says in one sentence why, with a **Switch** button. When the
+  active account's limit runs out, the next account is proposed automatically.
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
   usage left (or used up), plus filters by plan (Pro, Max, Team, ...) and by model-specific
   limits (e.g. only accounts with, or without, a Fable limit); one click clears the filters.

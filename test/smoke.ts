@@ -27,6 +27,7 @@ import {
 import { buildTimeline, Segment } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
+import { noProposalReason, propose, rankAccounts } from "../src/propose";
 import {
   DEFAULT_LISTING,
   extraFilterLabels,
@@ -1100,6 +1101,44 @@ function runResetToneTests(): void {
   check("a reset time already past counts as imminent", resetTone(100, -5 * min) === "imminent");
 }
 
+function runProposeTests(): void {
+  console.log("account proposals:");
+  const h = 3_600_000;
+  const now = Date.UTC(2026, 9, 13, 12, 0);
+  const at = (ms: number) => new Date(now + ms).toISOString();
+  const w = (kind: string, percent: number, resetIn: number | null = 2 * h) => ({ kind, label: kind, percent, resetsAt: resetIn === null ? null : at(resetIn) });
+  const acc = (id: string, windows: ReturnType<typeof w>[], extra: { isActive?: boolean; needsReauthorization?: boolean } = {}) => ({ id, label: id, windows, ...extra });
+
+  const accounts = [
+    acc("a", [w("session", 100, 1 * h), w("weekly_fable", 10, 100 * h)]),
+    acc("b", [w("session", 30, 3 * h), w("weekly_fable", 60, 50 * h)]),
+    acc("c", [w("session", 30, 4 * h)]),
+    acc("d", [w("session", 5, 2 * h)], { isActive: true }),
+    acc("e", [w("session", 0, 1 * h), w("weekly_fable", 100, 20 * h)]),
+    acc("f", [w("session", 0, 1 * h)], { needsReauthorization: true }),
+    acc("g", []),
+  ];
+  const ids = (list: { id: string }[]) => list.map((x) => x.id).join();
+
+  check("5h ranking: most 5h left first; a used-up weekly limit, expired logins, no data are excluded", ids(rankAccounts(accounts, "session", now)) === "d,c,b", ids(rankAccounts(accounts, "session", now)));
+  check("equal availability: the later reset wins (c resets in 4 h, b in 3 h)", ids(rankAccounts(accounts, "session", now)).indexOf("c") < ids(rankAccounts(accounts, "session", now)).indexOf("b"));
+  const five = propose(accounts, "session", now)!;
+  check("5h proposal is the active account d with 95% left", five.account.id === "d" && five.available === 95, five.account.id);
+  check("…and the reason says so in one sentence", five.reason === "It is already the active account: 95% of its 5h limit is available, the most of the 2 other usable accounts, and it resets in 2 h.", five.reason);
+  check("Fable ranking: only accounts with a Fable limit that are usable", ids(rankAccounts(accounts, "weekly_fable", now)) === "b", ids(rankAccounts(accounts, "weekly_fable", now)));
+  const fable = propose(accounts, "weekly_fable", now)!;
+  check("Fable proposal: b (a's 5h is used up, e's Fable is used up)", fable.account.id === "b" && fable.available === 40);
+  check("Fable reason", fable.reason === "40% of its Fable limit is available, and it resets in 2 d 2 h.", fable.reason);
+
+  const sameAvail = [acc("x", [w("session", 50, 1 * h)]), acc("y", [w("session", 50, 5 * h)])];
+  check("tie on availability: the reason explains the later reset", propose(sameAvail, "session", now)!.account.id === "y" && propose(sameAvail, "session", now)!.reason.includes("resets later"));
+
+  check("nothing usable: no proposal", propose([acc("z", [w("session", 100, 30 * 60_000)])], "session", now) === null);
+  check("reason when every account is used up names the wait", noProposalReason([acc("z", [w("session", 100, 30 * 60_000)])], "session", now) === "Every account is used up; the first is usable again in 30 min.");
+  check("reason when no account has the limit", noProposalReason([acc("z", [w("session", 10)])], "weekly_fable", now) === "No account reports a Fable limit.");
+  check("reason when only expired logins have it", noProposalReason([acc("z", [w("weekly_fable", 10)], { needsReauthorization: true })], "weekly_fable", now) === "Every account with a Fable limit has an expired login; reauthorize one first.");
+}
+
 function runToneTests(): void {
   console.log("usage colors:");
   const w = (kind: string, percent: number, label?: string) => ({ kind, label: label ?? kind, percent });
@@ -1141,6 +1180,7 @@ runListingTests();
 runAvatarTests();
 runToneTests();
 runResetToneTests();
+runProposeTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();
