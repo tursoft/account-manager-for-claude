@@ -269,25 +269,40 @@
     return root;
   }
 
-  /** Initials of an account name or email: "jane.doe@x.com" -> "JD", "Work" -> "W". */
-  function initials(label) {
-    const name = String(label || "?").split("@")[0];
-    const words = name.split(/[\s._\-+]+/).filter(Boolean);
-    const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || "?")[0];
-    return letters.toUpperCase();
+  /** Starburst mark: rays of alternating length around the center (16x16 box). */
+  function starburst(rays) {
+    let d = "";
+    for (let i = 0; i < rays; i++) {
+      const a = (i / rays) * Math.PI * 2 - Math.PI / 2;
+      const r = i % 2 ? 4.6 : 6.4;
+      d += `M${(8 + Math.cos(a) * 1.4).toFixed(2)} ${(8 + Math.sin(a) * 1.4).toFixed(2)}L${(8 + Math.cos(a) * r).toFixed(2)} ${(8 + Math.sin(a) * r).toFixed(2)}`;
+    }
+    return `<path d="${d}"/>`;
   }
 
-  /** Round avatar left of a card, with a stable color per account. */
+  /** Account providers; each account shows its provider's mark. More can be added here. */
+  const PROVIDERS = {
+    claude: { name: "Claude", color: "#d97757", glyph: starburst(12) },
+  };
+
+  function providerOf(acc) {
+    return PROVIDERS[acc.provider] || PROVIDERS.claude;
+  }
+
+  /** Round avatar inside a card: the provider's mark on a stable per-account color. */
   function avatar(acc) {
-    const a = el(
-      "div",
-      "avatar" + (acc.isActive ? " active" : "") + (acc.needsReauthorization ? " expired" : ""),
-      initials(acc.label)
-    );
+    const provider = providerOf(acc);
+    const a = el("div", "avatar" + (acc.isActive ? " active" : "") + (acc.needsReauthorization ? " expired" : ""));
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 16 16");
+    svg.setAttribute("class", "provider-mark");
+    svg.innerHTML = provider.glyph;
+    a.style.setProperty("--provider-color", provider.color);
+    a.appendChild(svg);
     let hash = 0;
     for (const ch of acc.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
     a.style.setProperty("--avatar-hue", String(hash % 360));
-    a.title = acc.isActive ? `${acc.label} (active)` : acc.label;
+    a.title = `${provider.name} account: ${acc.label}${acc.isActive ? " (active)" : ""}`;
     a.setAttribute("aria-hidden", "true");
     return a;
   }

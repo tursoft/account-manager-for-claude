@@ -40,6 +40,8 @@ interface ViewAccount {
   fetchedAt?: number;
   retryAfter?: number;
   needsReauthorization: boolean;
+  /** Which service the account belongs to; only Claude for now. */
+  provider: "claude";
 }
 
 /** Activity bar panel: list of accounts with usage limits and actions. */
@@ -244,6 +246,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           fetchedAt: p.lastUsage?.fetchedAt,
           retryAfter: p.lastUsage?.retryAfter,
           needsReauthorization,
+          provider: "claude",
         };
       })
     ).then((accounts) => {
