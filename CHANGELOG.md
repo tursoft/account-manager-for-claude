@@ -27,6 +27,7 @@ First release of the Tursoft fork of
 - `autoRefresh` setting to turn regular checks on or off; the polling interval can now go down to
   60 seconds.
 - About sheet with author and fork information.
+- Double-click an account's name to copy it (in the panel and the availability calendar).
 - Optional usage history (collected every minute by default, kept 90 days, stored locally) and a
   **Usage analytics** page with per-limit charts over selectable ranges, accounts, chart types,
   and limit % or usage.

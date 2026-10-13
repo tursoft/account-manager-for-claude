@@ -320,6 +320,24 @@ function el(tag, className, text) {
   return e;
 }
 
+/** Double-clicking an account's name copies it; the extension writes the clipboard and answers "copied". */
+function copyOnDoubleClick(node, id) {
+  node.addEventListener("mousedown", (e) => {
+    if (e.detail > 1) e.preventDefault(); // no word selection on the second click
+  });
+  node.addEventListener("dblclick", () => vscode.postMessage({ type: "copyName", id }));
+}
+
+const toastEl = $("toast");
+let toastTimer;
+
+function showToast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
 function starburst() {
   let d = "";
   for (let i = 0; i < 12; i++) {
@@ -383,7 +401,8 @@ function renderNow(accounts, timelines, now) {
     const head = el("div", "now-head");
     head.append(avatar());
     const name = el("div", "now-name", acc.label);
-    name.title = acc.label;
+    name.title = `${acc.label}\nDouble-click to copy`;
+    copyOnDoubleClick(name, acc.id);
     head.appendChild(name);
     if (acc.subscriptionType) head.appendChild(el("span", "badge", acc.subscriptionType));
     card.appendChild(head);
@@ -570,7 +589,9 @@ function render() {
     }
     label.append(avatar());
     const name = el("span", "name", acc.label);
-    name.title = acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label;
+    name.title =
+      (acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label) + "\nDouble-click to copy";
+    copyOnDoubleClick(name, acc.id);
     label.appendChild(name);
     row.append(label, track(tl.overall, [], from, to, now, `${acc.label} (any limit)`, false));
     group.appendChild(row);
@@ -602,6 +623,8 @@ window.addEventListener("message", (event) => {
     listing = normalizeListing(msg.listing);
     syncListingControls(data ? data.accounts : []);
     request();
+  } else if (msg.type === "copied") {
+    showToast(msg.ok ? `Copied “${msg.name}”` : "Could not copy to the clipboard");
   } else if (msg.type === "data") {
     data = msg;
     // Re-rendering mid-drag would destroy the dragged row; catch up when the drag ends.

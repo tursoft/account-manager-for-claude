@@ -39,7 +39,7 @@ and re-login.
 - **Compact panel** — one row per account with usage bars, reset times, and a **⋯** menu for
   all actions. **Switch** and **Refresh** buttons sit next to it inside each account's box, with
   the time of the last update under the account's icon. Drag and drop to reorder; the order is
-  remembered.
+  remembered. Double-click an account's name to copy it (also in the availability calendar).
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
   usage left (or used up), plus filters by plan (Pro, Max, Team, ...) and by model-specific
   limits (e.g. only accounts with, or without, a Fable limit); one click clears the filters.

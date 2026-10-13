@@ -5,6 +5,7 @@ import { hasUsableOAuthCreds } from "../credentialValidation";
 import { identityLabel } from "../identity";
 import { ListingSettings, normalizeListing } from "../listing";
 import { requiresProfileReauthorization } from "../oauth";
+import { copyToClipboard } from "./clipboard";
 
 /** The Claude Code login of this window, when it is not one of the saved profiles. */
 interface CurrentSessionView {
@@ -148,6 +149,14 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(
       (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown; text?: unknown }) => {
       switch (msg.type) {
+        case "copyName": {
+          // Double-click on a name: a saved account (by id), or the unsaved current login (no id).
+          const name = msg.id ? this.store.get(msg.id)?.label : this.currentSession?.label;
+          if (name) {
+            void copyToClipboard(name).then((ok) => webviewView.webview.postMessage({ type: "copied", name, ok }));
+          }
+          break;
+        }
         case "loginCurrent":
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
           break;
@@ -356,6 +365,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   <div id="session"></div>
   <div id="stats" class="hidden" aria-label="Account statistics"></div>
   <div id="menu" class="hidden" role="menu"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="about" class="hidden" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
     <div class="about-card">
       <button id="aboutClose" class="icon-btn about-close" title="Close" aria-label="Close"></button>

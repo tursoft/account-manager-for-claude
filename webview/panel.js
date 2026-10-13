@@ -64,6 +64,24 @@ import {
     vscode.postMessage(id ? { type, id } : { type });
   }
 
+  /** Double-clicking a name copies it; the extension writes the clipboard and answers "copied". */
+  function copyOnDoubleClick(node, id) {
+    node.addEventListener("mousedown", (e) => {
+      if (e.detail > 1) e.preventDefault(); // no word selection on the second click
+    });
+    node.addEventListener("dblclick", () => post("copyName", id));
+  }
+
+  const toastEl = document.getElementById("toast");
+  let toastTimer;
+
+  function showToast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+  }
+
   function bindToolbar(id, type, iconName) {
     const b = document.getElementById(id);
     if (iconName) b.prepend(icon(iconName));
@@ -116,6 +134,8 @@ import {
     const msg = event.data;
     if (msg.type === "showAbout") {
       showAbout();
+    } else if (msg.type === "copied") {
+      showToast(msg.ok ? `Copied “${msg.name}”` : "Could not copy to the clipboard");
     } else if (msg.type === "busy") {
       busy = msg;
       applyBusy();
@@ -233,7 +253,8 @@ import {
     const dot = el("span", "dot");
     dot.title = acc.isActive ? "Active in Claude Code" : "Inactive";
     const name = el("span", "name", acc.label);
-    name.title = acc.label;
+    name.title = `${acc.label}\nDouble-click to copy`;
+    copyOnDoubleClick(name, acc.id);
     head.append(dot, name);
 
     if (acc.subscriptionType) head.appendChild(el("span", "badge", acc.subscriptionType));
@@ -671,7 +692,8 @@ import {
 
     if (session.status === "unsaved") {
       const name = el("div", "session-name", session.label || "Unidentified account");
-      name.title = name.textContent;
+      name.title = `${name.textContent}\nDouble-click to copy`;
+      if (session.label) copyOnDoubleClick(name); // no id: the unsaved current login
       box.append(name, el("div", "session-note", "Not in your account list yet."));
       if (session.windows && session.windows.length) {
         const meters = el("div", "meters");

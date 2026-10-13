@@ -5,6 +5,7 @@ import { CARRY_MS } from "../historySeries";
 import { ListingSettings } from "../listing";
 import { requiresProfileReauthorization } from "../oauth";
 import { UsageHistory } from "../usageHistory";
+import { copyToClipboard } from "./clipboard";
 
 export interface AvailabilityDeps {
   store: AccountStore;
@@ -89,6 +90,15 @@ export class AvailabilityPanel {
           await this.deps.reorder(msg.ids as string[]);
         }
         break;
+      case "copyName": {
+        // Double-click on an account's name.
+        const name = typeof msg.id === "string" ? this.deps.store.get(msg.id)?.label : undefined;
+        if (name) {
+          const ok = await copyToClipboard(name);
+          void this.panel.webview.postMessage({ type: "copied", name, ok });
+        }
+        break;
+      }
       case "switch":
         if (typeof msg.id === "string") {
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", msg.id);
@@ -193,6 +203,7 @@ export class AvailabilityPanel {
   </section>
 
   <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script nonce="${nonce}" src="${script}"></script>
 </body>

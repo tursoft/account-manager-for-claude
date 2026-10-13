@@ -711,6 +711,35 @@ button.link {
   color: var(--muted);
 }
 
+/* ---- toast ("Copied ...") ----------------------------------------------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 40;
+  max-width: calc(100% - 32px);
+  padding: 6px 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--vscode-notifications-foreground, var(--fg));
+  background: var(--vscode-notifications-background, var(--vscode-editorWidget-background, var(--surface)));
+  border: 1px solid var(--vscode-notifications-border, var(--border));
+  border-radius: 6px;
+  box-shadow: 0 4px 14px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.3));
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 /* ---- tooltip ---------------------------------------------------------- */
 
 .tooltip {
