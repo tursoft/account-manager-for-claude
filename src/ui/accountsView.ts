@@ -393,7 +393,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <div class="about-card">
       <button id="aboutClose" class="icon-btn about-close" title="Close" aria-label="Close"></button>
       <img class="about-logo" src="${iconUri}" alt="" />
-      <h2 id="aboutTitle">Tursoft Claude Multi-Account Switcher</h2>
+      <h2 id="aboutTitle">Account Manager for Claude</h2>
       <p class="about-version">Version <span id="aboutVersion"></span></p>
       <p class="about-desc">Quickly switch between Claude accounts in Claude Code, with live usage limits.</p>
       <dl class="about-meta">

@@ -5,7 +5,7 @@
 First release of the Tursoft fork of
 [KrzysztofZander/claude-account-switcher](https://github.com/KrzysztofZander/claude-account-switcher).
 
-- Renamed the extension to **Tursoft Claude Multi-Account Switcher**; commands and settings now
+- Renamed the extension to **Account Manager for Claude**; commands and settings now
   use the `tursoftClaudeSwitcher.` prefix (profiles from the original extension are not shared).
 - Redesigned, compact accounts panel: one-line usage bars with reset times beside them, a status
   dot for the active account, a **⋯** menu per account instead of a row of buttons, **Switch** and

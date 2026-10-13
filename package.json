@@ -140,7 +140,7 @@
       },
       {
         "command": "tursoftClaudeSwitcher.about",
-        "title": "Claude: About Tursoft Claude Multi-Account Switcher",
+        "title": "Claude: About Account Manager for Claude",
         "icon": "$(info)"
       },
       {
@@ -231,7 +231,7 @@
       ]
     },
     "configuration": {
-      "title": "Claude Account Switcher",
+      "title": "Account Manager for Claude",
       "properties": {
         "tursoftClaudeSwitcher.autoRefresh": {
           "type": "boolean",

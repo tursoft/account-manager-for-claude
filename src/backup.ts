@@ -112,7 +112,7 @@ export async function readBackupZip(data: Uint8Array, password: string): Promise
     throw new BackupError("The backup content is corrupted.");
   }
   if (parsed.format !== FORMAT || !Array.isArray(parsed.accounts)) {
-    throw new BackupError("The file is not a Claude account switcher backup.");
+    throw new BackupError("The file is not an Account Manager for Claude backup.");
   }
   if (typeof parsed.version !== "number" || parsed.version > FORMAT_VERSION) {
     throw new BackupError("The backup was made by a newer version of the extension; update it first.");
