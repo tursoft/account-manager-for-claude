@@ -23,6 +23,8 @@ import {
   utilizationIn,
   utilizationSeries,
   utilizationSummary,
+  periodSlices,
+  utilizationByPeriod,
 } from "../src/utilization";
 import { buildTimeline, Segment, timelineStats } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
@@ -925,6 +927,40 @@ function runUtilizationTests(): void {
   check("series: one value per bucket", s.starts.length === 7 && s.values.length === 7);
   check("series: each day uses 1/7 of the week's budget at 50% together", s.values.every((v) => v === 50), JSON.stringify(s.values));
   check("series: per account 70% and 30% each day", s.perAccount[0].every((v) => v === 70) && s.perAccount[1].every((v) => v === 30));
+  // ---- breakdown by calendar period (local time: build the fixture from local dates)
+  const local = (y: number, mo: number, d: number, hr = 0) => new Date(y, mo - 1, d, hr).getTime();
+  // Mon 2026-10-05 00:00 .. Mon 2026-10-19 00:00 (two whole ISO weeks, 41 and 42), 20-minute readings.
+  const pFrom = local(2026, 10, 5);
+  const pTo = local(2026, 10, 19);
+  const wk: HistoryPoint[] = [];
+  for (let t = pFrom; t <= pTo; t += 20 * 60_000) {
+    const d = new Date(t);
+    // Account "wd": busy on Mondays (5h limit climbs to 100% within each cycle), idle otherwise.
+    const cyclePhase = ((t - pFrom) % (5 * h)) / (5 * h);
+    wk.push({ t, id: "wd", w: { session: d.getDay() === 1 ? Math.round(cyclePhase * 100) : 0 } });
+    // Account "w2": only watched in week 42, steady 50% of each cycle.
+    if (t >= local(2026, 10, 12)) wk.push({ t, id: "w2", w: { session: Math.round(cyclePhase * 50) } });
+  }
+  const slicesWd = periodSlices("weekday", pFrom, pTo);
+  check("period slices: 14 day slices for two weeks, Monday first in the range", slicesWd.length === 14 && slicesWd[0].label === "Mon" && slicesWd[13].label === "Sun");
+  check("period slices: weeks are keyed by ISO week", JSON.stringify([...new Set(periodSlices("week", pFrom, pTo).map((x) => x.key))]) === '["2026-W41","2026-W42"]');
+  check("period slices: a month key and label", periodSlices("month", pFrom, pTo)[0].key === "2026-10" && periodSlices("month", pFrom, pTo)[0].label === "Oct 2026");
+  check("period slices: hours are keyed 0..23", periodSlices("hour", local(2026, 10, 5, 22), local(2026, 10, 6, 2)).map((x) => x.key).join() === "22,23,0,1");
+  const byDay = utilizationByPeriod(wk, ["wd"], "session", "weekday", pFrom, pTo);
+  check("by weekday: seven groups, Monday first", byDay.length === 7 && byDay[0].label === "Mon" && byDay[6].label === "Sun", byDay.map((b) => b.label).join());
+  // A 5h cycle does not divide a day: the last Monday cycle finishes in Tuesday's first hour, and
+  // the reading at the range's end (a Monday 00:00) carries Sunday's cycle. So Monday is high but
+  // not 100, Tuesday gets a little spill-over, and Wednesday..Saturday are exactly 0.
+  check("by weekday: both Mondays merged into one high group, Wed..Sat at 0%", byDay[0].utilization !== null && byDay[0].utilization >= 90 && byDay.slice(2, 6).every((b) => b.utilization === 0) && (byDay[1].utilization ?? 0) < 15, JSON.stringify(byDay.map((b) => b.label + ":" + b.utilization)));
+  check("by weekday: Monday offers two days of 5h budgets (2 * 24/5 = 9.6)", byDay[0].offeredBudgets === 9.6, String(byDay[0].offeredBudgets));
+  const byWeek = utilizationByPeriod(wk, ["wd", "w2"], "session", "week", pFrom, pTo);
+  check("by week: two consecutive weeks in order", byWeek.map((b) => b.label).join() === "W41,W42", byWeek.map((b) => b.label).join());
+  check("by week: an account only watched in week 42 has no data in week 41 but counts in 42", byWeek[0].perAccount[1] === null && byWeek[1].perAccount[1] !== null && byWeek[1].perAccount[1] >= 45 && byWeek[1].perAccount[1] <= 50, JSON.stringify(byWeek.map((b) => b.perAccount)));
+  check("by week: the combined figure only offers capacity for watched time", byWeek[0].offeredBudgets === 33.6 && byWeek[1].offeredBudgets === 67.2, `${byWeek[0].offeredBudgets} ${byWeek[1].offeredBudgets}`);
+  const byMonth = utilizationByPeriod(wk, ["wd"], "session", "month", pFrom, pTo);
+  check("by month: one month, utilization = Monday share of a fortnight (2/14 of ~100%)", byMonth.length === 1 && byMonth[0].label === "Oct 2026" && byMonth[0].utilization !== null && Math.abs(byMonth[0].utilization - 14.3) < 1, JSON.stringify(byMonth));
+  check("by period: an unknown account gives empty groups, not a crash", utilizationByPeriod(wk, ["zz"], "session", "weekday", pFrom, pTo).every((b) => b.utilization === null));
+
   const sa = utilizationSeries(a, ["a", "nobody"], "session", 0, 10 * h, 5 * h);
   check("series: 5h buckets of the session account: 100% then 50%; an account without data is skipped", JSON.stringify(sa.values) === "[100,50]" && sa.perAccount[1].every((v) => v === null), JSON.stringify(sa.values));
   check("utilization never exceeds 100% (readings are rounded percents)", utilizationIn([pt("r", 0, 0), pt("r", 60_000, 100), pt("r", 120_000, 0), pt("r", 180_000, 100)], "session", 0, 180_000) === 100);

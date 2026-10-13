@@ -15,7 +15,7 @@ import {
 } from "chart.js";
 import { bucketSeries, bucketSizeFor, bucketStarts, kindsIn } from "../src/historySeries";
 import { toneOfPercent } from "../src/tone";
-import { cycleMs, utilizationSeries, utilizationSummary } from "../src/utilization";
+import { cycleMs, utilizationByPeriod, utilizationSeries, utilizationSummary } from "../src/utilization";
 
 Chart.register(BarController, BarElement, CategoryScale, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip);
 
@@ -61,6 +61,7 @@ const ui = {
   mode: saved.mode === "available" ? "available" : "used", // older saved states used "limit" / "usage"
   chartType: ["bar", "stacked", "line", "area"].includes(saved.chartType) ? saved.chartType : "bar",
   collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [], // chart ids folded up
+  period: ["weekday", "hour", "week", "month"].includes(saved.period) ? saved.period : "weekday",
   selected: saved.selected || null, // null = all accounts
   customFrom: saved.customFrom || null,
   customTo: saved.customTo || null,
@@ -161,6 +162,15 @@ $("mode").addEventListener("click", (e) => {
   render();
 });
 
+$("period").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-period]");
+  if (!b) return;
+  ui.period = b.dataset.period;
+  persist();
+  syncControls();
+  render();
+});
+
 $("chartType").addEventListener("change", (e) => {
   ui.chartType = e.target.value;
   persist();
@@ -194,6 +204,7 @@ $("collectToggle").addEventListener("change", (e) =>
 function syncControls() {
   setSeg($("range"), "range", ui.range);
   setSeg($("mode"), "mode", ui.mode);
+  setSeg($("period"), "period", ui.period);
   $("chartType").value = ui.chartType;
   $("custom").classList.toggle("hidden", ui.range !== "custom");
   if (ui.range === "custom" && ui.customFrom && ui.customTo) {
@@ -288,6 +299,7 @@ function render() {
   $("charts").innerHTML = "";
   $("utilCharts").innerHTML = "";
   $("utilSummary").innerHTML = "";
+  $("periodCharts").innerHTML = "";
 
   const accounts = allAccounts();
   renderLegend(accounts, new Set(data ? data.points.filter((p) => p.t >= data.from).map((p) => p.id) : []));
@@ -393,6 +405,7 @@ function render() {
   }
 
   renderUtilization(kinds, selected, points, from, to, { text, muted, grid });
+  renderPeriodCharts(kinds, selected, points, from, to, { text, muted, grid });
 }
 
 // ---- capacity utilization ----------------------------------------------------
@@ -524,6 +537,94 @@ function renderUtilization(kinds, selected, points, from, to, colors) {
 }
 
 /** A figure card: the limit's name, its utilization, and what it is made of. */
+// ---- capacity utilization by calendar period ---------------------------------------
+
+const PERIOD_NAMES = { weekday: "weekday", hour: "hour of the day", week: "week", month: "month" };
+
+/** One bar chart per limit: utilization per period, the accounts together plus each account. */
+function renderPeriodCharts(kinds, selected, points, from, to, colors) {
+  const ids = selected.map((a) => a.id);
+  for (const { kind, label } of kinds) {
+    const buckets = utilizationByPeriod(points, ids, kind, ui.period, from, to);
+    const withData = buckets.filter((b) => b.utilization !== null);
+    const labels = buckets.map((b) => b.label);
+    const together = buckets.map((b) => b.utilization);
+
+    const datasets = [
+      {
+        label: ids.length > 1 ? "Selected accounts together" : selected[0] ? selected[0].label : "",
+        data: together,
+        backgroundColor: together.map((v) => (v === null ? "transparent" : UTIL_COLORS[utilTone(v)])),
+        borderWidth: 0,
+        borderRadius: 3,
+        order: 0,
+      },
+    ];
+    if (ids.length > 1) {
+      // Each account as a thin line over the bars, so the group's bar and the accounts read together.
+      selected.forEach((acc, i) => {
+        const values = buckets.map((b) => b.perAccount[i]);
+        if (!values.some((v) => v !== null)) return;
+        datasets.push({
+          type: "line",
+          label: acc.label,
+          data: values,
+          borderColor: acc.color,
+          backgroundColor: acc.color,
+          borderWidth: 1.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0,
+          spanGaps: true,
+          order: -1,
+        });
+      });
+    }
+
+    const best = withData.length ? withData.reduce((x, y) => (y.utilization > x.utilization ? y : x)) : null;
+    const worst = withData.length ? withData.reduce((x, y) => (y.utilization < x.utilization ? y : x)) : null;
+    const caption =
+      withData.length === 0
+        ? `No data in this range`
+        : withData.length === 1
+          ? `${withData[0].label}: ${withData[0].utilization}%`
+          : `Best ${best.label} ${best.utilization}% · lowest ${worst.label} ${worst.utilization}%`;
+
+    chartCard($("periodCharts"), {
+      id: `period:${kind}`,
+      title: `${label} by ${PERIOD_NAMES[ui.period]}`,
+      caption,
+      empty: withData.length === 0 ? "No data for the selected accounts in this range." : null,
+      spark: { values: together, colors: together.map((v) => (v === null ? "transparent" : UTIL_COLORS[utilTone(v)])) },
+      config: {
+        type: "bar",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { ticks: { color: colors.muted, maxRotation: 0, autoSkip: true, autoSkipPadding: 12 }, grid: { display: false } },
+            y: { min: 0, max: 100, ticks: { color: colors.muted, callback: (v) => v + "%" }, grid: { color: colors.grid } },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => {
+                  const b = buckets[items[0].dataIndex];
+                  return `${b.label}: ${b.usedBudgets.toFixed(1)} of ${b.offeredBudgets.toFixed(1)} budgets used`;
+                },
+                label: (c) => (c.parsed.y === null ? null : ` ${c.dataset.label}: ${c.parsed.y}% of capacity used`),
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+}
+
 function utilFigure(name, value, detail, primary) {
   const card = document.createElement("div");
   card.className = "card util-figure" + (primary ? " primary" : "") + (value === null ? "" : " " + utilTone(value));

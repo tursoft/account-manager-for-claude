@@ -220,6 +220,23 @@ export class AnalyticsPanel {
         </div>
         <div id="utilSummary" class="util-summary"></div>
         <section id="utilCharts" class="charts"></section>
+
+        <div class="section-head period-head">
+          <h3 id="periodTitle">By calendar period</h3>
+          <p class="caption">The same utilization grouped by period: every Monday in the range
+          together, every hour of the day together, or each week or month on its own. Only the
+          time an account was watched counts as offered capacity.</p>
+          <div class="control">
+            <span class="label">Group by</span>
+            <div class="seg" id="period" role="radiogroup" aria-label="Period">
+              <button data-period="weekday" title="All Mondays together, all Tuesdays together, ...">Weekday</button>
+              <button data-period="hour" title="All 09:00 hours together, ...: the daily rhythm">Hour of day</button>
+              <button data-period="week" title="Each ISO week on its own">Week</button>
+              <button data-period="month" title="Each month on its own">Month</button>
+            </div>
+          </div>
+        </div>
+        <section id="periodCharts" class="charts" aria-labelledby="periodTitle"></section>
       </section>
     </div>
   </div>

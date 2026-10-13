@@ -198,3 +198,157 @@ function round1(n: number): number {
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+// ---- breakdown by calendar period -------------------------------------------------
+
+/**
+ * How to group the range: recurring groups (every Monday together, every 9 o'clock hour
+ * together) or consecutive spans (each week, each month).
+ */
+export type PeriodKind = "hour" | "weekday" | "week" | "month";
+
+export interface PeriodBucket {
+  /** stable key, e.g. "1" for Monday, "2026-W42", "2026-10", "9" for 09:00 */
+  key: string;
+  label: string;
+  /** utilization (%) of the selected accounts together; null without data */
+  utilization: number | null;
+  usedBudgets: number;
+  offeredBudgets: number;
+  /** per selected account, in the order given; null = no data in this period */
+  perAccount: (number | null)[];
+}
+
+const DAY_MS = 86_400_000;
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** ISO week number and its year for a local date. */
+function isoWeek(d: Date): { year: number; week: number } {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7; // Monday = 1 .. Sunday = 7
+  t.setUTCDate(t.getUTCDate() + 4 - day); // Thursday of this week decides the year
+  const year = t.getUTCFullYear();
+  const week = Math.ceil(((t.getTime() - Date.UTC(year, 0, 1)) / DAY_MS + 1) / 7);
+  return { year, week };
+}
+
+/** Start of the local calendar day containing `t`. */
+function startOfDay(t: number): number {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/** Start of the local hour containing `t`. */
+function startOfHour(t: number): number {
+  const d = new Date(t);
+  d.setMinutes(0, 0, 0);
+  return d.getTime();
+}
+
+export interface PeriodSlice {
+  start: number;
+  end: number;
+  key: string;
+  label: string;
+}
+
+/**
+ * The consecutive calendar slices of [from, to) for `kind`, each with the key of the
+ * group it belongs to. Hours and days are the atoms; weeks and months are their own slices.
+ */
+export function periodSlices(kind: PeriodKind, from: number, to: number): PeriodSlice[] {
+  const out: PeriodSlice[] = [];
+  if (kind === "hour") {
+    for (let t = startOfHour(from); t < to; t += 3_600_000) {
+      const h = new Date(t).getHours();
+      out.push({ start: Math.max(t, from), end: Math.min(t + 3_600_000, to), key: String(h), label: `${String(h).padStart(2, "0")}:00` });
+    }
+    return out;
+  }
+  let t = startOfDay(from);
+  while (t < to) {
+    const d = new Date(t);
+    const next = new Date(d);
+    next.setDate(d.getDate() + 1);
+    const start = Math.max(t, from);
+    const end = Math.min(next.getTime(), to);
+    if (kind === "weekday") {
+      out.push({ start, end, key: String(d.getDay()), label: WEEKDAYS[d.getDay()] });
+    } else if (kind === "week") {
+      const { year, week } = isoWeek(d);
+      out.push({ start, end, key: `${year}-W${String(week).padStart(2, "0")}`, label: `W${week}` });
+    } else {
+      out.push({ start, end, key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` });
+    }
+    t = next.getTime();
+  }
+  return out;
+}
+
+/** Order of recurring groups: Monday first for weekdays, 0..23 for hours. */
+function groupOrder(kind: PeriodKind, key: string): number {
+  if (kind === "weekday") return (Number(key) + 6) % 7; // Mon=0 .. Sun=6
+  if (kind === "hour") return Number(key);
+  return 0;
+}
+
+/**
+ * Utilization of a limit grouped by calendar period for the selected accounts: each period
+ * compares what the accounts used inside it with the capacity they were offered inside it
+ * (only the time an account was watched counts as offered). Recurring kinds (weekday, hour)
+ * merge every occurrence in the range into one group; week and month keep each one apart.
+ */
+export function utilizationByPeriod(
+  points: HistoryPoint[],
+  accountIds: string[],
+  kind: string,
+  period: PeriodKind,
+  from: number,
+  to: number
+): PeriodBucket[] {
+  const slices = periodSlices(period, from, to);
+  const cycle = cycleMs(kind);
+  interface Group {
+    label: string;
+    used: number;
+    offered: number;
+    perUsed: number[];
+    perOffered: number[];
+    first: number;
+  }
+  const groups = new Map<string, Group>();
+  const readingsByAccount = accountIds.map((id) =>
+    points.filter((p) => p.id === id && typeof p.w[kind] === "number").sort((a, b) => a.t - b.t)
+  );
+  for (const slice of slices) {
+    let g = groups.get(slice.key);
+    if (!g) {
+      g = { label: slice.label, used: 0, offered: 0, perUsed: accountIds.map(() => 0), perOffered: accountIds.map(() => 0), first: slice.start };
+      groups.set(slice.key, g);
+    }
+    const group = g;
+    readingsByAccount.forEach((readings, a) => {
+      for (const [s, e] of coveredSpans(readings, slice.start, slice.end)) {
+        const u = usedCapacityIn(readings, kind, s, e) ?? 0;
+        const cap = ((e - s) / cycle) * 100;
+        group.used += u;
+        group.offered += cap;
+        group.perUsed[a] += u;
+        group.perOffered[a] += cap;
+      }
+    });
+  }
+  const ordered = [...groups.entries()].sort(([ka, ga], [kb, gb]) =>
+    period === "weekday" || period === "hour" ? groupOrder(period, ka) - groupOrder(period, kb) : ga.first - gb.first
+  );
+  return ordered.map(([key, g]) => ({
+    key,
+    label: g.label,
+    utilization: g.offered > 0 ? round1(Math.min(100, (g.used / g.offered) * 100)) : null,
+    usedBudgets: round2(g.used / 100),
+    offeredBudgets: round2(g.offered / 100),
+    perAccount: g.perUsed.map((u, a) => (g.perOffered[a] > 0 ? round1(Math.min(100, (u / g.perOffered[a]) * 100)) : null)),
+  }));
+}

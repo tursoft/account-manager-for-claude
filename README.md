@@ -282,7 +282,11 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
   weekly limit (Fable included) every 7 days, so capacity not used before a reset is lost; the
   figures and charts show used capacity over offered capacity, per limit and for all limits
   together (per 5h or per week on the charts, overall for the whole period), and each limit's
-  figure lists every selected account's own utilization underneath.
+  figure lists every selected account's own utilization underneath;
+- **By calendar period** under that: the same utilization grouped by **weekday** (every Monday in
+  the range together, ...), **hour of day** (the daily rhythm), **week**, or **month**, as a bar
+  per period colored by level with each account as a line over it, and the best and lowest period
+  named in the caption.
 
 **Delete collected usage history** removes all recorded readings.
 
