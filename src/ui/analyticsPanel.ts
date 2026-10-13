@@ -140,6 +140,10 @@ export class AnalyticsPanel {
       <p id="status" class="sub"></p>
     </div>
     <div class="head-actions">
+      <span id="updatedText" class="updated-text" aria-live="polite"></span>
+      <button id="refreshBtn" class="icon-btn" type="button" title="Reload the charts now (they also reload every 2 minutes)" aria-label="Refresh">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2.5v3h-3"/></svg>
+      </button>
       <label class="switch" title="Record every account's limits in the background; readings stay on this computer">
         <input id="collectToggle" type="checkbox" role="switch" />
         <span class="track" aria-hidden="true"></span>

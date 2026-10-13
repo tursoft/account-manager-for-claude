@@ -56,6 +56,25 @@ let meta = { enabled: false, intervalSeconds: 60, retentionDays: 90, accounts: [
 let data = null; // { from, to, points, accounts }
 let charts = [];
 let reloadTimer = null;
+let loadedAt = null; // when the data on screen was fetched
+
+/** Reloads every 2 minutes, so the page follows the collection without being touched. */
+const AUTO_REFRESH_MS = 2 * 60_000;
+setInterval(() => {
+  if (currentRange().live) requestData();
+}, AUTO_REFRESH_MS);
+
+/** "updated 12s ago" next to the Refresh button; ticks every 10 s. */
+function renderUpdated() {
+  const el = $("updatedText");
+  if (loadedAt === null) {
+    el.textContent = "";
+    return;
+  }
+  const s = Math.max(0, Math.round((Date.now() - loadedAt) / 1000));
+  el.textContent = s < 60 ? `updated ${s}s ago` : `updated ${Math.round(s / 60)}m ago`;
+}
+setInterval(renderUpdated, 10_000);
 
 function persist() {
   vscode.setState(ui);
@@ -147,6 +166,14 @@ $("noneBtn").addEventListener("click", () => {
   render();
 });
 
+$("refreshBtn").addEventListener("click", () => {
+  if (reloadTimer) {
+    clearTimeout(reloadTimer);
+    reloadTimer = null;
+  }
+  $("refreshBtn").classList.add("spin");
+  requestData();
+});
 $("collectToggle").addEventListener("change", (e) =>
   vscode.postMessage({ type: "setHistory", enabled: e.target.checked })
 );
@@ -564,6 +591,9 @@ window.addEventListener("message", (event) => {
     requestData();
   } else if (msg.type === "data") {
     data = msg;
+    loadedAt = Date.now();
+    $("refreshBtn").classList.remove("spin");
+    renderUpdated();
     render();
   } else if (msg.type === "newData") {
     // Only ranges that end now change with new readings; reload at most every 30 s.

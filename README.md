@@ -257,6 +257,8 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
   chart interval holds several readings, Used % shows the highest and Available % the lowest;
 - line, area, bar, stacked bar, pie, or doughnut charts; the vertical axis always spans 0-100%
   (a stacked bar may grow past it when accounts add up);
+- a Refresh button in the header reloads the charts; they also reload every 2 minutes on their
+  own (and shortly after new readings arrive), with "updated … ago" showing the data's age;
 - **Capacity utilization** below the charts: how much of the capacity each limit offered was
   actually used, for the selected accounts and period. A 5h limit refills every 5 hours and a
   weekly limit (Fable included) every 7 days, so capacity not used before a reset is lost; the
