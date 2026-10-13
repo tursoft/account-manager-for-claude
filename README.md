@@ -246,7 +246,7 @@ top of the analytics page, which also turns it off) to record every saved accoun
 Readings stay on this computer, in the extension's storage; unchanged readings are stored only
 every 15 minutes, and data older than `usageHistory.retentionDays` (90) is deleted.
 
-**Show usage analytics** (in the panel's **⋯** menu) charts that history, one chart per limit
+**Show usage analytics** (the chart icon in the panel's title bar) charts that history, one chart per limit
 (5h, weekly, Fable, ...):
 
 - ranges of 1 day, 1 week, 1 month, 3 months, everything kept, or a custom from/to;
@@ -260,7 +260,7 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
 
 ## Availability calendar
 
-**Show account availability calendar** (in the **⋯** menu) shows when every account can be used,
+**Show account availability calendar** (the calendar icon in the title bar, left of Refresh) shows when every account can be used,
 as a week from Monday to Sunday or, after clicking a day, hour by hour:
 
 - the same search, **All / Available / Limited**, plan and model-limit filters and sort orders as

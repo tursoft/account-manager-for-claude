@@ -166,9 +166,19 @@
     "menus": {
       "view/title": [
         {
-          "command": "tursoftClaudeSwitcher.refreshAll",
+          "command": "tursoftClaudeSwitcher.openAnalytics",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@1"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.openAvailability",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.refreshAll",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "navigation@3"
         },
         {
           "command": "tursoftClaudeSwitcher.addCurrentAccount",
@@ -209,16 +219,6 @@
           "command": "tursoftClaudeSwitcher.restoreAccounts",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "3_backup@2"
-        },
-        {
-          "command": "tursoftClaudeSwitcher.openAvailability",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "4_views@0"
-        },
-        {
-          "command": "tursoftClaudeSwitcher.openAnalytics",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "4_views@1"
         },
         {
           "command": "tursoftClaudeSwitcher.openSettings",

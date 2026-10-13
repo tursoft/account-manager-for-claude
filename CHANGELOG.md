@@ -42,8 +42,8 @@ First release of the Tursoft fork of
   limit (5h, weekly, Fable), past from history and future projected from reset times, plus a
   "right now" card per account. It has the accounts panel's filters and sort orders, starting from
   the panel's current choices, and accounts can be reordered by drag and drop in custom order.
-- The view title shows only **Refresh**, which reloads the account list, the current login,
-  and all limits; every other action is in its **⋯** menu.
+- The view title shows **Usage analytics**, **Availability calendar**, and **Refresh** (which reloads
+  the account list, the current login, and all limits); every other action is in its **⋯** menu.
 
 ## 0.3.0
 
