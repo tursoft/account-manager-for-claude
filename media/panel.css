@@ -403,9 +403,10 @@ button:focus-visible {
 
 /* ---- meters --------------------------------------------------------- */
 
+/* Fixed text columns, so the bars of every card (5h, 7d, Fable, ...) line up. */
 .meters {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: 44px minmax(0, 1fr) 32px 46px;
   column-gap: 8px;
   row-gap: 3px;
   margin-top: 3px;
@@ -427,20 +428,21 @@ button:focus-visible {
 
 .m-label {
   color: var(--muted);
-  max-width: 64px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .pct {
   text-align: right;
-  min-width: 30px;
   font-weight: 600;
 }
 
 .reset {
   text-align: right;
-  min-width: 40px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted);
 }
 
