@@ -11,6 +11,11 @@ interface RawWindow {
   utilization?: number;
   resets_at?: string | null;
 }
+interface RawScopePart {
+  id?: string | null;
+  display_name?: string | null;
+}
+
 interface RawLimit {
   kind?: string;
   group?: string;
@@ -18,6 +23,8 @@ interface RawLimit {
   severity?: string;
   resets_at?: string | null;
   is_active?: boolean;
+  /** What a scoped limit applies to, e.g. { model: { display_name: "Fable" } }. */
+  scope?: { model?: RawScopePart | null; surface?: RawScopePart | null } | null;
 }
 interface RawUsage {
   five_hour?: RawWindow | null;
@@ -50,6 +57,26 @@ function labelFor(kind: string, group: string): string {
   }
 }
 
+/**
+ * Kind of a limit. Scoped limits arrive as `weekly_scoped` with the model (or
+ * surface) in `scope`; they become `weekly_<name>` (e.g. `weekly_fable`) so each
+ * scope is its own limit, like the older per-model kinds.
+ */
+function kindOf(l: RawLimit): string {
+  const kind = l.kind ?? l.group ?? "limit";
+  const name = scopeName(l);
+  if (name && /_scoped$/.test(kind)) {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    return kind.replace(/_scoped$/, "_" + (slug || "scoped"));
+  }
+  return kind;
+}
+
+function scopeName(l: RawLimit): string | undefined {
+  const part = l.scope?.model ?? l.scope?.surface;
+  return (part?.display_name || part?.id || undefined) ?? undefined;
+}
+
 /** Maps the raw endpoint response to a normalized snapshot. */
 export function parseUsage(raw: RawUsage): UsageSnapshot {
   const windows: UsageWindow[] = [];
@@ -57,9 +84,11 @@ export function parseUsage(raw: RawUsage): UsageSnapshot {
   if (Array.isArray(raw.limits) && raw.limits.length > 0) {
     for (const l of raw.limits) {
       const percent = typeof l.percent === "number" ? l.percent : 0;
+      const kind = kindOf(l);
+      const name = scopeName(l);
       windows.push({
-        kind: l.kind ?? l.group ?? "limit",
-        label: labelFor(l.kind ?? "", l.group ?? ""),
+        kind,
+        label: name && kind !== l.kind ? `${l.group === "session" ? "Session" : "Weekly"} (${name})` : labelFor(kind, l.group ?? ""),
         percent: Math.max(0, Math.min(100, Math.round(percent))),
         severity: l.severity ?? "normal",
         resetsAt: l.resets_at ?? null,

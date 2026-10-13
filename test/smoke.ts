@@ -755,6 +755,22 @@ function runLimitResetTests(): void {
   check("no reset when limit was not used up", findResetWindows(snap([["session", 99]]), snap([["session", 0]])).length === 0);
   const fable = parseUsage({ limits: [{ kind: "weekly_fable", group: "weekly", percent: 4 }] });
   check("labels model-specific weekly limits", fable.windows[0].label === "Weekly (Fable)");
+  // Shape returned by the usage endpoint: the model is in `scope`, the kind is generic.
+  const scoped = parseUsage({
+    limits: [
+      { kind: "session", group: "session", percent: 7, scope: null },
+      {
+        kind: "weekly_scoped",
+        group: "weekly",
+        percent: 24,
+        scope: { model: { id: null, display_name: "Fable" }, surface: null },
+      },
+    ],
+  });
+  check(
+    "reads the model of a scoped weekly limit",
+    scoped.windows[1].kind === "weekly_fable" && scoped.windows[1].label === "Weekly (Fable)"
+  );
   const legacy = parseUsage({
     five_hour: { utilization: 10, resets_at: null },
     seven_day: { utilization: 20, resets_at: null },
@@ -804,6 +820,7 @@ async function runUsageHistoryTests(): Promise<void> {
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+function runHistorySeriesTests(): void {
 runProfileActivityTests();
 runBrowserOAuthTests();
 runLimitResetTests();
