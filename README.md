@@ -266,9 +266,10 @@ as a week from Monday to Sunday or, after clicking a day, hour by hour:
   to reorder; this changes the same saved order the accounts panel uses;
 - below the timeline, a **Right now** card per account: available now, or how long until it is usable again, with
   each limit's current percent and a **Switch** button for accounts that are available;
-- per account an overall lane (blocked while any limit is used up) and, for each limit you tick
-  under **Limits**, its own lane: **5h**, **Fable**, and, when an account has them, weekly and
-  other model-specific limits. With exactly one limit ticked, its bar is the account's main bar;
+- for each limit you tick under **Limits** (**5h**, **Fable**, and, when an account has them,
+  weekly and other model-specific limits), a lane under the account's name. With exactly one limit
+  ticked, its bar sits beside the name instead; with none ticked, an overall bar shows whether any
+  limit blocks the account;
 - green = available, amber = 80%+ used, red = limited, grey = no data; markers show reset times
   and a red line shows now.
 

@@ -544,8 +544,10 @@ function render() {
   );
   const options = limitOptions([...timelines.values()]);
   renderLimitChecks(options);
-  // With exactly one limit ticked, that limit's bar is the account's main bar (not an overall bar
-  // plus a lane). With none or several ticked, the overall bar leads and each ticked limit gets a lane.
+  // Which bars sit beside the account's name:
+  //  - exactly one limit ticked: that limit's bar (there is nothing else to show);
+  //  - several ticked: none, the name row stays bare and each ticked limit has its own lane below;
+  //  - none ticked: the overall bar ("is any limit blocking?"), so the row is not empty.
   const ticked = options.filter(([kind]) => !ui.off.includes(kind));
   const single = ticked.length === 1 ? ticked[0] : null; // [kind, text]
   syncListingControls(accounts);
@@ -573,7 +575,8 @@ function render() {
     const tl = timelines.get(acc.id);
     const group = el("div", "group" + (acc.needsReauthorization ? " expired" : ""));
     group.dataset.id = acc.id;
-    const row = el("div", "row overall-row");
+    const bare = ticked.length > 1 && tl.lanes.some((l) => !ui.off.includes(l.kind));
+    const row = el("div", "row overall-row" + (bare ? " bare" : ""));
     const label = el("div", "row-label");
     if (listing.sort === "custom") {
       // Only in the user's own order does moving an account mean anything.
@@ -592,19 +595,23 @@ function render() {
       (acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label) + "\nDouble-click to copy";
     copyOnDoubleClick(name, acc.id);
     label.appendChild(name);
-    let main;
+    let main = null;
     if (single) {
       const lane = tl.lanes.find((l) => l.kind === single[0]);
       main = lane
         ? track(lane.segments, lane.resets, from, to, now, `${acc.label} · ${lane.label}`, false)
         : el("div", "track-empty", `No ${single[1]} limit`);
-    } else {
+    } else if (ticked.length === 0) {
       main = track(tl.overall, [], from, to, now, `${acc.label} (any limit)`, false);
+    } else if (!bare) {
+      // Several limits ticked, but this account has none of them.
+      main = el("div", "track-empty", `No ${ticked.map(([, text]) => text).join(" or ")} limit`);
     }
-    row.append(label, main);
+    row.appendChild(label);
+    if (main) row.appendChild(main);
     group.appendChild(row);
 
-    if (!single) {
+    if (ticked.length > 1) {
       for (const lane of tl.lanes) {
         if (ui.off.includes(lane.kind)) continue;
         const r = el("div", "row lane-row");

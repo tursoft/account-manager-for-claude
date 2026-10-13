@@ -628,6 +628,11 @@ button.link {
   min-height: 30px;
 }
 
+/* No bar beside the name: the bars are in the lanes below. */
+.overall-row.bare {
+  min-height: 24px;
+}
+
 .lane-row {
   min-height: 16px;
 }
