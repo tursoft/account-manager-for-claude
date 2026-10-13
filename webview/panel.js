@@ -812,6 +812,8 @@ import {
     // Analytics mean nothing before the first account; keep the tracking hint out of the empty state.
     document.getElementById("trackingNotice").classList.toggle("hidden", empty || state.trackingEnabled !== false);
 
+    // With no accounts, the info box offers Add account and Restore; the toolbar would only repeat them.
+    document.getElementById("toolbar").classList.toggle("hidden", empty);
     if (empty) {
       renderEmpty(state.currentSession);
       emptyEl.classList.remove("hidden");

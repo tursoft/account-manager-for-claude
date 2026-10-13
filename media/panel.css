@@ -1313,9 +1313,18 @@ button:focus-visible {
   min-width: 0;
 }
 
+/* Add account, with Restore as a link under it, centered. */
 .empty-box .empty-actions {
-  justify-content: flex-start;
-  margin: 8px 0 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 2px;
+}
+
+.empty-box .link-btn {
+  font-size: 11.5px;
+  font-weight: 400;
+  cursor: pointer;
 }
 
 /* The /logout warning as a footnote rather than a third box. */

@@ -372,7 +372,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         <span id="emptyText"></span>
         <div class="empty-actions">
           <button id="emptyLoginBtn" class="tb-btn">Add account</button>
-          <button id="emptyRestoreBtn" class="tb-btn">Restore backup…</button>
+          <button id="emptyRestoreBtn" class="link-btn">Restore backup…</button>
         </div>
       </div>
     </div>
