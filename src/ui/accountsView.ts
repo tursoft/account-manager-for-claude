@@ -47,6 +47,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private currentSession?: CurrentSessionView;
   private currentWindows?: ViewWindow[];
+  private busy = { ids: [] as string[], all: false, session: false };
   private aboutPending = false;
 
   constructor(
@@ -72,6 +73,22 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
       this.currentWindows = undefined;
     }
     this.refresh();
+  }
+
+  /** Which accounts are being refreshed, so the panel can show busy indicators. */
+  setBusy(ids: string[], all: boolean): void {
+    this.busy = { ...this.busy, ids, all };
+    this.postBusy();
+  }
+
+  /** Whether the unsaved current login's usage is being fetched. */
+  setSessionBusy(session: boolean): void {
+    this.busy = { ...this.busy, session };
+    this.postBusy();
+  }
+
+  private postBusy(): void {
+    void this.view?.webview.postMessage({ type: "busy", ...this.busy });
   }
 
   /** Usage limits of the unsaved current login, shown like an account's limits. */
@@ -216,6 +233,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           windows: this.currentWindows,
         },
         version: this.version,
+        busy: this.busy,
       });
     });
   }
@@ -266,7 +284,11 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     <button id="sortBtn" class="icon-btn" title="Sort accounts" aria-label="Sort accounts" aria-haspopup="menu"></button>
     <button id="clearFilters" class="icon-btn" title="Clear filters" aria-label="Clear filters"></button>
   </div>
-  <div id="list"></div>
+  <div id="progress" class="progress" role="progressbar" aria-label="Loading"></div>
+  <div id="list">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
   <div id="noMatch" class="hidden">
     No accounts match the filters. <button id="noMatchClear" class="link-btn">Clear filters</button>
   </div>

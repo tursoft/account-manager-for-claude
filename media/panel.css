@@ -323,6 +323,92 @@ button:focus-visible {
   flex: 0 0 auto;
 }
 
+/* ---- busy indicators ------------------------------------------------ */
+
+/* Thin indeterminate bar along the top of the panel while anything loads. */
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.progress::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  border-radius: 2px;
+  background: var(--vscode-progressBar-background, var(--accent));
+  animation: progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  from {
+    left: -35%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+/* A card (or the current-session box) whose usage is being fetched. */
+.card.busy,
+.session.busy,
+.skeleton {
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--accent) 12%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* Placeholder cards until the first account list arrives. */
+.skeleton {
+  height: 54px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+}
+
+.spin .ico {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress::before,
+  .card.busy,
+  .session.busy,
+  .skeleton,
+  .spin .ico {
+    animation-duration: 3s;
+  }
+}
+
 /* ---- quick actions beside a card ------------------------------------ */
 
 .row {

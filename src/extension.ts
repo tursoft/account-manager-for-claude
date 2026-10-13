@@ -111,6 +111,7 @@ export function activate(context: vscode.ExtensionContext): void {
       return;
     }
     currentUsageBusy = true;
+    viewProvider.setSessionBusy(true);
     try {
       const result = await fetchUsage(creds);
       currentUsageAt = Date.now();
@@ -120,6 +121,7 @@ export function activate(context: vscode.ExtensionContext): void {
       viewProvider.setCurrentUsage(result.snapshot?.windows);
     } finally {
       currentUsageBusy = false;
+      viewProvider.setSessionBusy(false);
     }
   };
 
@@ -461,6 +463,7 @@ export function activate(context: vscode.ExtensionContext): void {
     (id, previous, next) => limitNotifier.onSnapshot(id, previous, next),
     applyCurrentState
   );
+  poller.onBusyChange = (ids, all) => viewProvider.setBusy(ids, all);
 
   // Publish the remembered owner before asynchronous startup work, so another
   // window does not start a second session on this login during restart.

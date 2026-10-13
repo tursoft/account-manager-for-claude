@@ -9,6 +9,8 @@
   let dragId = null;
   let pendingRender = false;
   let lastActiveId;
+  let busy = { ids: [], all: false, session: false };
+  const progressEl = document.getElementById("progress");
 
   const ICONS = {
     more: '<circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/>',
@@ -95,8 +97,12 @@
     const msg = event.data;
     if (msg.type === "showAbout") {
       showAbout();
+    } else if (msg.type === "busy") {
+      busy = msg;
+      applyBusy();
     } else if (msg.type === "state") {
       state = msg;
+      if (msg.busy) busy = msg.busy;
       closeMenu();
       // Re-rendering mid-drag would destroy the dragged card; catch up on dragend.
       if (dragId) pendingRender = true;
@@ -247,7 +253,7 @@
     if (!acc.isActive) {
       side.appendChild(iconButton("swap", "Switch to this account", () => post("switch", acc.id), "side-btn switch"));
     }
-    side.appendChild(iconButton("refresh", "Refresh usage", () => post("refresh", acc.id), "side-btn"));
+    side.appendChild(iconButton("refresh", "Refresh usage", () => post("refresh", acc.id), "side-btn refresh"));
     return side;
   }
 
@@ -626,6 +632,7 @@
     if (accounts.length === 0) {
       emptyEl.classList.remove("hidden");
       noMatchEl.classList.add("hidden");
+      applyBusy();
       return;
     }
     emptyEl.classList.add("hidden");
@@ -638,6 +645,22 @@
       listEl.appendChild(row);
     }
     revealActiveChange(accounts);
+    applyBusy();
+  }
+
+  /** Top progress bar while anything loads; shimmer and a spinning refresh icon on updating cards. */
+  function applyBusy() {
+    const ids = new Set(busy.ids || []);
+    progressEl.classList.toggle("hidden", !(busy.all || busy.session || ids.size > 0));
+    for (const row of listEl.querySelectorAll(".row")) {
+      const cardEl = row.querySelector(".card");
+      const on = Boolean(cardEl && ids.has(cardEl.dataset.id));
+      cardEl.classList.toggle("busy", on);
+      const refresh = row.querySelector(".side-btn.refresh");
+      if (refresh) refresh.classList.toggle("spin", on);
+    }
+    const sessionBoxEl = sessionEl.querySelector(".session");
+    if (sessionBoxEl) sessionBoxEl.classList.toggle("busy", Boolean(busy.session));
   }
 
   /** When the detected login changes to a saved account, scroll to its card and flash it. */

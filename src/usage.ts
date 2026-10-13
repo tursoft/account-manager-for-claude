@@ -164,6 +164,9 @@ export const MIN_POLL_INTERVAL_SECONDS = 60;
 export class UsagePoller {
   private timer: NodeJS.Timeout | undefined;
   private polling: Promise<void> | undefined;
+  private readonly busyIds = new Set<string>();
+  /** Called whenever the set of accounts being fetched (or a full poll) starts or stops. */
+  onBusyChange?: (ids: string[], all: boolean) => void;
 
   constructor(
     private readonly store: AccountStore,
@@ -206,7 +209,9 @@ export class UsagePoller {
     }
     this.polling = this.runPollAll(force).finally(() => {
       this.polling = undefined;
+      this.emitBusy();
     });
+    this.emitBusy();
     return this.polling;
   }
 
@@ -229,7 +234,22 @@ export class UsagePoller {
     this.onUpdate();
   }
 
+  private emitBusy(): void {
+    this.onBusyChange?.([...this.busyIds], this.polling !== undefined);
+  }
+
   async pollOne(id: string, force: boolean): Promise<void> {
+    this.busyIds.add(id);
+    this.emitBusy();
+    try {
+      await this.pollOneNow(id, force);
+    } finally {
+      this.busyIds.delete(id);
+      this.emitBusy();
+    }
+  }
+
+  private async pollOneNow(id: string, force: boolean): Promise<void> {
     const profile = this.store.get(id);
     if (!profile) {
       return;
