@@ -147,7 +147,10 @@ export class AvailabilityPanel {
       <button data-view="week">Week</button>
       <button data-view="day">Day</button>
     </div>
-    <label class="toggle"><input id="lanesToggle" type="checkbox" /> Show each limit</label>
+    <div class="limit-checks" role="group" aria-label="Limits shown under each account">
+      <span class="label">Limits</span>
+      <span id="limitChecks" class="checks"></span>
+    </div>
     <div class="legend" aria-label="Legend">
       <span><i class="sw free"></i>Available</span>
       <span><i class="sw high"></i>80%+ used</span>

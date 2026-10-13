@@ -268,12 +268,36 @@ button.ghost:hover {
   background: var(--vscode-button-background);
 }
 
-.toggle {
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.limit-checks {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.check {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--muted);
   cursor: pointer;
+}
+
+.check input {
+  margin: 0;
+  accent-color: var(--vscode-button-background, #0e639c);
 }
 
 .legend {

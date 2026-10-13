@@ -259,8 +259,9 @@ as a week from Monday to Sunday or, after clicking a day, hour by hour:
 
 - a **Right now** card per account: available now, or how long until it is usable again, with
   each limit's current percent and a **Switch** button for accounts that are available;
-- per account an overall lane (blocked while any limit is used up) and, with **Show each limit**,
-  one lane per limit: 5h, weekly, and model-specific limits such as Fable;
+- per account an overall lane (blocked while any limit is used up) and, for each limit you tick
+  under **Limits**, its own lane: **5h**, **Fable**, and, when an account has them, weekly and
+  other model-specific limits;
 - green = available, amber = 80%+ used, red = limited, grey = no data; markers show reset times
   and a red line shows now.
 

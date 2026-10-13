@@ -10,12 +10,13 @@ const DAY = 24 * HOUR;
 const STATE_TEXT = { free: "Available", high: "80%+ used", limited: "Limited", nodata: "No data" };
 
 const saved = vscode.getState() || {};
-const ui = { view: saved.view || "week", lanes: saved.lanes !== false };
+// `off`: limit kinds whose lane is hidden (every other lane is shown).
+const ui = { view: saved.view || "week", off: Array.isArray(saved.off) ? saved.off : [] };
 let anchor = startOfDay(Date.now());
 let data = null;
 
 function persist() {
-  vscode.setState({ view: ui.view, lanes: ui.lanes });
+  vscode.setState({ view: ui.view, off: ui.off });
 }
 
 // ---- time helpers ------------------------------------------------------------
@@ -92,11 +93,6 @@ $("view").addEventListener("click", (e) => {
   syncControls();
   request();
 });
-$("lanesToggle").addEventListener("change", (e) => {
-  ui.lanes = e.target.checked;
-  persist();
-  render();
-});
 
 function syncControls() {
   for (const b of $("view").querySelectorAll("[data-view]")) {
@@ -104,7 +100,6 @@ function syncControls() {
     b.classList.toggle("on", on);
     b.setAttribute("aria-checked", String(on));
   }
-  $("lanesToggle").checked = ui.lanes;
 }
 
 // ---- tooltip ---------------------------------------------------------------
@@ -283,6 +278,45 @@ function renderHead(from, to, now) {
   return head;
 }
 
+/** Limits offered as checkboxes: 5h and Fable always, other kinds (weekly, ...) once an account has them. */
+function limitOptions(timelines) {
+  const options = new Map([
+    ["session", "5h"],
+    ["weekly_fable", "Fable"],
+  ]);
+  for (const tl of timelines) {
+    for (const lane of tl.lanes) {
+      if (!options.has(lane.kind)) options.set(lane.kind, shortLane(lane.kind, lane.label));
+    }
+  }
+  const rank = (kind) => (kind === "session" ? 0 : kind === "weekly_all" ? 1 : 2);
+  return [...options.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[1].localeCompare(b[1]));
+}
+
+let checksKey = "";
+
+/** Builds the checkboxes; rebuilt only when the set of limits changes, so a focused box stays focused. */
+function renderLimitChecks(options) {
+  const key = options.map(([kind]) => kind).join("|");
+  if (key === checksKey) return;
+  checksKey = key;
+  const box = $("limitChecks");
+  box.innerHTML = "";
+  for (const [kind, text] of options) {
+    const label = el("label", "check");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = !ui.off.includes(kind);
+    input.addEventListener("change", () => {
+      ui.off = input.checked ? ui.off.filter((k) => k !== kind) : [...ui.off, kind];
+      persist();
+      render();
+    });
+    label.append(input, el("span", "", text));
+    box.appendChild(label);
+  }
+}
+
 function render() {
   if (!data) return;
   const { from, to, now, points, accounts } = data;
@@ -296,6 +330,7 @@ function render() {
       : `${new Date(from).toLocaleDateString([], o)} – ${new Date(to - 1).toLocaleDateString([], { ...o, year: "numeric" })}`;
 
   const timelines = accounts.map((acc) => buildTimeline(acc, points, from, to, now));
+  renderLimitChecks(limitOptions(timelines));
   renderNow(accounts, timelines, now);
 
   const cal = $("calendar");
@@ -318,15 +353,14 @@ function render() {
     row.append(label, track(tl.overall, [], from, to, now, `${acc.label} (any limit)`, false));
     group.appendChild(row);
 
-    if (ui.lanes) {
-      for (const lane of tl.lanes) {
-        const r = el("div", "row lane-row");
-        r.append(
-          el("div", "row-label lane-label", shortLane(lane.kind, lane.label)),
-          track(lane.segments, lane.resets, from, to, now, `${acc.label} · ${lane.label}`, true)
-        );
-        group.appendChild(r);
-      }
+    for (const lane of tl.lanes) {
+      if (ui.off.includes(lane.kind)) continue;
+      const r = el("div", "row lane-row");
+      r.append(
+        el("div", "row-label lane-label", shortLane(lane.kind, lane.label)),
+        track(lane.segments, lane.resets, from, to, now, `${acc.label} · ${lane.label}`, true)
+      );
+      group.appendChild(r);
     }
     cal.appendChild(group);
   });
@@ -348,4 +382,5 @@ window.addEventListener("message", (event) => {
 setInterval(request, 60_000);
 
 syncControls();
+renderLimitChecks(limitOptions([]));
 request();
