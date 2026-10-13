@@ -359,6 +359,7 @@ input[type="datetime-local"] {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   gap: 14px;
+  align-items: start; /* a collapsed card does not keep the row's full height */
 }
 
 .chart-column {
@@ -429,10 +430,80 @@ input[type="datetime-local"] {
 
 .chart-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.chart-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chart-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* The sparkline: shown in the header only while the card is collapsed. */
+.spark-holder {
+  display: none;
+  line-height: 0;
+}
+
+.chart-card.collapsed .spark-holder {
+  display: inline-block;
+}
+
+.spark {
+  width: 120px;
+  height: 28px;
+}
+
+.chart-card.collapsed .chart-head {
+  margin-bottom: 0;
+}
+
+.chart-card.collapsed .canvas-wrap {
+  display: none;
+}
+
+.fold {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.fold:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+  color: var(--fg);
+}
+
+.fold svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s ease;
+}
+
+.chart-card.collapsed .fold svg {
+  transform: rotate(-90deg);
 }
 
 h2 {
@@ -444,10 +515,6 @@ h2 {
 .canvas-wrap {
   position: relative;
   height: 260px;
-}
-
-.canvas-wrap.pie {
-  height: 240px;
 }
 
 .canvas-wrap.no-data {

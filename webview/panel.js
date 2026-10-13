@@ -95,6 +95,8 @@ import {
   // Info and warning boxes declare their icon in markup.
   for (const n of document.querySelectorAll(".notice[data-icon]")) n.prepend(icon(n.dataset.icon));
 
+  document.getElementById("enableTrackingBtn").addEventListener("click", () => post("enableTracking"));
+
   bindToolbar("emptyLoginBtn", "login");
   bindToolbar("emptyRestoreBtn", "restore");
 
@@ -770,6 +772,8 @@ import {
     revealActiveChange(accounts);
     applyBusy();
     renderProposal();
+    // Offer to turn tracking on; it feeds the analytics and the calendar's past.
+    document.getElementById("trackingNotice").classList.toggle("hidden", state.trackingEnabled !== false);
   }
 
   const statsEl = document.getElementById("stats");

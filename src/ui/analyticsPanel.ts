@@ -185,12 +185,10 @@ export class AnalyticsPanel {
     <div class="control">
       <span class="label">Chart</span>
       <select id="chartType" aria-label="Chart type">
-        <option value="line">Line</option>
-        <option value="area">Area</option>
         <option value="bar">Bar</option>
         <option value="stacked">Stacked bar</option>
-        <option value="pie">Pie</option>
-        <option value="doughnut">Doughnut</option>
+        <option value="line">Line</option>
+        <option value="area">Area</option>
       </select>
     </div>
   </section>

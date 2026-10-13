@@ -46,6 +46,8 @@ and re-login.
   an hour, red beyond a day. Drag
   and drop to reorder; the order is
   remembered. Double-click an account's name to copy it (also in the availability calendar).
+- an info box offers to turn usage tracking on while it is off (it feeds the analytics and the
+  calendar's past);
 - **Propose account** / **Propose for Fable** (below the footer) — picks the account with the most
   of that limit available (a later reset wins a tie; accounts with any limit used up, or an
   expired login, are skipped) and says in one sentence why, with a **Switch** button. When the
@@ -259,8 +261,12 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
   share a chart);
 - **Used %** (how much of each limit was used) or **Available %** (how much was left); where a
   chart interval holds several readings, Used % shows the highest and Available % the lowest;
-- line, area, bar, stacked bar, pie, or doughnut charts; the vertical axis always spans 0-100%
-  (a stacked bar may grow past it when accounts add up);
+- bar (the default), stacked bar, line, or area charts; the vertical axis always spans 0-100%
+  (a stacked bar may grow past it when accounts add up). Bars are colored by level like the
+  panel's usage bars: green below 60%, orange from 60%, red from 80% used;
+- hovering a chart shows thin dashed guide lines to both axes;
+- every chart folds up with the arrow in its header (or a double-click on the header); a folded
+  chart keeps a small sparkline in the header, and the fold state is remembered;
 - a Refresh button in the header reloads the charts; they also reload every 2 minutes on their
   own (and shortly after new readings arrive), with "updated … ago" showing the data's age;
 - **Capacity utilization** below the charts: how much of the capacity each limit offered was

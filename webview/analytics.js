@@ -1,39 +1,51 @@
 // Usage analytics page: charts of the collected usage history, one chart per
 // limit kind (5h session, weekly, Fable, ...), for one or more accounts.
 import {
-  ArcElement,
   BarController,
   BarElement,
   CategoryScale,
   Chart,
-  DoughnutController,
   Filler,
   Legend,
   LinearScale,
   LineController,
   LineElement,
-  PieController,
   PointElement,
   Tooltip,
 } from "chart.js";
-import { bucketSeries, bucketSizeFor, bucketStarts, kindsIn, seriesTotal } from "../src/historySeries";
+import { bucketSeries, bucketSizeFor, bucketStarts, kindsIn } from "../src/historySeries";
+import { toneOfPercent } from "../src/tone";
 import { cycleMs, utilizationSeries, utilizationSummary } from "../src/utilization";
 
-Chart.register(
-  ArcElement,
-  BarController,
-  BarElement,
-  CategoryScale,
-  DoughnutController,
-  Filler,
-  Legend,
-  LinearScale,
-  LineController,
-  LineElement,
-  PieController,
-  PointElement,
-  Tooltip
-);
+Chart.register(BarController, BarElement, CategoryScale, Filler, Legend, LinearScale, LineController, LineElement, PointElement, Tooltip);
+
+
+// ---- hover crosshair ------------------------------------------------------------
+// Thin, light-gray dashed lines from the hovered point to both axes.
+const crosshair = {
+  id: "crosshair",
+  afterDatasetsDraw(chart) {
+    if (chart.options.events && chart.options.events.length === 0) return; // sparklines take no events
+    const active = chart.getActiveElements();
+    if (!active.length) return;
+    const { x, y } = active[0].element;
+    const { left, right, top, bottom } = chart.chartArea;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = "rgba(160, 160, 160, 0.55)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+Chart.register(crosshair);
+window.__Chart = Chart; // for the page tests
 
 const vscode = acquireVsCodeApi();
 const $ = (id) => document.getElementById(id);
@@ -47,7 +59,8 @@ const saved = vscode.getState() || {};
 const ui = {
   range: saved.range || "1w",
   mode: saved.mode === "available" ? "available" : "used", // older saved states used "limit" / "usage"
-  chartType: saved.chartType || "line",
+  chartType: ["bar", "stacked", "line", "area"].includes(saved.chartType) ? saved.chartType : "bar",
+  collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [], // chart ids folded up
   selected: saved.selected || null, // null = all accounts
   customFrom: saved.customFrom || null,
   customTo: saved.customTo || null,
@@ -307,88 +320,44 @@ function render() {
   const text = cssVar("--vscode-foreground", "#ccc");
   const muted = cssVar("--vscode-descriptionForeground", "#999");
   const grid = cssVar("--vscode-editorWidget-border", "rgba(128,128,128,0.25)");
-  const isPie = ui.chartType === "pie" || ui.chartType === "doughnut";
+  const bar = ui.chartType === "bar" || ui.chartType === "stacked";
+  const stacked = ui.chartType === "stacked";
+  const used = ui.mode === "used";
 
   for (const { kind, label } of kinds) {
-    const card = document.createElement("div");
-    card.className = "card chart-card";
-    const head = document.createElement("div");
-    head.className = "chart-head";
-    const title = document.createElement("h2");
-    title.textContent = label;
-    const sub = document.createElement("span");
-    sub.className = "caption";
-    const used = ui.mode === "used";
-    sub.textContent = isPie
-      ? `Average % ${used ? "used" : "available"} in the range, per account`
-      : used
-        ? `Highest % used per ${fmtDuration(bucketMs)}`
-        : `Lowest % available per ${fmtDuration(bucketMs)}`;
-    head.append(title, sub);
-    const wrap = document.createElement("div");
-    wrap.className = "canvas-wrap" + (isPie ? " pie" : "");
-    const canvas = document.createElement("canvas");
-    wrap.appendChild(canvas);
-    card.append(head, wrap);
-    $("charts").appendChild(card);
-
     const series = selected
       .map((acc) => ({ acc, values: bucketSeries(points, acc.id, kind, from, to, bucketMs, ui.mode) }))
       .filter((s) => s.values.some((v) => v !== null));
+    const caption = used ? `Highest % used per ${fmtDuration(bucketMs)}` : `Lowest % available per ${fmtDuration(bucketMs)}`;
 
-    if (series.length === 0) {
-      wrap.classList.add("no-data");
-      wrap.textContent = "No data for the selected accounts.";
-      continue;
-    }
+    const datasets = series.map(({ acc, values }) => ({
+      label: acc.label,
+      data: values,
+      borderColor: acc.color,
+      // Bars are colored by level (green / orange / red, as the usage bars in the panel);
+      // in "available" mode the level is what is used, i.e. 100 minus the value.
+      backgroundColor: bar
+        ? values.map((v) => (v === null ? "transparent" : LEVEL_COLORS[toneOfPercent(used ? v : 100 - v)]))
+        : acc.color + "33",
+      fill: ui.chartType === "area" ? "origin" : false,
+      borderWidth: bar ? 0 : 2,
+      borderRadius: bar ? 3 : 0,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      tension: 0.25,
+      spanGaps: false,
+    }));
 
-    let config;
-    if (isPie) {
-      const totals = series.map((s) => ({ acc: s.acc, total: seriesTotal(s.values) ?? 0 }));
-      config = {
-        type: ui.chartType,
-        data: {
-          labels: totals.map((t) => t.acc.label),
-          datasets: [
-            {
-              data: totals.map((t) => t.total),
-              backgroundColor: totals.map((t) => t.acc.color),
-              borderColor: cssVar("--vscode-editor-background", "#1e1e1e"),
-              borderWidth: 2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}%` } },
-          },
-        },
-      };
-    } else {
-      const bar = ui.chartType === "bar" || ui.chartType === "stacked";
-      const stacked = ui.chartType === "stacked";
-      config = {
+    chartCard($("charts"), {
+      id: `usage:${kind}`,
+      title: label,
+      caption,
+      empty: series.length === 0 ? "No data for the selected accounts." : null,
+      // The header sparkline: the busiest account per bucket, colored like the bars.
+      spark: series.length ? sparkOf(series.map((x) => x.values), used) : null,
+      config: {
         type: bar ? "bar" : "line",
-        data: {
-          labels,
-          datasets: series.map(({ acc, values }) => ({
-            label: acc.label,
-            data: values,
-            borderColor: acc.color,
-            backgroundColor: bar ? acc.color + "cc" : acc.color + "33",
-            fill: ui.chartType === "area" ? "origin" : false,
-            borderWidth: bar ? 0 : 2,
-            borderRadius: bar ? 3 : 0,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            tension: 0.25,
-            spanGaps: false,
-            stepped: false,
-          })),
-        },
+        data: { labels, datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -419,9 +388,8 @@ function render() {
             },
           },
         },
-      };
-    }
-    charts.push(new Chart(canvas, config));
+      },
+    });
   }
 
   renderUtilization(kinds, selected, points, from, to, { text, muted, grid });
@@ -471,23 +439,6 @@ function renderUtilization(kinds, selected, points, from, to, colors) {
     if (!series.values.some((v) => v !== null)) continue;
     const summary = summaries.find((s) => s.kind === kind);
 
-    const card = document.createElement("div");
-    card.className = "card chart-card";
-    const head = document.createElement("div");
-    head.className = "chart-head";
-    const title = document.createElement("h2");
-    title.textContent = `${label} utilization`;
-    const sub = document.createElement("span");
-    sub.className = "caption";
-    sub.textContent = `% of the capacity used per ${fmtDuration(bucketMs)}${summary && summary.overall !== null ? ` · ${summary.overall}% overall` : ""}`;
-    head.append(title, sub);
-    const wrap = document.createElement("div");
-    wrap.className = "canvas-wrap";
-    const canvas = document.createElement("canvas");
-    wrap.appendChild(canvas);
-    card.append(head, wrap);
-    $("utilCharts").appendChild(card);
-
     const labels = series.starts.map((t) => fmtBucket(t, rangeMs));
     const datasets = [];
     if (ids.length > 1) {
@@ -523,8 +474,13 @@ function renderUtilization(kinds, selected, points, from, to, colors) {
       });
     });
 
-    charts.push(
-      new Chart(canvas, {
+    chartCard($("utilCharts"), {
+      id: `util:${kind}`,
+      title: `${label} utilization`,
+      caption: `% of the capacity used per ${fmtDuration(bucketMs)}${summary && summary.overall !== null ? ` · ${summary.overall}% overall` : ""}`,
+      empty: null,
+      spark: { values: series.values, colors: series.values.map((v) => (v === null ? "transparent" : UTIL_COLORS[utilTone(v)])) },
+      config: {
         type: "line",
         data: { labels, datasets },
         options: {
@@ -544,8 +500,8 @@ function renderUtilization(kinds, selected, points, from, to, colors) {
             },
           },
         },
-      })
-    );
+      },
+    });
   }
 }
 
@@ -563,6 +519,123 @@ function utilFigure(name, value, detail, primary) {
   d.className = "caption";
   d.textContent = detail;
   card.append(n, v, d);
+  return card;
+}
+
+// ---- chart cards ----------------------------------------------------------------
+
+/** Green / orange / red, the panel's usage-bar colors (also used for sparklines). */
+const LEVEL_COLORS = { ok: "#3fb950", warn: "#d18616", danger: "#f14c4c" };
+/** Utilization: high is good, so the scale is the other way round. */
+const UTIL_COLORS = { good: "#3fb950", mid: "#d18616", low: "#f14c4c" };
+
+/** The sparkline of several series: the highest value per bucket, colored by its usage level. */
+function sparkOf(seriesValues, used) {
+  const n = Math.max(...seriesValues.map((v) => v.length));
+  const values = [];
+  for (let i = 0; i < n; i++) {
+    const known = seriesValues.map((v) => v[i]).filter((x) => x !== null && x !== undefined);
+    values.push(known.length ? (used ? Math.max(...known) : Math.min(...known)) : null);
+  }
+  return { values, colors: values.map((v) => (v === null ? "transparent" : LEVEL_COLORS[toneOfPercent(used ? v : 100 - v)])) };
+}
+
+/** A tiny chart for a collapsed card: bars (or a line/area) in the header, no axes. */
+function sparkline(spark) {
+  const canvas = document.createElement("canvas");
+  canvas.className = "spark";
+  canvas.setAttribute("aria-hidden", "true");
+  const bar = ui.chartType === "bar" || ui.chartType === "stacked";
+  const config = {
+    type: bar ? "bar" : "line",
+    data: {
+      labels: spark.values.map((_, i) => i),
+      datasets: [
+        {
+          data: spark.values,
+          backgroundColor: bar ? spark.colors : "rgba(128,128,128,0.25)",
+          borderColor: cssVar("--vscode-foreground", "#ccc"),
+          borderWidth: bar ? 0 : 1.2,
+          fill: ui.chartType === "area" ? "origin" : false,
+          pointRadius: 0,
+          tension: 0.25,
+          spanGaps: false,
+          barPercentage: 1,
+          categoryPercentage: 0.9,
+        },
+      ],
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      events: [],
+      scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    },
+  };
+  // Drawn after it is in the DOM, so it has a size.
+  requestAnimationFrame(() => charts.push(new Chart(canvas, config)));
+  return canvas;
+}
+
+/**
+ * A collapsible chart card: header with title, caption, a sparkline (shown while collapsed) and a
+ * fold button; the full chart below. Collapsed cards are remembered by id.
+ */
+function chartCard(parent, { id, title, caption, empty, spark, config }) {
+  const collapsed = ui.collapsed.includes(id);
+  const card = document.createElement("div");
+  card.className = "card chart-card" + (collapsed ? " collapsed" : "");
+
+  const head = document.createElement("div");
+  head.className = "chart-head";
+  const titles = document.createElement("div");
+  titles.className = "chart-titles";
+  const h2 = document.createElement("h2");
+  h2.textContent = title;
+  const sub = document.createElement("span");
+  sub.className = "caption";
+  sub.textContent = caption;
+  titles.append(h2, sub);
+  const right = document.createElement("div");
+  right.className = "chart-tools";
+  if (spark) {
+    // In a wrapper: Chart.js sets an inline display on the canvas, so the wrapper is what hides.
+    const holder = document.createElement("span");
+    holder.className = "spark-holder";
+    holder.appendChild(sparkline(spark));
+    right.appendChild(holder);
+  }
+  const fold = document.createElement("button");
+  fold.className = "fold";
+  fold.type = "button";
+  fold.setAttribute("aria-expanded", String(!collapsed));
+  fold.title = collapsed ? "Expand" : "Collapse";
+  fold.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>';
+  fold.addEventListener("click", () => {
+    ui.collapsed = ui.collapsed.includes(id) ? ui.collapsed.filter((x) => x !== id) : [...ui.collapsed, id];
+    persist();
+    render();
+  });
+  right.appendChild(fold);
+  head.append(titles, right);
+  head.addEventListener("dblclick", () => fold.click());
+
+  const wrap = document.createElement("div");
+  wrap.className = "canvas-wrap";
+  card.append(head, wrap);
+  parent.appendChild(card);
+
+  if (empty) {
+    wrap.classList.add("no-data");
+    wrap.textContent = empty;
+    return card;
+  }
+  if (!collapsed) {
+    const canvas = document.createElement("canvas");
+    wrap.appendChild(canvas);
+    charts.push(new Chart(canvas, config));
+  }
   return card;
 }
 

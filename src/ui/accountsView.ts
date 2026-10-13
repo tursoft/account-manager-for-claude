@@ -165,6 +165,12 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         case "loginCurrent":
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
           break;
+        case "enableTracking":
+          void vscode.workspace
+            .getConfiguration("tursoftClaudeSwitcher")
+            .update("usageHistory.enabled", true, vscode.ConfigurationTarget.Global)
+            .then(() => this.refresh());
+          break;
         case "backup":
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.backupAccounts");
           break;
@@ -294,6 +300,9 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         version: this.version,
         busy: this.busy,
         viewSettings: this.getViewSettings(),
+        trackingEnabled: vscode.workspace
+          .getConfiguration("tursoftClaudeSwitcher")
+          .get<boolean>("usageHistory.enabled", false),
         viewSettingsRev: this.viewSettingsRev,
       });
     });
@@ -364,6 +373,10 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     </div>
   </div>
   <div id="session"></div>
+  <div id="trackingNotice" class="notice info hidden" data-icon="info">
+    <span>Usage tracking is off. Turn it on to record every account's limits and get the usage and
+    capacity analytics. <button id="enableTrackingBtn" class="link-btn">Turn on tracking</button></span>
+  </div>
   <div id="stats" class="hidden" aria-label="Account statistics"></div>
   <div id="toolbar">
     <button id="addBtn" class="tb-btn primary" title="Save the account Claude Code is logged in with">Save current</button>

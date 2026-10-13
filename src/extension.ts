@@ -1046,6 +1046,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       if (e.affectsConfiguration("tursoftClaudeSwitcher.usageHistory")) {
         restartHistoryCollection();
+        viewProvider.refresh(); // the panel's tracking notice follows the setting
       }
       if (e.affectsConfiguration("tursoftClaudeSwitcher.warnThresholdPercent")) {
         refreshUI();
