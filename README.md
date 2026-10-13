@@ -118,7 +118,7 @@ the account on each computer separately instead of copying credential files betw
 ## Usage
 
 1. Log in to Claude Code with account #1.
-2. Open the **Claude Accounts** panel (activity bar icon) → **"Save current"**.
+2. Open the **MultiAccount** panel (activity bar icon) → **"Save current"**.
 3. Click **"+ Add account"** and log in with account #2. The current Claude Code account is not
    changed; the new account is saved automatically when the login completes.
 4. From now on, switch with one click via the switch icon on an account row (shown on hover), the
@@ -273,7 +273,7 @@ needs no build step.
 1. Open this folder in VS Code.
 2. Press **F5** (or **Run and Debug → Run Extension**). This compiles the extension and opens an
    **Extension Development Host** window with it loaded.
-3. In that window, open the **Claude Accounts** icon in the activity bar.
+3. In that window, open the **MultiAccount** icon in the activity bar.
 4. After editing code, run **Developer: Reload Window** (`Ctrl+R` / `Cmd+R`) in the Extension
    Development Host. Keep `npm run watch` running to rebuild automatically.
 5. To debug the webview, run **Developer: Open Webview Developer Tools** in the Extension

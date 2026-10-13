@@ -42,7 +42,7 @@
       "activitybar": [
         {
           "id": "tursoftClaudeSwitcher",
-          "title": "Claude Accounts",
+          "title": "MultiAccount",
           "icon": "media/icon.svg"
         }
       ]

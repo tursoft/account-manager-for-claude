@@ -292,7 +292,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   <meta http-equiv="Content-Security-Policy" content="${csp}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="${styleUri}" rel="stylesheet" />
-  <title>Claude Accounts</title>
+  <title>MultiAccount</title>
 </head>
 <body>
   <div id="toolbar">
