@@ -12,8 +12,10 @@ First release of the Tursoft fork of
   and **Refresh** buttons beside each account.
 - Drag and drop (or **Move up / Move down**) to reorder accounts; the order is remembered.
 - Text filter plus **All / Available / Limited** filter, with a button to clear filters.
+- Filter by plan (account type) and by model-specific limits, e.g. only accounts with (or
+  without) a Fable limit.
 - Sort accounts by your custom order, availability (available first, then soonest to become
-  available), most usage left, soonest reset, or name. Drag and drop applies to the custom order.
+  available), most usage left, soonest reset, plan, or name. Drag and drop applies to the custom order.
 - Shows the current Claude Code session at the bottom when it is not saved yet (with **Save to
   account list**), or states that no account is logged in.
 - New accounts are saved under their email automatically, with a **Rename** shortcut, instead

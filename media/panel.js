@@ -29,6 +29,7 @@
     search: '<circle cx="7" cy="7" r="4.25"/><path d="m10.2 10.2 3.3 3.3"/>',
     save: '<path d="M3 2.5h8l2 2v9H3z"/><path d="M5.5 2.5v3h4v-3M5.5 13.5v-4h5v4"/>',
     sort: '<path d="M3 4.5h10M3 8h7M3 11.5h4"/>',
+    funnel: '<path d="M2.5 3.5h11l-4.2 5v4l-2.6 1.2V8.5z"/>',
     check: '<path d="M3.5 8.5 6.5 11.5 12.5 4.5"/>',
     blank: '',
     info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.3V11M8 4.9v.2"/>',
@@ -482,7 +483,13 @@
   const clearFiltersBtn = document.getElementById("clearFilters");
   const noMatchEl = document.getElementById("noMatch");
   const saved = vscode.getState() || {};
-  let filter = { text: saved.text || "", limit: saved.limit || "all", sort: saved.sort || "custom" };
+  let filter = {
+    text: saved.text || "",
+    limit: saved.limit || "all",
+    plan: saved.plan || "all",
+    scope: saved.scope || "any",
+    sort: saved.sort || "custom",
+  };
 
   document.getElementById("searchIcon").appendChild(icon("search"));
   clearFiltersBtn.appendChild(icon("close"));
@@ -496,7 +503,7 @@
 
   function clearFilters() {
     searchInput.value = "";
-    setFilter({ text: "", limit: "all" });
+    setFilter({ text: "", limit: "all", plan: "all", scope: "any" });
   }
 
   searchInput.addEventListener("input", () => setFilter({ text: searchInput.value }));
@@ -511,6 +518,50 @@
   }
   clearFiltersBtn.addEventListener("click", clearFilters);
 
+  /** Account type, lower-cased ("pro", "max", "team", ...); "unknown" when not reported. */
+  function planOf(acc) {
+    return (acc.subscriptionType || "").trim().toLowerCase() || "unknown";
+  }
+
+  function planName(plan) {
+    return plan === "unknown" ? "Unknown plan" : plan.charAt(0).toUpperCase() + plan.slice(1);
+  }
+
+  /** Scoped (model-specific) weekly limits of an account, e.g. {fable: "Fable"}. */
+  function scopesOf(acc) {
+    const scopes = {};
+    for (const w of acc.windows || []) {
+      const key = /^weekly_(.+)$/.exec(w.kind || "")?.[1];
+      if (!key || key === "all") continue;
+      scopes[key] = /\((.+)\)/.exec(w.label || "")?.[1] || key;
+    }
+    return scopes;
+  }
+
+  const moreFiltersBtn = document.getElementById("moreFiltersBtn");
+  moreFiltersBtn.appendChild(icon("funnel"));
+  moreFiltersBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const accounts = state.accounts || [];
+    const plans = [...new Set(accounts.map(planOf))].sort();
+    const scopes = {};
+    for (const acc of accounts) Object.assign(scopes, scopesOf(acc));
+    const pick = (on) => (on ? "check" : "blank");
+    const items = [{ icon: pick(filter.plan === "all"), label: "Any plan", run: () => setFilter({ plan: "all" }) }];
+    for (const plan of plans) {
+      items.push({ icon: pick(filter.plan === plan), label: planName(plan), run: () => setFilter({ plan }) });
+    }
+    items.push(null);
+    items.push({ icon: pick(filter.scope === "any"), label: "Any model limits", run: () => setFilter({ scope: "any" }) });
+    for (const [key, name] of Object.entries(scopes).sort()) {
+      for (const [mode, text] of [["has", `With ${name} limit`], ["no", `Without ${name} limit`]]) {
+        const scope = `${mode}:${key}`;
+        items.push({ icon: pick(filter.scope === scope), label: text, run: () => setFilter({ scope }) });
+      }
+    }
+    toggleMenu(moreFiltersBtn, "Filter accounts", items);
+  });
+
   // ---- sorting ----------------------------------------------------------
 
   const SORTS = [
@@ -518,6 +569,7 @@
     { key: "available", label: "Available first, then soonest available" },
     { key: "remaining", label: "Most usage left first" },
     { key: "reset", label: "Resetting soonest first" },
+    { key: "plan", label: "Plan (Enterprise, Team, Max, Pro, Free)" },
     { key: "name", label: "Name A–Z" },
   ];
   const sortBtn = document.getElementById("sortBtn");
@@ -559,6 +611,15 @@
     return windows.length ? 100 - Math.max(...windows.map((w) => w.percent)) : -1;
   }
 
+  const PLAN_ORDER = ["enterprise", "team", "max", "pro", "free"];
+
+  /** Larger plans first; plans not in PLAN_ORDER after them, unknown last. */
+  function planRank(acc) {
+    const plan = planOf(acc);
+    const i = PLAN_ORDER.indexOf(plan);
+    return i >= 0 ? i : plan === "unknown" ? PLAN_ORDER.length + 1 : PLAN_ORDER.length;
+  }
+
   /** Orders `list` by the chosen sort; ties keep the custom order (`order` = index in state.accounts). */
   function sortAccounts(list, order) {
     if (filter.sort === "custom") return list;
@@ -574,6 +635,7 @@
       },
       remaining: (a, b) => headroom(b) - headroom(a),
       reset: (a, b) => nextReset(a) - nextReset(b) || 0,
+      plan: (a, b) => planRank(a) - planRank(b),
       name: (a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
     }[filter.sort];
     // Infinity - Infinity is NaN, which `||` turns into 0 so ties fall back to custom order.
@@ -590,6 +652,11 @@
 
   function matchesFilter(acc) {
     if (filter.limit !== "all" && limitState(acc) !== filter.limit) return false;
+    if (filter.plan !== "all" && planOf(acc) !== filter.plan) return false;
+    if (filter.scope !== "any") {
+      const [mode, key] = filter.scope.split(":");
+      if ((key in scopesOf(acc)) !== (mode === "has")) return false;
+    }
     const q = filter.text.trim().toLowerCase();
     if (!q) return true;
     return [acc.label, acc.subscriptionType, acc.isActive ? "active" : ""]
@@ -604,7 +671,19 @@
       b.classList.toggle("on", on);
       b.setAttribute("aria-checked", String(on));
     }
-    clearFiltersBtn.classList.toggle("hidden", !filter.text && filter.limit === "all");
+    const extra = [];
+    if (filter.plan !== "all") extra.push(planName(filter.plan));
+    if (filter.scope !== "any") {
+      const [mode, key] = filter.scope.split(":");
+      extra.push(`${mode === "has" ? "with" : "without"} ${key} limit`);
+    }
+    moreFiltersBtn.classList.toggle("on", extra.length > 0);
+    moreFiltersBtn.title = extra.length ? "Filter: " + extra.join(", ") : "Filter by plan or model limit";
+    moreFiltersBtn.setAttribute("aria-label", moreFiltersBtn.title);
+    clearFiltersBtn.classList.toggle(
+      "hidden",
+      !filter.text && filter.limit === "all" && extra.length === 0
+    );
     const sort = SORTS.find((s) => s.key === filter.sort) || SORTS[0];
     sortBtn.title = "Sort: " + sort.label;
     sortBtn.setAttribute("aria-label", sortBtn.title);

@@ -23,6 +23,7 @@ const ABOUT_LINKS = new Set([
 ]);
 
 interface ViewWindow {
+  kind: string;
   label: string;
   percent: number;
   severity: string;
@@ -281,6 +282,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
       <button data-filter="available" role="radio" title="Accounts with all limits below 100%">Available</button>
       <button data-filter="limited" role="radio" title="Accounts with at least one limit used up">Limited</button>
     </div>
+    <button id="moreFiltersBtn" class="icon-btn" title="Filter by plan or model limit" aria-label="Filter by plan or model limit" aria-haspopup="menu"></button>
     <button id="sortBtn" class="icon-btn" title="Sort accounts" aria-label="Sort accounts" aria-haspopup="menu"></button>
     <button id="clearFilters" class="icon-btn" title="Clear filters" aria-label="Clear filters"></button>
   </div>
