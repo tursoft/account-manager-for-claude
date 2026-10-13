@@ -149,7 +149,6 @@ $("noneBtn").addEventListener("click", () => {
 $("collectToggle").addEventListener("change", (e) =>
   vscode.postMessage({ type: "setHistory", enabled: e.target.checked })
 );
-$("settingsBtn").addEventListener("click", () => vscode.postMessage({ type: "openSettings" }));
 
 function syncControls() {
   setSeg($("range"), "range", ui.range);

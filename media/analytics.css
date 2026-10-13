@@ -54,18 +54,6 @@ h1 {
   font-size: 12px;
 }
 
-button.ghost {
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-}
-
-button.ghost:hover {
-  background: var(--vscode-toolbar-hoverBackground);
-}
-
 .head-actions {
   display: flex;
   align-items: center;

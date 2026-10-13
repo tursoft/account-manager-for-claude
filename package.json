@@ -144,11 +144,6 @@
         "icon": "$(info)"
       },
       {
-        "command": "tursoftClaudeSwitcher.openSettings",
-        "title": "Claude: Open extension settings",
-        "icon": "$(gear)"
-      },
-      {
         "command": "tursoftClaudeSwitcher.clearUsageHistory",
         "title": "Claude: Delete collected usage history"
       },
@@ -219,11 +214,6 @@
           "command": "tursoftClaudeSwitcher.restoreAccounts",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "3_backup@2"
-        },
-        {
-          "command": "tursoftClaudeSwitcher.openSettings",
-          "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "9_about@0"
         },
         {
           "command": "tursoftClaudeSwitcher.about",

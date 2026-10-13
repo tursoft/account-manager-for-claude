@@ -153,7 +153,6 @@ the account on each computer separately instead of copying credential files betw
 | `Claude: Back up account list (password-protected ZIP)` | saves all profiles and their tokens to an encrypted ZIP |
 | `Claude: Restore account list from backup` | merges a backup into the list (never replaces newer tokens) |
 | `Claude: About Tursoft Claude Multi-Account Switcher` | shows version, author, and fork information |
-| `Claude: Open extension settings` | opens the Settings editor filtered to this extension |
 | `Claude: Show usage analytics` | charts the collected usage history |
 | `Claude: Show account availability calendar` | week/day timeline of when each account and limit is usable |
 | `Claude: Delete collected usage history` | removes all recorded usage readings |

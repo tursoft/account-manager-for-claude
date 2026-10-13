@@ -83,9 +83,6 @@ export class AnalyticsPanel {
       case "setHistory":
         await this.setCollection(msg.enabled === true);
         break;
-      case "openSettings":
-        void vscode.commands.executeCommand("tursoftClaudeSwitcher.openSettings");
-        break;
     }
   }
 
@@ -148,7 +145,6 @@ export class AnalyticsPanel {
         <span class="track" aria-hidden="true"></span>
         <span class="switch-text">Collect usage history</span>
       </label>
-      <button id="settingsBtn" class="ghost" title="Open extension settings">Settings</button>
     </div>
   </header>
 
