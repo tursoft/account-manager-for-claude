@@ -64,7 +64,7 @@ export class AnalyticsPanel {
     );
   }
 
-  private async onMessage(msg: { type?: string; from?: unknown; to?: unknown }): Promise<void> {
+  private async onMessage(msg: { type?: string; from?: unknown; to?: unknown; enabled?: unknown }): Promise<void> {
     switch (msg.type) {
       case "ready":
         await this.postMeta();
@@ -80,12 +80,23 @@ export class AnalyticsPanel {
         void this.panel.webview.postMessage({ type: "data", from, to, points, accounts: this.accounts() });
         break;
       }
-      case "enableHistory":
-        await this.deps.getConfig().update("usageHistory.enabled", true, vscode.ConfigurationTarget.Global);
+      case "setHistory":
+        await this.setCollection(msg.enabled === true);
         break;
       case "openSettings":
         void vscode.commands.executeCommand("tursoftClaudeSwitcher.openSettings");
         break;
+    }
+  }
+
+  /** Turns usage collection on or off (the user-level setting). */
+  private async setCollection(enabled: boolean): Promise<void> {
+    try {
+      await this.deps.getConfig().update("usageHistory.enabled", enabled, vscode.ConfigurationTarget.Global);
+      // The configuration listener sends the new state to the page.
+    } catch (e) {
+      void vscode.window.showErrorMessage(`Could not change usage collection: ${(e as Error).message}`);
+      await this.postMeta(); // put the switch back to the real state
     }
   }
 
@@ -131,13 +142,20 @@ export class AnalyticsPanel {
       <h1>Usage analytics</h1>
       <p id="status" class="sub"></p>
     </div>
-    <button id="settingsBtn" class="ghost" title="Open extension settings">Settings</button>
+    <div class="head-actions">
+      <label class="switch" title="Record every account's limits in the background; readings stay on this computer">
+        <input id="collectToggle" type="checkbox" role="switch" />
+        <span class="track" aria-hidden="true"></span>
+        <span class="switch-text">Collect usage history</span>
+      </label>
+      <button id="settingsBtn" class="ghost" title="Open extension settings">Settings</button>
+    </div>
   </header>
 
   <div id="offNotice" class="notice info hidden">
-    <span>Usage collection is off, so there is no history to chart yet. Turn it on to record every
-    account's limits once a minute (configurable); data stays on this computer.</span>
-    <button id="enableBtn" class="primary">Turn on collection</button>
+    <span>Collection is off, so nothing new is being recorded (history collected earlier stays
+    available). Turn on <b>Collect usage history</b> above to record every account's limits, once a
+    minute by default; readings stay on this computer.</span>
   </div>
 
   <section class="controls">

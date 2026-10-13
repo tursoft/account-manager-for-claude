@@ -54,30 +54,80 @@ h1 {
   font-size: 12px;
 }
 
-button.ghost,
-button.primary {
-  padding: 5px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
 button.ghost {
+  padding: 5px 12px;
   border: 1px solid var(--border);
+  border-radius: 6px;
   background: transparent;
+  cursor: pointer;
 }
 
 button.ghost:hover {
   background: var(--vscode-toolbar-hoverBackground);
 }
 
-button.primary {
-  border: none;
-  color: var(--vscode-button-foreground);
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* On/off switch: a real checkbox (keyboard and screen reader friendly) drawn as a track. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch .track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.switch .track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.switch input:checked + .track {
+  border-color: transparent;
   background: var(--vscode-button-background);
 }
 
-button.primary:hover {
-  background: var(--vscode-button-hoverBackground);
+.switch input:checked + .track::after {
+  transform: translateX(14px);
+  background: #fff;
+}
+
+.switch input:focus-visible + .track {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switch-text {
+  font-size: 12px;
 }
 
 button.link {

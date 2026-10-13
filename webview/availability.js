@@ -97,7 +97,6 @@ $("lanesToggle").addEventListener("change", (e) => {
   persist();
   render();
 });
-$("enableBtn").addEventListener("click", () => vscode.postMessage({ type: "enableHistory" }));
 
 function syncControls() {
   for (const b of $("view").querySelectorAll("[data-view]")) {
@@ -295,7 +294,6 @@ function render() {
     ui.view === "day"
       ? new Date(from).toLocaleDateString([], o)
       : `${new Date(from).toLocaleDateString([], o)} – ${new Date(to - 1).toLocaleDateString([], { ...o, year: "numeric" })}`;
-  $("historyNotice").classList.toggle("hidden", data.historyEnabled || from >= now);
 
   const timelines = accounts.map((acc) => buildTimeline(acc, points, from, to, now));
   renderNow(accounts, timelines, now);

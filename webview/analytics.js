@@ -146,7 +146,9 @@ $("noneBtn").addEventListener("click", () => {
   render();
 });
 
-$("enableBtn").addEventListener("click", () => vscode.postMessage({ type: "enableHistory" }));
+$("collectToggle").addEventListener("change", (e) =>
+  vscode.postMessage({ type: "setHistory", enabled: e.target.checked })
+);
 $("settingsBtn").addEventListener("click", () => vscode.postMessage({ type: "openSettings" }));
 
 function syncControls() {
@@ -421,6 +423,7 @@ function renderStatus() {
   $("status").textContent = meta.enabled
     ? `Collecting every ${meta.intervalSeconds}s · keeping ${meta.retentionDays} days · stored only on this computer`
     : "Usage collection is off";
+  $("collectToggle").checked = meta.enabled;
   $("offNotice").classList.toggle("hidden", meta.enabled);
 }
 

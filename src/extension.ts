@@ -831,7 +831,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("tursoftClaudeSwitcher.openAvailability", () =>
-      AvailabilityPanel.show(context.extensionUri, { store, history, getConfig: config })
+      AvailabilityPanel.show(context.extensionUri, { store, history })
     )
   );
 

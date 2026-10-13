@@ -8,7 +8,6 @@ import { UsageHistory } from "../usageHistory";
 export interface AvailabilityDeps {
   store: AccountStore;
   history: UsageHistory;
-  getConfig: () => vscode.WorkspaceConfiguration;
 }
 
 /**
@@ -73,7 +72,6 @@ export class AvailabilityPanel {
           now,
           points,
           accounts: await this.accounts(),
-          historyEnabled: this.deps.getConfig().get<boolean>("usageHistory.enabled", false),
         });
         break;
       }
@@ -81,10 +79,6 @@ export class AvailabilityPanel {
         if (typeof msg.id === "string") {
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", msg.id);
         }
-        break;
-      case "enableHistory":
-        await this.deps.getConfig().update("usageHistory.enabled", true, vscode.ConfigurationTarget.Global);
-        AvailabilityPanel.notifyChanged();
         break;
     }
   }
@@ -162,11 +156,6 @@ export class AvailabilityPanel {
       <span><i class="sw free projected"></i>Projected</span>
     </div>
   </section>
-
-  <div id="historyNotice" class="notice hidden">
-    <span>Past availability needs collected usage history. Turn it on to fill in the days behind you.</span>
-    <button id="enableBtn" class="primary">Turn on collection</button>
-  </div>
 
   <section id="calendar" class="calendar" aria-label="Availability timeline"></section>
   <div id="tooltip" class="tooltip hidden" role="tooltip"></div>

@@ -235,8 +235,8 @@ directories would each try to spend the same single-use refresh token.
 
 ## Usage history and analytics
 
-Turn on `tursoftClaudeSwitcher.usageHistory.enabled` (or **Turn on collection** on the analytics
-page) to record every saved account's limits once a minute (`usageHistory.intervalSeconds`).
+Turn on `tursoftClaudeSwitcher.usageHistory.enabled` (or the **Collect usage history** switch at the
+top of the analytics page, which also turns it off) to record every saved account's limits once a minute (`usageHistory.intervalSeconds`).
 Readings stay on this computer, in the extension's storage; unchanged readings are stored only
 every 15 minutes, and data older than `usageHistory.retentionDays` (90) is deleted.
 
@@ -264,7 +264,7 @@ as a week from Monday to Sunday or, after clicking a day, hour by hour:
 - green = available, amber = 80%+ used, red = limited, grey = no data; markers show reset times
   and a red line shows now.
 
-The past comes from collected usage history; the future is projected from the latest reading
+The past comes from collected usage history (turn collection on from the analytics page); the future is projected from the latest reading
 (a used-up limit stays blocked until its reset time, then counts as free) and is drawn striped.
 
 ## Backup and restore
