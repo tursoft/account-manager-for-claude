@@ -265,3 +265,7 @@ To publish to [Open VSX](https://open-vsx.org/) as well, run `npx ovsx publish -
 ## License
 
 MIT
+
+---
+
+<p align="center"><a href="https://bestjobfinder.net/?utm_source=vscode-account-manager-for-claude&utm_medium=readme&utm_campaign=readme"><img src="docs/bjf-banner.png" width="600" alt="BestJobFinder: your AI copilot in job search. Try now."></a></p>
