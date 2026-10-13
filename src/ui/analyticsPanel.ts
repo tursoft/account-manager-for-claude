@@ -206,7 +206,20 @@ export class AnalyticsPanel {
       <div id="accounts" class="legend-list"></div>
       <p class="legend-hint">Click an account to show or hide it in every chart.</p>
     </aside>
-    <section id="charts" class="charts"></section>
+    <div class="chart-column">
+      <section id="charts" class="charts"></section>
+
+      <section class="utilization" aria-labelledby="utilTitle">
+        <div class="section-head">
+          <h2 id="utilTitle">Capacity utilization</h2>
+          <p class="caption">How much of the capacity each limit offered was actually used, for the
+          selected accounts and period. A 5h limit refills every 5 hours and a weekly limit (Fable
+          included) every 7 days: capacity that is not used before the reset is lost.</p>
+        </div>
+        <div id="utilSummary" class="util-summary"></div>
+        <section id="utilCharts" class="charts"></section>
+      </section>
+    </div>
   </div>
 
   <script nonce="${nonce}" src="${script}"></script>

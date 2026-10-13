@@ -255,7 +255,12 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
 - **Used %** (how much of each limit was used) or **Available %** (how much was left); where a
   chart interval holds several readings, Used % shows the highest and Available % the lowest;
 - line, area, bar, stacked bar, pie, or doughnut charts; the vertical axis always spans 0-100%
-  (a stacked bar may grow past it when accounts add up).
+  (a stacked bar may grow past it when accounts add up);
+- **Capacity utilization** below the charts: how much of the capacity each limit offered was
+  actually used, for the selected accounts and period. A 5h limit refills every 5 hours and a
+  weekly limit (Fable included) every 7 days, so capacity not used before a reset is lost; the
+  figures and charts show used capacity over offered capacity, per limit and for all limits
+  together (per 5h or per week on the charts, overall for the whole period).
 
 **Delete collected usage history** removes all recorded readings.
 

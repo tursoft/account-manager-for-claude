@@ -17,6 +17,7 @@ import {
   Tooltip,
 } from "chart.js";
 import { bucketSeries, bucketSizeFor, bucketStarts, kindsIn, seriesTotal } from "../src/historySeries";
+import { cycleMs, utilizationSeries, utilizationSummary } from "../src/utilization";
 
 Chart.register(
   ArcElement,
@@ -243,6 +244,8 @@ function render() {
   for (const c of charts) c.destroy();
   charts = [];
   $("charts").innerHTML = "";
+  $("utilCharts").innerHTML = "";
+  $("utilSummary").innerHTML = "";
 
   const accounts = allAccounts();
   renderLegend(accounts, new Set(data ? data.points.filter((p) => p.t >= data.from).map((p) => p.id) : []));
@@ -391,6 +394,147 @@ function render() {
     }
     charts.push(new Chart(canvas, config));
   }
+
+  renderUtilization(kinds, selected, points, from, to, { text, muted, grid });
+}
+
+// ---- capacity utilization ----------------------------------------------------
+
+/**
+ * Chart buckets for utilization. Each bucket compares what was used in it with the share of
+ * the cycle's budget it covers, so a bucket must hold a meaningful share: at least a day for
+ * weekly limits (1/7 of the budget), at least an hour for the 5h limit; whole cycles once the
+ * range spans several of them.
+ */
+function utilBucketMs(kind, rangeMs) {
+  const cycle = cycleMs(kind);
+  const floor = kind === "session" ? 3_600_000 : 86_400_000;
+  if (rangeMs <= cycle * 2) return Math.max(floor, bucketSizeFor(rangeMs));
+  return cycle * Math.max(1, Math.ceil(rangeMs / cycle / 120)); // keep it under ~120 bars
+}
+
+function utilTone(value) {
+  return value === null ? "" : value >= 70 ? "good" : value >= 35 ? "mid" : "low";
+}
+
+function renderUtilization(kinds, selected, points, from, to, colors) {
+  const rangeMs = to - from;
+  const ids = selected.map((a) => a.id);
+  const summaryBox = $("utilSummary");
+  const summaries = kinds.map(({ kind, label }) => utilizationSummary(points, ids, kind, label, from, to));
+
+  // One figure per limit, plus the whole: every limit's used budgets over every limit's offered budgets.
+  const totalUsed = summaries.reduce((s, x) => s + x.usedBudgets, 0);
+  const totalOffered = summaries.reduce((s, x) => s + x.offeredBudgets, 0);
+  const overall = totalOffered > 0 ? Math.round((totalUsed / totalOffered) * 1000) / 10 : null;
+  summaryBox.appendChild(
+    utilFigure("All limits", overall, totalOffered > 0 ? `${totalUsed.toFixed(1)} of ${totalOffered.toFixed(1)} budgets used` : "no data", true)
+  );
+  for (const s of summaries) {
+    summaryBox.appendChild(
+      utilFigure(s.label, s.overall, s.overall === null ? "no data" : `${s.usedBudgets.toFixed(1)} of ${s.offeredBudgets.toFixed(1)} ${s.kind === "session" ? "5h" : "weekly"} budgets used`)
+    );
+  }
+
+  for (const { kind, label } of kinds) {
+    const bucketMs = utilBucketMs(kind, rangeMs);
+    const series = utilizationSeries(points, ids, kind, from, to, bucketMs);
+    if (!series.values.some((v) => v !== null)) continue;
+    const summary = summaries.find((s) => s.kind === kind);
+
+    const card = document.createElement("div");
+    card.className = "card chart-card";
+    const head = document.createElement("div");
+    head.className = "chart-head";
+    const title = document.createElement("h2");
+    title.textContent = `${label} utilization`;
+    const sub = document.createElement("span");
+    sub.className = "caption";
+    sub.textContent = `% of the capacity used per ${fmtDuration(bucketMs)}${summary && summary.overall !== null ? ` · ${summary.overall}% overall` : ""}`;
+    head.append(title, sub);
+    const wrap = document.createElement("div");
+    wrap.className = "canvas-wrap";
+    const canvas = document.createElement("canvas");
+    wrap.appendChild(canvas);
+    card.append(head, wrap);
+    $("utilCharts").appendChild(card);
+
+    const labels = series.starts.map((t) => fmtBucket(t, rangeMs));
+    const datasets = [];
+    if (ids.length > 1) {
+      datasets.push({
+        label: "Selected accounts together",
+        data: series.values,
+        borderColor: colors.text,
+        backgroundColor: colors.text + "22",
+        fill: "origin",
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.2,
+        spanGaps: false,
+        order: 0,
+      });
+    }
+    selected.forEach((acc, i) => {
+      if (!series.perAccount[i].some((v) => v !== null)) return;
+      datasets.push({
+        label: acc.label,
+        data: series.perAccount[i],
+        borderColor: acc.color,
+        backgroundColor: acc.color + "22",
+        fill: ids.length > 1 ? false : "origin",
+        borderWidth: ids.length > 1 ? 1.25 : 2,
+        borderDash: ids.length > 1 ? [4, 3] : [],
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.2,
+        spanGaps: false,
+        order: 1,
+      });
+    });
+
+    charts.push(
+      new Chart(canvas, {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { ticks: { color: colors.muted, maxRotation: 0, autoSkip: true, autoSkipPadding: 18 }, grid: { display: false } },
+            y: { min: 0, max: 100, ticks: { color: colors.muted, callback: (v) => v + "%" }, grid: { color: colors.grid } },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (c) => (c.parsed.y === null ? null : ` ${c.dataset.label}: ${c.parsed.y}% of capacity used`),
+              },
+            },
+          },
+        },
+      })
+    );
+  }
+}
+
+/** A figure card: the limit's name, its utilization, and what it is made of. */
+function utilFigure(name, value, detail, primary) {
+  const card = document.createElement("div");
+  card.className = "card util-figure" + (primary ? " primary" : "") + (value === null ? "" : " " + utilTone(value));
+  const n = document.createElement("div");
+  n.className = "caption";
+  n.textContent = name;
+  const v = document.createElement("div");
+  v.className = "util-value";
+  v.textContent = value === null ? "–" : `${value}%`;
+  const d = document.createElement("div");
+  d.className = "caption";
+  d.textContent = detail;
+  card.append(n, v, d);
+  return card;
 }
 
 function fmtDuration(ms) {

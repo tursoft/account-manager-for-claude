@@ -15,6 +15,15 @@ import { SwitchService } from "../src/switchService";
 import { findResetWindows } from "../src/limitNotifier";
 import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHistory";
 import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal } from "../src/historySeries";
+import {
+  coveredSpans,
+  cycleMs,
+  usedBetween,
+  usedCapacityIn,
+  utilizationIn,
+  utilizationSeries,
+  utilizationSummary,
+} from "../src/utilization";
 import { buildTimeline, Segment } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
@@ -856,6 +865,70 @@ async function runUsageHistoryTests(): Promise<void> {
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+function runUtilizationTests(): void {
+  console.log("capacity utilization:");
+  const h = 3_600_000;
+  const pt = (id: string, t: number, session: number, fable?: number): HistoryPoint => ({
+    t,
+    id,
+    w: fable === undefined ? { session } : { session, weekly_fable: fable },
+  });
+
+  check("cycles: 5h for the session limit, 7 days for every weekly limit", cycleMs("session") === 5 * h && cycleMs("weekly_fable") === 7 * 24 * h && cycleMs("weekly_all") === 7 * 24 * h);
+  check("usage between readings: increases count, a drop is a reset", usedBetween(10, 40) === 30 && usedBetween(90, 15) === 15 && usedBetween(50, 50) === 0);
+
+  // One account, readings every 10 min: 0 -> 100% across exactly 5 h, then reset to 0 and 50% in the next 5 h.
+  const a: HistoryPoint[] = [];
+  for (let i = 0; i <= 30; i++) a.push(pt("a", i * 10 * 60_000, Math.min(100, Math.round((i / 30) * 100))));
+  for (let i = 1; i <= 30; i++) a.push(pt("a", 5 * h + i * 10 * 60_000, Math.min(50, Math.round((i / 30) * 50))));
+  const used10h = usedCapacityIn(a, "session", 0, 10 * h)!;
+  check("used capacity over 10 h: 100% + 50% = 150%", Math.round(used10h) === 150, String(used10h));
+  check("10 h offers two 5 h budgets: utilization 75%", Math.round(utilizationIn(a, "session", 0, 10 * h)!) === 75);
+  check("the first 5 h alone: 100%", Math.round(utilizationIn(a, "session", 0, 5 * h)!) === 100);
+  check("the second 5 h alone: 50%", Math.round(utilizationIn(a, "session", 5 * h, 10 * h)!) === 50);
+  check("a window without any readings: null, not 0", usedCapacityIn(a, "session", 20 * h, 25 * h) === null);
+  check("an increase spanning a window edge is split by time", Math.round(usedCapacityIn(a, "session", 0, 2.5 * h)!) === 50);
+
+  // Gaps: two readings 2 hours apart (collection was off): nothing is counted across the gap.
+  const gap = [pt("g", 0, 10), pt("g", 2 * h, 80), pt("g", 2 * h + 60_000, 82)];
+  check("a long gap between readings counts nothing", Math.round(usedCapacityIn(gap, "session", 0, 3 * h)!) === 2);
+  check("covered spans leave the gap out", JSON.stringify(coveredSpans(gap, 0, 3 * h)) === JSON.stringify([[2 * h, 2 * h + 60_000]]));
+
+  // Two accounts over a 7-day Fable cycle, read every 20 minutes (readings further apart than
+  // CARRY_MS count as a collection gap): "a" climbs to 70%, "b" to 30%.
+  const week: HistoryPoint[] = [];
+  const steps = 7 * 24 * 3;
+  for (let i = 0; i <= steps; i++) {
+    const t = i * 20 * 60_000;
+    week.push(pt("fa", t, 0, (i / steps) * 70));
+    week.push(pt("fb", t, 0, (i / steps) * 30));
+  }
+  const both = utilizationSummary(week, ["fa", "fb"], "weekly_fable", "Weekly (Fable)", 0, 7 * 24 * h);
+  check("Fable over the week: a 70%, b 30%", both.accounts[0].utilization === 70 && both.accounts[1].utilization === 30, JSON.stringify(both.accounts));
+  check("together: (70 + 30) / (2 budgets) = 50%", both.overall === 50, String(both.overall));
+  check("budgets reported: 1.0 used of 2 offered", both.usedBudgets === 1 && both.offeredBudgets === 2, `${both.usedBudgets}/${both.offeredBudgets}`);
+  const onlyA = utilizationSummary(week, ["fa"], "weekly_fable", "Weekly (Fable)", 0, 7 * 24 * h);
+  check("selecting one account changes the overall figure", onlyA.overall === 70);
+  const none = utilizationSummary(week, ["zz"], "weekly_fable", "Weekly (Fable)", 0, 7 * 24 * h);
+  check("an account without readings: no utilization, no capacity", none.overall === null && none.accounts[0].utilization === null);
+
+  // Partial coverage: an account watched only for the last 3.5 days of the week must not be charged for 7.
+  const half: HistoryPoint[] = [];
+  const halfSteps = (3.5 * 24 * 60) / 20;
+  for (let i = 0; i <= halfSteps; i++) half.push(pt("h", 3.5 * 24 * h + i * 20 * 60_000, 0, (i / halfSteps) * 35));
+  const partial = utilizationSummary(half, ["h"], "weekly_fable", "Weekly (Fable)", 0, 7 * 24 * h);
+  check("only the watched part of the range is offered capacity", partial.offeredBudgets === 0.5 && partial.overall === 70, `${partial.offeredBudgets} ${partial.overall}`);
+
+  // Series: 1-day buckets over the week for the two Fable accounts (steady climb => the same every day).
+  const s = utilizationSeries(week, ["fa", "fb"], "weekly_fable", 0, 7 * 24 * h, 24 * h);
+  check("series: one value per bucket", s.starts.length === 7 && s.values.length === 7);
+  check("series: each day uses 1/7 of the week's budget at 50% together", s.values.every((v) => v === 50), JSON.stringify(s.values));
+  check("series: per account 70% and 30% each day", s.perAccount[0].every((v) => v === 70) && s.perAccount[1].every((v) => v === 30));
+  const sa = utilizationSeries(a, ["a", "nobody"], "session", 0, 10 * h, 5 * h);
+  check("series: 5h buckets of the session account: 100% then 50%; an account without data is skipped", JSON.stringify(sa.values) === "[100,50]" && sa.perAccount[1].every((v) => v === null), JSON.stringify(sa.values));
+  check("utilization never exceeds 100% (readings are rounded percents)", utilizationIn([pt("r", 0, 0), pt("r", 60_000, 100), pt("r", 120_000, 0), pt("r", 180_000, 100)], "session", 0, 180_000) === 100);
+}
+
 function runHistorySeriesTests(): void {
   console.log("history series:");
   const m = 60_000;
@@ -1062,6 +1135,7 @@ function runToneTests(): void {
 
 runProfileActivityTests();
 runHistorySeriesTests();
+runUtilizationTests();
 runAvailabilityTests();
 runListingTests();
 runAvatarTests();

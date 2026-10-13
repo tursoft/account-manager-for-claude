@@ -322,6 +322,68 @@ input[type="datetime-local"] {
   gap: 14px;
 }
 
+.chart-column {
+  min-width: 0;
+}
+
+/* ---- capacity utilization ------------------------------------------ */
+
+.utilization {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.section-head {
+  margin-bottom: 12px;
+}
+
+.section-head h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.section-head .caption {
+  margin: 0;
+  max-width: 760px;
+  line-height: 1.45;
+}
+
+.util-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.util-figure {
+  padding: 10px 14px;
+  border-left: 3px solid var(--muted);
+}
+
+.util-figure.primary {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.util-figure.good {
+  border-left-color: var(--vscode-charts-green, #3fb950);
+}
+
+.util-figure.mid {
+  border-left-color: var(--vscode-charts-yellow, #d29922);
+}
+
+.util-figure.low {
+  border-left-color: var(--vscode-charts-red, #f85149);
+}
+
+.util-value {
+  margin: 2px 0;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .chart-card {
   padding: 14px 16px 12px;
 }
