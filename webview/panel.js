@@ -1,3 +1,4 @@
+import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import {
   extraFilterLabels,
   filtersActive,
@@ -308,27 +309,16 @@ import {
     return root;
   }
 
-  /** Starburst mark: rays of alternating length around the center (16x16 box). */
-  function starburst(rays) {
-    let d = "";
-    for (let i = 0; i < rays; i++) {
-      const a = (i / rays) * Math.PI * 2 - Math.PI / 2;
-      const r = i % 2 ? 4.6 : 6.4;
-      d += `M${(8 + Math.cos(a) * 1.4).toFixed(2)} ${(8 + Math.sin(a) * 1.4).toFixed(2)}L${(8 + Math.cos(a) * r).toFixed(2)} ${(8 + Math.sin(a) * r).toFixed(2)}`;
-    }
-    return `<path d="${d}"/>`;
-  }
-
   /** Account providers; each account shows its provider's mark. More can be added here. */
   const PROVIDERS = {
-    claude: { name: "Claude", color: "#d97757", glyph: starburst(12) },
+    claude: { name: "Claude", glyph: starburstGlyph(12) },
   };
 
   function providerOf(acc) {
     return PROVIDERS[acc.provider] || PROVIDERS.claude;
   }
 
-  /** Round avatar inside a card: the provider's mark on the provider's color. */
+  /** Round avatar inside a card: the provider's mark; green while the account has limit left, orange once a limit is used up. */
   function avatar(acc) {
     const provider = providerOf(acc);
     const a = el("div", "avatar" + (acc.isActive ? " active" : "") + (acc.needsReauthorization ? " expired" : ""));
@@ -336,9 +326,9 @@ import {
     svg.setAttribute("viewBox", "0 0 16 16");
     svg.setAttribute("class", "provider-mark");
     svg.innerHTML = provider.glyph;
-    a.style.setProperty("--provider-color", provider.color);
+    a.style.setProperty("--avatar-color", AVATAR_COLORS[avatarState(acc)]);
     a.appendChild(svg);
-    a.title = `${provider.name} account: ${acc.label}${acc.isActive ? " (active)" : ""}`;
+    a.title = `${provider.name} account: ${acc.label}${acc.isActive ? " (active)" : ""} — ${avatarDescription(acc)}`;
     a.setAttribute("aria-hidden", "true");
     return a;
   }

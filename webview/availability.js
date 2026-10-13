@@ -1,6 +1,7 @@
 // Account availability calendar: a week (or one day) timeline per account, with
 // an overall "usable?" lane and one lane per limit (5h, weekly, Fable, ...).
 import { buildTimeline } from "../src/availability";
+import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import {
   DEFAULT_LISTING,
   filtersActive,
@@ -338,21 +339,14 @@ function showToast(text) {
   toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
 }
 
-function starburst() {
-  let d = "";
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
-    const r = i % 2 ? 4.6 : 6.4;
-    d += `M${(8 + Math.cos(a) * 1.4).toFixed(2)} ${(8 + Math.sin(a) * 1.4).toFixed(2)}L${(8 + Math.cos(a) * r).toFixed(2)} ${(8 + Math.sin(a) * r).toFixed(2)}`;
-  }
-  return `<path d="${d}"/>`;
-}
-
-function avatar() {
+/** Round account icon: the Claude mark; green while the account has limit left, orange once a limit is used up. */
+function avatar(acc) {
   const a = el("span", "avatar");
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 16 16");
-  svg.innerHTML = starburst();
+  svg.innerHTML = starburstGlyph(12);
+  a.style.setProperty("--avatar-color", AVATAR_COLORS[avatarState(acc)]);
+  a.title = avatarDescription(acc);
   a.appendChild(svg);
   return a;
 }
@@ -399,7 +393,7 @@ function renderNow(accounts, timelines, now) {
     const tl = timelines[i];
     const card = el("div", "now-card" + (acc.isActive ? " active" : ""));
     const head = el("div", "now-head");
-    head.append(avatar());
+    head.append(avatar(acc));
     const name = el("div", "now-name", acc.label);
     name.title = `${acc.label}\nDouble-click to copy`;
     copyOnDoubleClick(name, acc.id);
@@ -587,7 +581,7 @@ function render() {
       grip.addEventListener("keydown", (e) => onGripKey(e, acc.id));
       label.appendChild(grip);
     }
-    label.append(avatar());
+    label.append(avatar(acc));
     const name = el("span", "name", acc.label);
     name.title =
       (acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label) + "\nDouble-click to copy";

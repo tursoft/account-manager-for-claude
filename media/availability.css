@@ -190,7 +190,7 @@ h1 {
   border-radius: 4px;
 }
 
-/* Provider mark: white starburst on Claude orange, no border. */
+/* Provider mark: a white starburst; the fill shows the limit state (green: limit left, orange: used up, gray: unknown). */
 .avatar {
   flex: 0 0 auto;
   display: grid;
@@ -198,7 +198,11 @@ h1 {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--claude) 80%, #fff), var(--claude) 70%);
+  background: radial-gradient(
+    circle at 30% 25%,
+    color-mix(in srgb, var(--avatar-color, #7b8087) 80%, #fff),
+    var(--avatar-color, #7b8087) 70%
+  );
 }
 
 .avatar svg {

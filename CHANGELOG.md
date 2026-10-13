@@ -28,6 +28,8 @@ First release of the Tursoft fork of
   60 seconds.
 - About sheet with author and fork information.
 - Double-click an account's name to copy it (in the panel and the availability calendar).
+- The account icon shows the limit state: green while a limit is left, orange once one is used up,
+  gray when usage is unknown or the login expired.
 - Optional usage history (collected every minute by default, kept 90 days, stored locally) and a
   **Usage analytics** page with per-limit charts over selectable ranges, accounts, chart types,
   and limit % or usage.

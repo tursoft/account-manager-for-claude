@@ -392,7 +392,6 @@ button:focus-visible {
 }
 
 .avatar.expired {
-  filter: grayscale(0.7);
   position: relative;
 }
 
@@ -612,11 +611,11 @@ button:focus-visible {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  /* Provider color (Claude orange); no border. */
+  /* Fill = limit state (green: limit left, orange: used up, gray: unknown); no border. */
   background: radial-gradient(
     circle at 30% 25%,
-    color-mix(in srgb, var(--provider-color, #d97757) 80%, #fff),
-    var(--provider-color, #d97757) 70%
+    color-mix(in srgb, var(--avatar-color, #7b8087) 80%, #fff),
+    var(--avatar-color, #7b8087) 70%
   );
   user-select: none;
 }

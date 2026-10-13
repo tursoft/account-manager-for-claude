@@ -16,6 +16,7 @@ import { findResetWindows } from "../src/limitNotifier";
 import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHistory";
 import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal, usageDelta } from "../src/historySeries";
 import { buildTimeline, Segment } from "../src/availability";
+import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import {
   DEFAULT_LISTING,
   extraFilterLabels,
@@ -972,10 +973,39 @@ function runListingTests(): void {
   check("sort alone is not a filter", !filtersActive({ ...DEFAULT_LISTING, sort: "name" }) && filtersActive({ ...DEFAULT_LISTING, text: "a" }));
 }
 
+function runAvatarTests(): void {
+  console.log("account icon:");
+  const win = (percent: number) => [{ kind: "session", label: "Session (5h)", percent, resetsAt: null }];
+  const acc = (windows: ReturnType<typeof win>, extra: { needsReauthorization?: boolean } = {}) => ({
+    id: "x",
+    label: "X",
+    windows,
+    ...extra,
+  });
+  check("green while a limit is left", avatarState(acc(win(30))) === "available" && AVATAR_COLORS.available === "#3c9d5d");
+  check("still green at 80%+ (a limit is left)", avatarState(acc(win(99))) === "available");
+  check("orange once a limit is used up", avatarState(acc(win(100))) === "limited" && AVATAR_COLORS.limited === "#d97757");
+  check(
+    "orange when any one limit is used up",
+    avatarState(acc([...win(10), { kind: "weekly_fable", label: "Weekly (Fable)", percent: 100, resetsAt: null }])) === "limited"
+  );
+  check("gray without usage data", avatarState(acc([])) === "unknown");
+  check("gray for an expired login, whatever its last usage said", avatarState(acc(win(10), { needsReauthorization: true })) === "unknown");
+  check(
+    "tooltip text names the state",
+    avatarDescription(acc(win(10))) === "limit available" &&
+      avatarDescription(acc(win(100))) === "limit used up" &&
+      avatarDescription(acc([])) === "usage unknown" &&
+      avatarDescription(acc(win(10), { needsReauthorization: true })) === "login expired"
+  );
+  check("the mark is one path with a ray per segment", /^<path d="(M[\d. ]+L[\d. ]+){12}"\/>$/.test(starburstGlyph(12)));
+}
+
 runProfileActivityTests();
 runHistorySeriesTests();
 runAvailabilityTests();
 runListingTests();
+runAvatarTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();

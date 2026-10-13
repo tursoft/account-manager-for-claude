@@ -38,7 +38,9 @@ and re-login.
 - **Status bar** — the active account and its usage % always in view.
 - **Compact panel** — one row per account with usage bars, reset times, and a **⋯** menu for
   all actions. **Switch** and **Refresh** buttons sit next to it inside each account's box, with
-  the time of the last update under the account's icon. Drag and drop to reorder; the order is
+  the time of the last update under the account's icon, which is green while the account has limit
+  left, orange once a limit is used up, and gray when usage is unknown or the login expired. Drag
+  and drop to reorder; the order is
   remembered. Double-click an account's name to copy it (also in the availability calendar).
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
   usage left (or used up), plus filters by plan (Pro, Max, Team, ...) and by model-specific
