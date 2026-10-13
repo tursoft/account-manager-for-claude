@@ -142,6 +142,11 @@
         "command": "tursoftClaudeSwitcher.about",
         "title": "Claude: About Tursoft Claude Multi-Account Switcher",
         "icon": "$(info)"
+      },
+      {
+        "command": "tursoftClaudeSwitcher.openSettings",
+        "title": "Claude: Open extension settings",
+        "icon": "$(gear)"
       }
     ],
     "menus": {
@@ -195,6 +200,11 @@
           "command": "tursoftClaudeSwitcher.about",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "9_about@1"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.openSettings",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "9_about@0"
         }
       ],
       "commandPalette": [

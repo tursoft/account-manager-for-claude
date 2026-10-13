@@ -940,6 +940,12 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.openSettings", () =>
+      vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${context.extension.id}`)
+    )
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("tursoftClaudeSwitcher.openPanel", () => {
       void vscode.commands.executeCommand("tursoftClaudeSwitcher.accountsView.focus");
     })
