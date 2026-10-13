@@ -37,7 +37,8 @@ and re-login.
   that profile's own `CLAUDE_CONFIG_DIR` instead of copying the currently active account.
 - **Status bar** — the active account and its usage % always in view.
 - **Compact panel** — one row per account with usage bars, reset times, and a **⋯** menu for
-  all actions. Drag and drop to reorder; the order is remembered.
+  all actions. **Switch** and **Refresh** buttons sit beside each account. Drag and drop to
+  reorder; the order is remembered.
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
   usage left (or used up); one click clears the filters.
 - **Sorting** — keep your own drag-and-drop order, or sort by availability (usable accounts
