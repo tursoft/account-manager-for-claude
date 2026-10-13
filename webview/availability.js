@@ -200,6 +200,99 @@ function syncListingControls(accounts) {
   clearBtn.classList.toggle("hidden", !filtersActive(listing));
 }
 
+// ---- reordering (custom order only) --------------------------------------------
+// Drag an account's label onto another account, or focus its grip and press Up / Down.
+// This changes the saved custom order, the same order the accounts panel shows.
+
+let dragId = null;
+let dropTarget = null; // { el, before }
+let pendingRender = false;
+let focusGripId = null;
+let shownIds = [];
+
+function clearDropMarker() {
+  if (dropTarget) dropTarget.el.classList.remove("drop-before", "drop-after");
+  dropTarget = null;
+}
+
+/** Puts account `id` before or after account `targetId` in the full, saved order. */
+function moveAccount(id, targetId, before) {
+  const ids = data.accounts.map((a) => a.id);
+  const from = ids.indexOf(id);
+  const target = ids.indexOf(targetId);
+  if (from < 0 || target < 0 || id === targetId) return;
+  let to = target + (before ? 0 : 1);
+  if (from < to) to -= 1;
+  if (to === from) return;
+  ids.splice(from, 1);
+  ids.splice(to, 0, id);
+  const byId = new Map(data.accounts.map((a) => [a.id, a]));
+  data = { ...data, accounts: ids.map((i) => byId.get(i)) };
+  render();
+  vscode.postMessage({ type: "reorder", ids });
+}
+
+function onGripKey(e, id) {
+  if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+  e.preventDefault();
+  const i = shownIds.indexOf(id);
+  const j = e.key === "ArrowUp" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= shownIds.length) return;
+  focusGripId = id; // render() rebuilds the rows; put the focus back afterwards
+  moveAccount(id, shownIds[j], e.key === "ArrowUp");
+}
+
+const calEl = $("calendar");
+
+calEl.addEventListener("dragstart", (e) => {
+  const label = e.target.closest && e.target.closest(".row-label[draggable='true']");
+  const group = label && label.closest(".group");
+  if (!group) return;
+  dragId = group.dataset.id;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", dragId);
+  e.dataTransfer.setDragImage(group, 24, 16);
+  requestAnimationFrame(() => group.classList.add("dragging"));
+});
+
+calEl.addEventListener("dragover", (e) => {
+  if (!dragId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const group = e.target.closest && e.target.closest(".group");
+  if (!group || group.dataset.id === dragId) {
+    clearDropMarker();
+    return;
+  }
+  const r = group.getBoundingClientRect();
+  const before = e.clientY < r.top + r.height / 2;
+  if (dropTarget && dropTarget.el === group && dropTarget.before === before) return;
+  clearDropMarker();
+  group.classList.add(before ? "drop-before" : "drop-after");
+  dropTarget = { el: group, before };
+});
+
+calEl.addEventListener("drop", (e) => {
+  if (!dragId) return;
+  e.preventDefault();
+  const target = dropTarget;
+  const id = dragId;
+  endDrag();
+  if (target) moveAccount(id, target.el.dataset.id, target.before);
+});
+
+calEl.addEventListener("dragend", endDrag);
+
+function endDrag() {
+  clearDropMarker();
+  dragId = null;
+  for (const g of calEl.querySelectorAll(".dragging")) g.classList.remove("dragging");
+  if (pendingRender) {
+    pendingRender = false;
+    render();
+  }
+}
+
 // ---- tooltip ---------------------------------------------------------------
 
 const tip = $("tooltip");
@@ -457,11 +550,24 @@ function render() {
     return;
   }
 
+  shownIds = visible.map((acc) => acc.id);
   visible.forEach((acc) => {
     const tl = timelines.get(acc.id);
     const group = el("div", "group" + (acc.needsReauthorization ? " expired" : ""));
+    group.dataset.id = acc.id;
     const row = el("div", "row overall-row");
     const label = el("div", "row-label");
+    if (listing.sort === "custom") {
+      // Only in the user's own order does moving an account mean anything.
+      label.classList.add("reorderable");
+      label.draggable = true;
+      const grip = el("button", "grip");
+      grip.type = "button";
+      grip.title = "Drag to reorder, or press the Up / Down arrow key";
+      grip.setAttribute("aria-label", `Reorder ${acc.label}: press the Up or Down arrow key to move it`);
+      grip.addEventListener("keydown", (e) => onGripKey(e, acc.id));
+      label.appendChild(grip);
+    }
     label.append(avatar());
     const name = el("span", "name", acc.label);
     name.title = acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label;
@@ -480,6 +586,12 @@ function render() {
     }
     cal.appendChild(group);
   });
+
+  if (focusGripId) {
+    const grip = cal.querySelector(`.group[data-id="${CSS.escape(focusGripId)}"] .grip`);
+    focusGripId = null;
+    if (grip) grip.focus();
+  }
 }
 
 // ---- messages --------------------------------------------------------------
@@ -492,7 +604,9 @@ window.addEventListener("message", (event) => {
     request();
   } else if (msg.type === "data") {
     data = msg;
-    render();
+    // Re-rendering mid-drag would destroy the dragged row; catch up when the drag ends.
+    if (dragId) pendingRender = true;
+    else render();
   } else if (msg.type === "changed") {
     request();
   }

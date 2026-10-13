@@ -11,6 +11,8 @@ export interface AvailabilityDeps {
   history: UsageHistory;
   /** The accounts panel's sort and filters, which the calendar starts from. */
   getInitialListing: () => ListingSettings;
+  /** Saves a new custom order of the accounts (the same order the accounts panel uses). */
+  reorder: (ids: string[]) => Promise<void>;
 }
 
 /**
@@ -58,7 +60,7 @@ export class AvailabilityPanel {
     panel.webview.onDidReceiveMessage((msg) => void this.onMessage(msg), undefined, this.disposables);
   }
 
-  private async onMessage(msg: { type?: string; from?: unknown; to?: unknown; id?: unknown }): Promise<void> {
+  private async onMessage(msg: { type?: string; from?: unknown; to?: unknown; id?: unknown; ids?: unknown }): Promise<void> {
     switch (msg.type) {
       case "ready":
         // Start from the accounts panel's sort and filters; the page keeps its own from here on.
@@ -82,6 +84,11 @@ export class AvailabilityPanel {
         });
         break;
       }
+      case "reorder":
+        if (Array.isArray(msg.ids) && msg.ids.every((id) => typeof id === "string")) {
+          await this.deps.reorder(msg.ids as string[]);
+        }
+        break;
       case "switch":
         if (typeof msg.id === "string") {
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", msg.id);

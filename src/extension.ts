@@ -835,6 +835,10 @@ export function activate(context: vscode.ExtensionContext): void {
         store,
         history,
         getInitialListing: () => viewProvider.getListingSeed(),
+        reorder: async (ids) => {
+          await store.reorder(ids);
+          refreshUI();
+        },
       })
     )
   );

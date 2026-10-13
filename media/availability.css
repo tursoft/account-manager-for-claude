@@ -534,8 +534,69 @@ button.link {
 }
 
 .group {
+  position: relative;
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* Reordering (custom order): grip, dragged row, and the drop line. */
+.row-label {
+  position: relative;
+}
+
+.row-label.reorderable {
+  cursor: grab;
+}
+
+.grip {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  width: 6px;
+  height: 18px;
+  margin-top: -9px;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  background-image: radial-gradient(circle, var(--muted) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.group:hover .grip,
+.grip:focus-visible {
+  opacity: 0.85;
+}
+
+.grip:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #3794ff);
+  outline-offset: 2px;
+}
+
+.group.dragging {
+  opacity: 0.4;
+}
+
+.group.drop-before::before,
+.group.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--vscode-focusBorder, #3794ff);
+  z-index: 3;
+}
+
+.group.drop-before::before {
+  top: -1px;
+}
+
+.group.drop-after::after {
+  bottom: -1px;
 }
 
 .group:last-child {
