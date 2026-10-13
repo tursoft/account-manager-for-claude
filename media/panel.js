@@ -198,7 +198,13 @@
   }
 
   function card(acc, warn) {
-    const root = el("div", "card" + (acc.isActive ? " active" : "") + (acc.error ? " has-error" : ""));
+    const root = el(
+      "div",
+      "card" +
+        (acc.isActive ? " active" : "") +
+        (acc.error ? " has-error" : "") +
+        (acc.needsReauthorization ? " expired" : "")
+    );
     root.dataset.id = acc.id;
     // Dragging only makes sense in the user's own order.
     root.draggable = filter.sort === "custom";
@@ -216,6 +222,12 @@
     head.append(dot, name);
 
     if (acc.subscriptionType) head.appendChild(el("span", "badge", acc.subscriptionType));
+    if (acc.needsReauthorization) {
+      const expired = el("span", "badge expired-badge");
+      expired.append(icon("key"), el("span", "", "Login expired"));
+      expired.title = "The saved login (refresh token) expired or was revoked. Reauthorize to use this account again.";
+      head.appendChild(expired);
+    }
     head.appendChild(el("span", "spacer"));
 
     const ago = fmtAgo(acc.fetchedAt);
@@ -264,7 +276,11 @@
 
   /** Round avatar left of a card, with a stable color per account. */
   function avatar(acc) {
-    const a = el("div", "avatar" + (acc.isActive ? " active" : ""), initials(acc.label));
+    const a = el(
+      "div",
+      "avatar" + (acc.isActive ? " active" : "") + (acc.needsReauthorization ? " expired" : ""),
+      initials(acc.label)
+    );
     let hash = 0;
     for (const ch of acc.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
     a.style.setProperty("--avatar-hue", String(hash % 360));
@@ -276,7 +292,12 @@
   /** Always-visible quick actions beside a card: switch (inactive accounts only) and refresh. */
   function sideButtons(acc) {
     const side = el("div", "side");
-    if (!acc.isActive) {
+    if (acc.needsReauthorization) {
+      // Switching would fail with a dead login; offer the fix instead.
+      side.appendChild(
+        iconButton("key", "Login expired: reauthorize this account", () => post("reauthorize", acc.id), "side-btn reauth")
+      );
+    } else if (!acc.isActive) {
       side.appendChild(iconButton("swap", "Switch to this account", () => post("switch", acc.id), "side-btn switch"));
     }
     side.appendChild(iconButton("refresh", "Refresh usage", () => post("refresh", acc.id), "side-btn refresh"));
@@ -797,6 +818,10 @@
       [count((a) => limitState(a) === "limited"), "limited", "At least one limit used up", "danger"],
       [count((a) => freeWindow(a, (w) => w.kind === "session")), "5h free", "5-hour session limit below 100%"],
     ];
+    const expired = count((a) => a.needsReauthorization);
+    if (expired > 0) {
+      chips.push([expired, "login expired", "Saved login expired or revoked; reauthorize these accounts", "warn"]);
+    }
     const scopes = {};
     for (const acc of accounts) Object.assign(scopes, scopesOf(acc));
     for (const [key, name] of Object.entries(scopes).sort()) {

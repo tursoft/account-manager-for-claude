@@ -370,7 +370,7 @@ function displayUsageError(
   needsReauthorization: boolean
 ): string | undefined {
   if (needsReauthorization) {
-    return "Login was revoked or expired. Reauthorize this profile.";
+    return "The saved login expired or was revoked, so usage cannot be read. Reauthorize to use this account again.";
   }
   return error;
 }

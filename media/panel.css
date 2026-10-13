@@ -314,6 +314,62 @@ button:focus-visible {
   background: var(--ok);
 }
 
+/* The saved login (refresh token) expired or was revoked. */
+.card.expired {
+  border-color: color-mix(in srgb, var(--warn) 60%, var(--border));
+  border-style: dashed;
+  background: color-mix(in srgb, var(--warn) 5%, var(--surface));
+}
+
+.card.expired .meters {
+  opacity: 0.45;
+}
+
+.expired-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+
+.expired-badge .ico {
+  width: 10px;
+  height: 10px;
+}
+
+.side-btn.reauth {
+  color: var(--warn);
+  opacity: 1;
+}
+
+.avatar.expired {
+  filter: grayscale(0.7);
+  position: relative;
+}
+
+.avatar.expired::after {
+  content: "!";
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  font-weight: 700;
+  color: #1e1e1e;
+  background: var(--warn);
+  box-shadow: 0 0 0 1.5px var(--vscode-sideBar-background, #1e1e1e);
+}
+
+.stat.warn b {
+  color: var(--warn);
+}
+
 /* The detected login just changed to this account. */
 .card.flash {
   animation: card-flash 1.6s ease-out;
