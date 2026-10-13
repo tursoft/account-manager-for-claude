@@ -251,12 +251,10 @@ import {
     // Avatar on the left inside the card; everything else stacks in the body.
     const body = el("div", "card-body");
     const head = el("div", "card-head");
-    const dot = el("span", "dot");
-    dot.title = acc.isActive ? "Active in Claude Code" : "Inactive";
     const name = el("span", "name", acc.label);
-    name.title = `${acc.label}\nDouble-click to copy`;
+    name.title = `${acc.label}${acc.isActive ? "\nActive in Claude Code" : ""}\nDouble-click to copy`;
     copyOnDoubleClick(name, acc.id);
-    head.append(dot, name);
+    head.append(name);
 
     if (acc.subscriptionType) head.appendChild(el("span", "badge", acc.subscriptionType));
     if (acc.needsReauthorization) {
