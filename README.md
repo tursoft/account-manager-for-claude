@@ -4,6 +4,7 @@
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-Install-0e639c?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
 [![Downloads](https://vsmarketplacebadges.dev/downloads-short/tursoft.account-manager-for-claude.svg)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
+[![Open VSX](https://img.shields.io/open-vsx/v/tursoft/account-manager-for-claude?label=Open%20VSX&logo=eclipseide&color=a60ee5)](https://open-vsx.org/extension/tursoft/account-manager-for-claude)
 [![GitHub](https://img.shields.io/badge/GitHub-account--manager--for--claude-181717?logo=github)](https://github.com/tursoft/account-manager-for-claude)
 
 Use several Claude subscriptions in **Claude Code** and switch between them with one click.
@@ -11,7 +12,8 @@ See every account's usage limits at a glance, and let the extension tell you whi
 next.
 
 - **Install:** [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude),
-  or run `ext install tursoft.account-manager-for-claude` in Quick Open (`Ctrl+P`).
+  or run `ext install tursoft.account-manager-for-claude` in Quick Open (`Ctrl+P`). For VSCodium,
+  Cursor and other editors that use Open VSX: [open-vsx.org](https://open-vsx.org/extension/tursoft/account-manager-for-claude).
 - **Source:** [github.com/tursoft/account-manager-for-claude](https://github.com/tursoft/account-manager-for-claude)
 
 > Built on [KrzysztofZander/claude-account-switcher](https://github.com/KrzysztofZander/claude-account-switcher)
