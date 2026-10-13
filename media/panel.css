@@ -304,17 +304,28 @@ button:focus-visible {
   flex: 0 0 auto;
 }
 
-.card .quick {
-  opacity: 0;
+/* ---- quick actions beside a card ------------------------------------ */
+
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
 }
 
-.card:hover .quick,
-.card:focus-within .quick {
-  opacity: 0.75;
+.row .card {
+  flex: 1;
+  min-width: 0;
 }
 
-.card .quick:hover {
-  opacity: 1;
+.side {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.side-btn.switch:hover {
   color: var(--accent);
 }
 
@@ -348,10 +359,6 @@ button:focus-visible {
 
 #list.is-dragging .card:hover {
   background: var(--surface);
-}
-
-#list.is-dragging .card:hover .quick {
-  opacity: 0;
 }
 
 .card.drop-before::after,

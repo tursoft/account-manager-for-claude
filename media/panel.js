@@ -222,9 +222,6 @@
       head.appendChild(agoEl);
     }
 
-    if (!acc.isActive) {
-      head.appendChild(iconButton("swap", "Switch to this account", () => post("switch", acc.id), "quick"));
-    }
     head.appendChild(
       iconButton("more", "More actions", (btn) => toggleMenu(btn, acc.label, accountMenuItems(acc)), "menu-btn")
     );
@@ -252,6 +249,16 @@
     }
 
     return root;
+  }
+
+  /** Always-visible quick actions beside a card: switch (inactive accounts only) and refresh. */
+  function sideButtons(acc) {
+    const side = el("div", "side");
+    if (!acc.isActive) {
+      side.appendChild(iconButton("swap", "Switch to this account", () => post("switch", acc.id), "side-btn switch"));
+    }
+    side.appendChild(iconButton("refresh", "Refresh usage", () => post("refresh", acc.id), "side-btn"));
+    return side;
   }
 
   // ---- dropdown menu ----------------------------------------------------
@@ -555,7 +562,9 @@
     const visible = accounts.filter(matchesFilter);
     noMatchEl.classList.toggle("hidden", visible.length > 0);
     for (const acc of visible) {
-      listEl.appendChild(card(acc, state.warnThreshold || 80));
+      const row = el("div", "row");
+      row.append(card(acc, state.warnThreshold || 80), sideButtons(acc));
+      listEl.appendChild(row);
     }
   }
 
