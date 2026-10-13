@@ -23,8 +23,13 @@ body {
   font-family: var(--vscode-font-family);
   font-size: 12px;
   color: var(--vscode-foreground);
-  padding: 6px 8px 10px;
+  padding: 6px 8px 0; /* the bottom gap is the banner's own padding */
   margin: 0;
+  /* A full-height column, so the banner can sit at the bottom of the panel (see .bjf-wrap). */
+  box-sizing: border-box;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .hidden {
@@ -1326,11 +1331,13 @@ button:focus-visible {
 
 /* ---- BestJobFinder sidebar banner, sticky at the bottom of the panel ------ */
 
+/* margin-top: auto takes the free space above it, so the banner sits at the bottom of the panel
+   when the content is short; sticky keeps it there while a long list scrolls. */
 .bjf-wrap {
   position: sticky;
   bottom: 0;
-  margin-top: 12px;
-  padding-bottom: 8px;
+  margin-top: auto;
+  padding: 12px 0 8px;
 }
 
 .bjf-banner {
