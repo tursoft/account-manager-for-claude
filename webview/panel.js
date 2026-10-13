@@ -1,5 +1,5 @@
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
-import { limitName, noProposalReason, propose } from "../src/propose";
+import { limitName, noProposalReason, propose, rankAccounts } from "../src/propose";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
 import {
   extraFilterLabels,
@@ -90,7 +90,6 @@ import {
     if (iconName) b.prepend(icon(iconName));
     b.addEventListener("click", () => post(type));
   }
-  bindToolbar("addBtn", "add", "plus");
   bindToolbar("loginBtn", "login", "personAdd");
   // Info and warning boxes declare their icon in markup.
   for (const n of document.querySelectorAll(".notice[data-icon]")) n.prepend(icon(n.dataset.icon));
@@ -208,7 +207,7 @@ import {
       const ago = fmtAgo(Number(n.dataset.ago));
       if (ago) {
         n.textContent = ago;
-        n.title = `Usage updated ${ago} ago`;
+        n.title = `Usage last updated ${ago} ago (${new Date(Number(n.dataset.ago)).toLocaleTimeString()})\nRefreshed on the polling interval, after a switch, and with the Refresh button.`;
       }
     }
   }
@@ -248,23 +247,35 @@ import {
   function meter(w, warn) {
     const level = toneOfPercent(w.percent, warn);
     const row = el("div", "meter " + level);
-    row.title = `${w.label}: ${w.percent}%`;
+    const left = 100 - w.percent;
+    const state = w.percent >= 100 ? "used up" : `${left}% left`;
+    row.title = `${w.label}: ${w.percent}% used, ${state}`;
+
+    const label = el("span", "m-label", shortLabel(w.label));
+    label.title = w.kind === "session" ? "5-hour session limit" : w.label + (w.kind === "weekly_all" ? " (7-day limit)" : " (7-day limit for this model)");
 
     const bar = el("div", "bar");
     const fill = el("div", "fill");
     fill.style.width = Math.min(100, Math.max(0, w.percent)) + "%";
     bar.appendChild(fill);
+    bar.title = `${w.percent}% of the ${shortLabel(w.label)} limit used, ${state}`;
+
+    const pct = el("span", "pct", w.percent + "%");
+    pct.title = `${w.percent}% used · ${state}`;
 
     const resetEl = el("span", "reset");
     const reset = paintReset(resetEl, w.resetsAt, w.percent);
     if (reset) {
       resetEl.dataset.reset = w.resetsAt;
       resetEl.dataset.percent = String(w.percent);
-      resetEl.title = reset.title;
+      // "Resets in 1h 21m · Tue 20:11" plus, when used up, why the time is colored.
+      resetEl.title = reset.title + (w.percent >= 100 ? "\nThis limit is used up: the time until it is usable again." : "\nTime until this limit's usage resets to 0%.");
       row.title += ` · ${reset.title}`;
+    } else {
+      resetEl.title = "Reset time not known";
     }
 
-    row.append(el("span", "m-label", shortLabel(w.label)), bar, el("span", "pct", w.percent + "%"), resetEl);
+    row.append(label, bar, pct, resetEl);
     return row;
   }
 
@@ -297,7 +308,11 @@ import {
     copyOnDoubleClick(name, acc.id);
     head.append(name);
 
-    if (acc.subscriptionType) head.appendChild(el("span", "badge", acc.subscriptionType));
+    if (acc.subscriptionType) {
+      const plan = el("span", "badge", acc.subscriptionType);
+      plan.title = `Plan: ${acc.subscriptionType}`;
+      head.appendChild(plan);
+    }
     if (acc.needsReauthorization) {
       const expired = el("span", "badge expired-badge");
       expired.append(icon("key"), el("span", "", "Login expired"));
@@ -342,7 +357,7 @@ import {
     if (ago) {
       const agoEl = el("span", "ago", ago);
       agoEl.dataset.ago = String(acc.fetchedAt);
-      agoEl.title = `Usage updated ${ago} ago`;
+      agoEl.title = `Usage last updated ${ago} ago (${new Date(acc.fetchedAt).toLocaleTimeString()})\nRefreshed on the polling interval, after a switch, and with the Refresh button.`;
       lead.appendChild(agoEl);
     }
     root.append(lead, body);
@@ -692,8 +707,11 @@ import {
 
   document.getElementById("noMatchClear").addEventListener("click", clearFilters);
 
+  /** Filters and sorting only matter with more than one account. */
+  const MANY = 2;
+
   function renderFilterBar(total) {
-    filtersEl.classList.toggle("hidden", total === 0);
+    filtersEl.classList.toggle("hidden", total < MANY);
     for (const b of filtersEl.querySelectorAll("[data-filter]")) {
       const on = b.dataset.filter === filter.limit;
       b.classList.toggle("on", on);
@@ -780,11 +798,7 @@ import {
     renderStats(accounts);
     // Analytics mean nothing before the first account; keep the tracking hint out of the empty state.
     document.getElementById("trackingNotice").classList.toggle("hidden", empty || state.trackingEnabled !== false);
-    // "Save current" only makes sense without a session box: an unsaved login has its own save
-    // button in the box, and a logged-out window has nothing to save.
-    const sessionShown = Boolean(state.currentSession);
-    document.getElementById("addBtn").classList.toggle("hidden", sessionShown);
-    document.getElementById("toolbar").classList.toggle("solo-add", sessionShown);
+
     if (empty) {
       renderEmpty(state.currentSession);
       emptyEl.classList.remove("hidden");
@@ -851,8 +865,8 @@ import {
   /** Footer chips: shown/total, availability counts, and when each limit is next usable. */
   function renderStats(accounts) {
     statsEl.innerHTML = "";
-    statsEl.classList.toggle("hidden", accounts.length === 0);
-    if (accounts.length === 0) return;
+    statsEl.classList.toggle("hidden", accounts.length < MANY);
+    if (accounts.length < MANY) return;
 
     const visible = accounts.filter((a) => matchesListing(a, filter)).length;
     // An expired login cannot be used, whatever its last usage said.
@@ -945,9 +959,17 @@ import {
   function renderProposal() {
     proposalEl.innerHTML = "";
     const accounts = state.accounts || [];
-    proposeBar.classList.toggle("hidden", accounts.length === 0);
-    // "Propose Fable" only when some account has a Fable limit.
-    proposeBar.querySelector("[data-propose=weekly_fable]").classList.toggle("hidden", !accounts.some((a) => (a.windows || []).some((w) => w.kind === "weekly_fable")));
+    // A Propose button is only worth showing when it can propose another account: one that is
+    // usable for that limit and is not the active one.
+    const worthIt = (kind) => rankAccounts(accounts, kind).some((a) => !a.isActive);
+    const regular = worthIt("session");
+    const fable = accounts.some((a) => (a.windows || []).some((w) => w.kind === "weekly_fable")) && worthIt("weekly_fable");
+    proposeBar.classList.toggle("hidden", !regular && !fable);
+    proposeBar.querySelector("[data-propose=session]").classList.toggle("hidden", !regular);
+    proposeBar.querySelector("[data-propose=weekly_fable]").classList.toggle("hidden", !fable);
+    if (shownProposal && !shownProposal.automatic && ((shownProposal.kind === "session" && !regular) || (shownProposal.kind === "weekly_fable" && !fable))) {
+      shownProposal = null;
+    }
     if (!shownProposal || accounts.length === 0) {
       proposalEl.classList.add("hidden");
       return;

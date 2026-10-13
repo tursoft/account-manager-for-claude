@@ -17,9 +17,10 @@ and re-login.
 
 ![The account list: limits, colors, filters, sorting, and proposing the next account](docs/panel.gif)
 
-- **Save accounts** — click "Save current" to save the account Claude Code is logged in with,
-  or "+ Add account" to log in to another account in an isolated login that does not touch the
-  current one (tokens are kept in VS Code's encrypted secret storage).
+- **Save accounts** — when Claude Code is logged in with an account that is not saved yet, the
+  panel shows it in a box with a **Save** button (the command palette has it too); **Add account**
+  logs in to another account in an isolated login that does not touch the current one (tokens are
+  kept in VS Code's encrypted secret storage).
 - **Stays logged in** — the extension behaves like one more Claude Code process: it refreshes
   rotating OAuth tokens only under Claude Code's own refresh lock and writes every rotation back
   to all local copies, so neither Claude Code nor the extension is left with a spent token.
@@ -46,11 +47,13 @@ and re-login.
   The name is green while the 5h limit has room and red once the 5h limit or a weekly limit is
   used up (Claude then refuses sessions too). A used-up limit's reset time is yellow under
   10 minutes, orange under an hour, red beyond a day; everything else stays gray.
-- **Propose Regular** / **Propose Fable** — list the three best accounts for that limit, each
+- **Propose** / **Propose for Fable** — list the three best *other* accounts for that limit, each
   with its limit bar, a one-sentence reason, and a **Switch** button. Accounts whose capacity
   would be lost soonest come first (available percent per hour until the limit resets), then the
-  most available; accounts with any limit used up, or an expired login, are skipped. **Propose
-  Fable** appears only when an account has a Fable limit.
+  most available; accounts with any limit used up, or an expired login, are skipped. A Propose
+  button appears only when it has another usable account to offer (for Fable, one with a Fable
+  limit). The filter bar, the sort menu, and the statistics footer appear from two accounts on; with
+  a single account the panel is just that account's card.
 - **Automatic proposal** — when the active account's limit runs out, the next accounts are
   proposed on their own:
 
@@ -138,7 +141,8 @@ the account on each computer separately instead of copying credential files betw
 ## Usage
 
 1. Log in to Claude Code with account #1.
-2. Open the **MultiAccount** panel (activity bar icon) → **"Save current"**.
+2. Open the **MultiAccount** panel (activity bar icon): the detected login is shown in a box;
+   click **Save this account**.
 3. Click **"+ Add account"** and log in with account #2. The current Claude Code account is not
    changed; the new account is saved automatically when the login completes.
 4. From now on, switch with one click via the switch icon on an account row (shown on hover), the
@@ -151,7 +155,7 @@ the account on each computer separately instead of copying credential files betw
 
 | Command | Description |
 | --- | --- |
-| `Claude: Save current account as profile` | saves the currently logged-in account |
+| `Claude: Save current account as profile` | saves the currently logged-in account (the panel's detected-login box does the same) |
 | `Claude: Add another account (isolated login)` | logs in to another account without touching the current one and saves it |
 | `Claude: Switch account` | QuickPick with usage limits |
 | `Claude: Refresh usage limits` | forces a refresh |

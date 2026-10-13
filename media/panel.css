@@ -63,7 +63,7 @@ button:focus-visible {
   outline-offset: 1px;
 }
 
-/* ---- toolbar (Save current / Add), below the stats footer -------------- */
+/* ---- toolbar (Add account, Propose), below the stats footer ------------- */
 
 #toolbar {
   display: flex;
@@ -202,10 +202,21 @@ button:focus-visible {
 
 /* ---- proposing an account --------------------------------------------- */
 
-/* In the toolbar row, pushed to the right by the spacer. */
+/* In the toolbar row, pushed to the right by the spacer: secondary actions, grouped. */
 .propose-bar {
   display: inline-flex;
   gap: 4px;
+}
+
+.propose-bar .tb-btn {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.propose-bar .tb-btn:hover {
+  color: var(--vscode-foreground);
+  background: var(--hover);
 }
 
 #toolbar {
@@ -370,10 +381,16 @@ button:focus-visible {
 #stats {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   margin-top: 12px;
-  padding-top: 8px;
+  padding: 8px 0 10px;
   border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+/* The toolbar follows the footer's bottom line with the same breathing room. */
+#stats + #toolbar {
+  margin-top: 10px;
 }
 
 .stats-row {
@@ -767,7 +784,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 7px;
   min-width: 28px;
 }
 
@@ -779,8 +796,20 @@ button:focus-visible {
   gap: 1px;
 }
 
+/* Switching is the panel's main action: the card's Switch is a solid primary button. */
+.quick.switch {
+  width: auto;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 4px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  opacity: 1;
+}
+
 .quick.switch:hover {
-  color: var(--accent);
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-hoverBackground);
 }
 
 /* ---- drag & drop ---------------------------------------------------- */
@@ -1266,16 +1295,6 @@ button:focus-visible {
   flex-wrap: wrap;
   gap: 6px;
   margin: 12px 0 10px;
-}
-
-/* When "Save current" is hidden (an unsaved login is shown), "Add" alone fills the row. */
-#toolbar.solo-add #loginBtn {
-  flex: 1;
-  justify-content: center;
-}
-
-#toolbar.solo-add .spacer {
-  display: none;
 }
 
 /* The info box with the Add / Restore buttons inside it. */

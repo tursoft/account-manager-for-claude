@@ -379,12 +379,11 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   </div>
   <div id="stats" class="hidden" aria-label="Account statistics"></div>
   <div id="toolbar">
-    <button id="addBtn" class="tb-btn primary" title="Save the account Claude Code is logged in with">Save current</button>
-    <button id="loginBtn" class="tb-btn" title="Log in to another Claude account in an isolated login (the current account is not touched)">Add</button>
+    <button id="loginBtn" class="tb-btn" title="Log in to another Claude account in an isolated login (the current account is not touched)">Add account</button>
     <span class="spacer"></span>
     <span id="proposeBar" class="propose-bar hidden">
-      <button id="proposeSessionBtn" class="tb-btn" data-propose="session" title="Propose accounts for the 5h limit: those whose capacity would be lost soonest come first">Propose Regular</button>
-      <button id="proposeFableBtn" class="tb-btn" data-propose="weekly_fable" title="Propose accounts for the Fable limit: those whose capacity would be lost soonest come first">Propose Fable</button>
+      <button id="proposeSessionBtn" class="tb-btn" data-propose="session" title="Which other account to switch to for the 5h limit: those whose capacity would be lost soonest come first">Propose</button>
+      <button id="proposeFableBtn" class="tb-btn" data-propose="weekly_fable" title="Which other account to switch to for the Fable limit: those whose capacity would be lost soonest come first">Propose for Fable</button>
     </span>
   </div>
   <div id="proposal" class="proposal hidden" role="status" aria-live="polite"></div>
