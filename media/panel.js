@@ -214,6 +214,8 @@
       root.appendChild(grip);
     }
 
+    // Avatar on the left inside the card; everything else stacks in the body.
+    const body = el("div", "card-body");
     const head = el("div", "card-head");
     const dot = el("span", "dot");
     dot.title = acc.isActive ? "Active in Claude Code" : "Inactive";
@@ -240,14 +242,14 @@
     head.appendChild(
       iconButton("more", "More actions", (btn) => toggleMenu(btn, acc.label, accountMenuItems(acc)), "menu-btn")
     );
-    root.appendChild(head);
+    body.appendChild(head);
 
     if (acc.windows && acc.windows.length) {
       const meters = el("div", "meters");
       for (const w of acc.windows) meters.appendChild(meter(w, warn));
-      root.appendChild(meters);
+      body.appendChild(meters);
     } else if (!acc.error) {
-      root.appendChild(el("div", "muted-line", "No usage data yet"));
+      body.appendChild(el("div", "muted-line", "No usage data yet"));
     }
 
     if (acc.error) {
@@ -260,9 +262,10 @@
         fix.addEventListener("click", () => post("reauthorize", acc.id));
         err.appendChild(fix);
       }
-      root.appendChild(err);
+      body.appendChild(err);
     }
 
+    root.append(avatar(acc), body);
     return root;
   }
 
@@ -794,7 +797,7 @@
     noMatchEl.classList.toggle("hidden", visible.length > 0);
     for (const acc of visible) {
       const row = el("div", "row");
-      row.append(avatar(acc), card(acc, state.warnThreshold || 80), sideButtons(acc));
+      row.append(card(acc, state.warnThreshold || 80), sideButtons(acc));
       listEl.appendChild(row);
     }
     revealActiveChange(accounts);
