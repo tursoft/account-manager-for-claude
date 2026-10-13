@@ -191,7 +191,7 @@ export class AnalyticsPanel {
     </div>
   </section>
 
-  <section id="summary" class="summary"></section>
+  <p id="rangeText" class="range-text"></p>
   <div id="emptyNotice" class="notice info hidden"><span id="emptyText"></span></div>
 
   <div class="layout">

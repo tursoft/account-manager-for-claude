@@ -239,42 +239,22 @@ function fmtRange(from, to) {
   return `${new Date(from).toLocaleString([], o)} – ${new Date(to).toLocaleString([], o)}`;
 }
 
-function summaryCard(value, label) {
-  const c = document.createElement("div");
-  c.className = "card stat";
-  const v = document.createElement("div");
-  v.className = "value";
-  v.textContent = value;
-  const l = document.createElement("div");
-  l.className = "caption";
-  l.textContent = label;
-  c.append(v, l);
-  return c;
-}
-
 function render() {
   for (const c of charts) c.destroy();
   charts = [];
   $("charts").innerHTML = "";
-  $("summary").innerHTML = "";
 
   const accounts = allAccounts();
   renderLegend(accounts, new Set(data ? data.points.filter((p) => p.t >= data.from).map((p) => p.id) : []));
   if (!data) return;
 
   const { from, to } = data;
+  $("rangeText").textContent = fmtRange(from, to);
   const rangeMs = to - from;
   const points = data.points;
   const inRange = points.filter((p) => p.t >= from);
   const selected = accounts.filter((a) => isSelected(a.id));
   const kinds = kindsIn(points);
-
-  $("summary").append(
-    summaryCard(String(inRange.length), "readings in range"),
-    summaryCard(String(new Set(inRange.map((p) => p.id)).size), "accounts with data"),
-    summaryCard(String(kinds.length), "limit types"),
-    summaryCard(fmtRange(from, to), "range")
-  );
 
   const empty = $("emptyNotice");
   if (inRange.length === 0 || selected.length === 0 || kinds.length === 0) {
