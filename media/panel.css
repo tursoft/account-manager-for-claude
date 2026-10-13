@@ -10,6 +10,7 @@
   --ok: var(--vscode-charts-green, #3fb950);
   --warn: var(--vscode-charts-yellow, #d29922);
   --danger: var(--vscode-charts-red, #f85149);
+  --orange: var(--vscode-charts-orange, #d18616);
   --track: rgba(128, 128, 128, 0.18);
   --radius: 6px;
 }
@@ -449,6 +450,22 @@ button:focus-visible {
   align-items: center;
   gap: 6px;
   min-height: 22px;
+}
+
+/* Account names are colored by the 5h limit (red while a weekly limit is used up). */
+.name.tone-ok,
+.session-name.tone-ok {
+  color: var(--ok);
+}
+
+.name.tone-warn,
+.session-name.tone-warn {
+  color: var(--orange);
+}
+
+.name.tone-danger,
+.session-name.tone-danger {
+  color: var(--danger);
 }
 
 .name {

@@ -17,6 +17,7 @@ import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHi
 import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal, usageDelta } from "../src/historySeries";
 import { buildTimeline, Segment } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
+import { nameTone, nameToneDescription, toneOfPercent } from "../src/tone";
 import {
   DEFAULT_LISTING,
   extraFilterLabels,
@@ -1001,11 +1002,43 @@ function runAvatarTests(): void {
   check("the mark is one path with a ray per segment", /^<path d="(M[\d. ]+L[\d. ]+){12}"\/>$/.test(starburstGlyph(12)));
 }
 
+function runToneTests(): void {
+  console.log("usage colors:");
+  const w = (kind: string, percent: number, label?: string) => ({ kind, label: label ?? kind, percent });
+  const acc = (windows: ReturnType<typeof w>[], needsReauthorization = false) => ({ windows, needsReauthorization });
+  check(
+    "default thresholds: 59 ok, 60 warn, 79 warn, 80 danger, 100 danger",
+    [59, 60, 79, 80, 100].map((p) => toneOfPercent(p)).join() === "ok,warn,warn,danger,danger"
+  );
+  check("a custom threshold scales both steps", toneOfPercent(67, 90) === "ok" && toneOfPercent(68, 90) === "warn" && toneOfPercent(90, 90) === "danger");
+  check(
+    "the name follows the 5h limit",
+    nameTone(acc([w("session", 7)])) === "ok" && nameTone(acc([w("session", 65)])) === "warn" && nameTone(acc([w("session", 100)])) === "danger"
+  );
+  check("other limits below 100% do not change it", nameTone(acc([w("session", 7), w("weekly_fable", 99)])) === "ok");
+  check(
+    "a used-up weekly limit makes the name red although 5h is free",
+    nameTone(acc([w("session", 0), w("weekly_fable", 100, "Weekly (Fable)")])) === "danger"
+  );
+  check("the general weekly limit counts too", nameTone(acc([w("session", 10), w("weekly_all", 100)])) === "danger");
+  check("without a 5h reading the most used limit decides", nameTone(acc([w("weekly_all", 65)])) === "warn");
+  check("no usage data: no color", nameTone(acc([])) === undefined);
+  check("an expired login gets no color", nameTone(acc([w("session", 100)], true)) === undefined);
+  check(
+    "the tooltip line explains the color",
+    nameToneDescription(acc([w("session", 7)])) === "5h limit: 7% used" &&
+      nameToneDescription(acc([w("session", 0), w("weekly_fable", 100, "Weekly (Fable)")])) === "Weekly (Fable) used up: sessions are blocked too" &&
+      nameToneDescription(acc([w("weekly_all", 30)])) === "Most used limit: 30%" &&
+      nameToneDescription(acc([])) === undefined
+  );
+}
+
 runProfileActivityTests();
 runHistorySeriesTests();
 runAvailabilityTests();
 runListingTests();
 runAvatarTests();
+runToneTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();

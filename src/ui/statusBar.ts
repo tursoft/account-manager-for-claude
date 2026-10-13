@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { AccountStore } from "../accountStore";
 import { identityLabel } from "../identity";
 import { requiresProfileReauthorization } from "../oauth";
+import { toneOfPercent } from "../tone";
 import { ClaudeAuthIdentity } from "../types";
 
 /**
@@ -58,15 +59,16 @@ export class StatusBarController {
     lines.push("Click to switch account.");
     this.item.tooltip = lines.join("\n");
 
-    // Color by the most used limit, since that one decides whether the account
-    // can still be used: green < 60%, orange 60-80%, red >= 80%.
+    // Color by the most used limit, since that one decides whether the account can still be
+    // used: green below 75% of the warning threshold (60% by default), orange up to it (80%),
+    // red from it. The same thresholds color the usage bars and the account names.
+    const warn = vscode.workspace
+      .getConfiguration("tursoftClaudeSwitcher")
+      .get<number>("warnThresholdPercent", 80);
     const highest = usage?.windows.length ? Math.max(...usage.windows.map((w) => w.percent)) : undefined;
+    const colors = { ok: "charts.green", warn: "charts.orange", danger: "charts.red" } as const;
     this.item.color =
-      highest === undefined
-        ? undefined
-        : new vscode.ThemeColor(
-            highest >= 80 ? "charts.red" : highest >= 60 ? "charts.orange" : "charts.green"
-          );
+      highest === undefined ? undefined : new vscode.ThemeColor(colors[toneOfPercent(highest, warn)]);
     this.item.backgroundColor =
       highest !== undefined && highest >= 100
         ? new vscode.ThemeColor("statusBarItem.errorBackground")

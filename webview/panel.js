@@ -1,4 +1,5 @@
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
+import { nameTone, nameToneDescription, toneOfPercent } from "../src/tone";
 import {
   extraFilterLabels,
   filtersActive,
@@ -211,7 +212,7 @@ import {
   }
 
   function meter(w, warn) {
-    const level = w.percent >= warn ? "danger" : w.percent >= warn * 0.75 ? "warn" : "ok";
+    const level = toneOfPercent(w.percent, warn);
     const row = el("div", "meter " + level);
     row.title = `${w.label}: ${w.percent}%`;
 
@@ -251,8 +252,12 @@ import {
     // Avatar on the left inside the card; everything else stacks in the body.
     const body = el("div", "card-body");
     const head = el("div", "card-head");
-    const name = el("span", "name", acc.label);
-    name.title = `${acc.label}${acc.isActive ? "\nActive in Claude Code" : ""}\nDouble-click to copy`;
+    // The name's color follows the 5h limit (red whenever a weekly limit is used up).
+    const tone = nameTone(acc, warn);
+    const name = el("span", "name" + (tone ? ` tone-${tone}` : ""), acc.label);
+    name.title = [acc.label, nameToneDescription(acc), acc.isActive ? "Active in Claude Code" : "", "Double-click to copy"]
+      .filter(Boolean)
+      .join("\n");
     copyOnDoubleClick(name, acc.id);
     head.append(name);
 
@@ -679,8 +684,10 @@ import {
     box.appendChild(head);
 
     if (session.status === "unsaved") {
-      const name = el("div", "session-name", session.label || "Unidentified account");
-      name.title = `${name.textContent}\nDouble-click to copy`;
+      const usage = { windows: session.windows || [] };
+      const tone = nameTone(usage, state.warnThreshold || 80);
+      const name = el("div", "session-name" + (tone ? ` tone-${tone}` : ""), session.label || "Unidentified account");
+      name.title = [name.textContent, nameToneDescription(usage), "Double-click to copy"].filter(Boolean).join("\n");
       if (session.label) copyOnDoubleClick(name); // no id: the unsaved current login
       box.append(name, el("div", "session-note", "Not in your account list yet."));
       if (session.windows && session.windows.length) {

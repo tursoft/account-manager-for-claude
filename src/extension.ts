@@ -835,6 +835,7 @@ export function activate(context: vscode.ExtensionContext): void {
         store,
         history,
         getInitialListing: () => viewProvider.getListingSeed(),
+        getWarnThreshold: () => config().get<number>("warnThresholdPercent", 80),
         reorder: async (ids) => {
           await store.reorder(ids);
           refreshUI();

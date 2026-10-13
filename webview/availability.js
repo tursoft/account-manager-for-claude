@@ -2,6 +2,7 @@
 // an overall "usable?" lane and one lane per limit (5h, weekly, Fable, ...).
 import { buildTimeline } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
+import { nameTone, nameToneDescription } from "../src/tone";
 import {
   DEFAULT_LISTING,
   filtersActive,
@@ -29,6 +30,18 @@ const ui = { view: saved.view || "week", off: Array.isArray(saved.off) ? saved.o
 let listing = { ...DEFAULT_LISTING };
 let anchor = startOfDay(Date.now());
 let data = null;
+
+/** The warning threshold (%) the usage colors are based on; set in the extension's settings. */
+const warnLimit = () => (data && data.warnThreshold) || 80;
+
+/** Tone class and tooltip for an account's name, from its 5h limit (red while a weekly limit is used up). */
+function nameStyle(acc, extraTitle) {
+  const tone = nameTone(acc, warnLimit());
+  return {
+    className: tone ? ` tone-${tone}` : "",
+    title: [extraTitle, nameToneDescription(acc), "Double-click to copy"].filter(Boolean).join("\n"),
+  };
+}
 
 function persist() {
   vscode.setState({ view: ui.view, off: ui.off });
@@ -394,8 +407,9 @@ function renderNow(accounts, timelines, now) {
     const card = el("div", "now-card" + (acc.isActive ? " active" : ""));
     const head = el("div", "now-head");
     head.append(avatar(acc));
-    const name = el("div", "now-name", acc.label);
-    name.title = `${acc.label}\nDouble-click to copy`;
+    const style = nameStyle(acc, acc.label);
+    const name = el("div", "now-name" + style.className, acc.label);
+    name.title = style.title;
     copyOnDoubleClick(name, acc.id);
     head.appendChild(name);
     if (acc.subscriptionType) head.appendChild(el("span", "badge", acc.subscriptionType));
@@ -590,9 +604,9 @@ function render() {
       label.appendChild(grip);
     }
     label.append(avatar(acc));
-    const name = el("span", "name", acc.label);
-    name.title =
-      (acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label) + "\nDouble-click to copy";
+    const style = nameStyle(acc, acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label);
+    const name = el("span", "name" + style.className, acc.label);
+    name.title = style.title;
     copyOnDoubleClick(name, acc.id);
     label.appendChild(name);
     let main = null;

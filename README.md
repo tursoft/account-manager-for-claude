@@ -39,7 +39,9 @@ and re-login.
 - **Compact panel** — one row per account with usage bars, reset times, and a **⋯** menu for
   all actions. **Switch** and **Refresh** buttons sit next to it inside each account's box, with
   the time of the last update under the account's icon, which is green while the account has limit
-  left, orange once a limit is used up, and gray when usage is unknown or the login expired. Drag
+  left, orange once a limit is used up, and gray when usage is unknown or the login expired. The
+  account's name is colored by its 5h limit (green, orange from 60%, red from 80%) and is red
+  whenever a weekly limit is used up, since Claude then refuses sessions too. Drag
   and drop to reorder; the order is
   remembered. Double-click an account's name to copy it (also in the availability calendar).
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
@@ -163,7 +165,7 @@ the account on each computer separately instead of copying credential files betw
 | `tursoftClaudeSwitcher.notifyOnLimitReset` | `true` | notify when a used-up limit becomes available again |
 | `tursoftClaudeSwitcher.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
 | `tursoftClaudeSwitcher.credentialsPath` | `""` | override the path to `.credentials.json` |
-| `tursoftClaudeSwitcher.warnThresholdPercent` | `80` | warning threshold (% → red bar) |
+| `tursoftClaudeSwitcher.warnThresholdPercent` | `80` | warning threshold (%): bars, names, and the status bar turn red from it and orange from 75% of it |
 | `tursoftClaudeSwitcher.claudeCommand` | `claude` | CLI command used for CLI login and Say Hi; set the full path if VS Code cannot find it |
 | `tursoftClaudeSwitcher.sayHiModel` | `haiku` | model alias passed to `claude -p` |
 | `tursoftClaudeSwitcher.sayHiPrompt` | `Hi` | prompt used by Say Hi |
