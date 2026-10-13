@@ -185,6 +185,11 @@
           "minimum": 60,
           "markdownDescription": "How often (in seconds, minimum 60 = 1 minute) to check usage limits for each account when `#tursoftClaudeSwitcher.autoRefresh#` is on. The usage endpoint is rate-limited: short intervals with many accounts can hit HTTP 429, after which that account is paused for 5 minutes."
         },
+        "tursoftClaudeSwitcher.notifyOnLimitReset": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show a notification when a used-up limit (session, weekly, or a model-specific weekly limit) of a saved account becomes available again."
+        },
         "tursoftClaudeSwitcher.autoReloadAfterSwitch": {
           "type": "boolean",
           "default": false,

@@ -35,10 +35,16 @@ function labelFor(kind: string, group: string): string {
       return "Weekly (Opus)";
     case "weekly_sonnet":
       return "Weekly (Sonnet)";
-    default:
+    default: {
+      // Model-specific weekly limits (e.g. weekly_fable) -> "Weekly (Fable)".
+      const model = /^weekly_(.+)$/.exec(kind)?.[1];
+      if (model) {
+        return `Weekly (${model.charAt(0).toUpperCase()}${model.slice(1).replace(/_/g, " ")})`;
+      }
       if (group === "session") return "Session (5h)";
       if (group === "weekly") return "Weekly";
       return kind || group || "Limit";
+    }
   }
 }
 
@@ -142,7 +148,12 @@ export class UsagePoller {
     private readonly store: AccountStore,
     private readonly sync: CredentialSync,
     private readonly getIntervalSeconds: () => number,
-    private readonly onUpdate: () => void
+    private readonly onUpdate: () => void,
+    private readonly onSnapshot?: (
+      id: string,
+      previous: UsageSnapshot | undefined,
+      next: UsageSnapshot
+    ) => void
   ) {}
 
   start(): void {
@@ -225,7 +236,9 @@ export class UsagePoller {
     }
 
     if (result.snapshot) {
+      const previous = this.store.get(id)?.lastUsage;
       await this.store.updateUsage(id, result.snapshot);
+      this.onSnapshot?.(id, previous, result.snapshot);
       if (!this.store.get(id)?.authAccountUuid) {
         const identity = await this.sync.identify(fresh.creds);
         const saved = this.store.get(id);

@@ -11,7 +11,8 @@ import { CredentialSync } from "../src/credentialSync";
 import { sameIdentity } from "../src/identity";
 import { ProfileActivityRegistry } from "../src/profileActivity";
 import { SwitchService } from "../src/switchService";
-import { ClaudeAuthIdentity, OAuthCreds } from "../src/types";
+import { findResetWindows } from "../src/limitNotifier";
+import { ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "../src/types";
 
 let failures = 0;
 function check(name: string, cond: boolean): void {
@@ -678,8 +679,28 @@ async function runTokenRefresherTests(): Promise<void> {
   }
 }
 
+function runLimitResetTests(): void {
+  console.log("limit reset detection:");
+  const snap = (windows: [string, number][]): UsageSnapshot => ({
+    fetchedAt: 0,
+    sessionPercent: null,
+    weeklyPercent: null,
+    windows: windows.map(([kind, percent]) => ({ kind, label: kind, percent, severity: "normal", resetsAt: null })),
+  });
+  const reset = findResetWindows(
+    snap([["session", 100], ["weekly_all", 100], ["weekly_fable", 100]]),
+    snap([["session", 0], ["weekly_all", 100], ["weekly_fable", 3]])
+  );
+  check("detects reset session and model limits", reset.map((w) => w.kind).join() === "session,weekly_fable");
+  check("no reset without previous snapshot", findResetWindows(undefined, snap([["session", 0]])).length === 0);
+  check("no reset when limit was not used up", findResetWindows(snap([["session", 99]]), snap([["session", 0]])).length === 0);
+  const fable = parseUsage({ limits: [{ kind: "weekly_fable", group: "weekly", percent: 4 }] });
+  check("labels model-specific weekly limits", fable.windows[0].label === "Weekly (Fable)");
+}
+
 runProfileActivityTests();
 runBrowserOAuthTests();
+runLimitResetTests();
 runIdentityTests();
 runAccountStoreTests()
   .then(runClaudeLockTests)

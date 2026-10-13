@@ -15,6 +15,7 @@ import { hasUsableOAuthCreds, sameNonEmptyToken } from "./credentialValidation";
 import { CredentialsManager } from "./credentials";
 import { identityLabel, profileIdentity, sameIdentity } from "./identity";
 import { getAccountConfigDir } from "./isolatedConfig";
+import { LimitResetNotifier } from "./limitNotifier";
 import { TokenRefresher } from "./oauth";
 import { ProfileActivityRegistry } from "./profileActivity";
 import { SwitchService } from "./switchService";
@@ -53,9 +54,37 @@ export function activate(context: vscode.ExtensionContext): void {
   const getInterval = () =>
     config().get<boolean>("autoRefresh", true) ? config().get<number>("pollIntervalSeconds", 240) : 0;
 
+  // --- Limit reset notifications ---
+
+  const limitNotifier = new LimitResetNotifier(
+    ({ profileId, window }) => {
+      if (!config().get<boolean>("notifyOnLimitReset", true)) {
+        return;
+      }
+      const profile = store.get(profileId);
+      if (!profile) {
+        return;
+      }
+      const isActive = store.getActiveId() === profileId;
+      const actions = isActive ? [] : ["Switch"];
+      void vscode.window
+        .showInformationMessage(
+          `"${profile.label}": the ${window.label} limit is available again (${window.percent}% used).`,
+          ...actions
+        )
+        .then((choice) => {
+          if (choice === "Switch") {
+            void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", profileId);
+          }
+        });
+    },
+    (profileId) => void poller.pollOne(profileId, true).then(refreshUI)
+  );
+
   const refreshUI = () => {
     statusBar.refresh();
     viewProvider.refresh();
+    limitNotifier.schedule(store.list());
   };
 
   // --- Current account tracking ---
@@ -374,7 +403,9 @@ export function activate(context: vscode.ExtensionContext): void {
     await importIsolatedLogin(id, configDir);
   };
 
-  const poller = new UsagePoller(store, sync, getInterval, refreshUI);
+  const poller = new UsagePoller(store, sync, getInterval, refreshUI, (id, previous, next) =>
+    limitNotifier.onSnapshot(id, previous, next)
+  );
 
   // Publish the remembered owner before asynchronous startup work, so another
   // window does not start a second session on this login during restart.
@@ -385,6 +416,7 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBar,
     profileActivity,
     { dispose: () => poller.stop() },
+    limitNotifier,
     {
       dispose: () => {
         if (watchedCredentialsPath) {

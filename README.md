@@ -36,6 +36,8 @@ and re-login.
 - **Isolated reauthorization** — if a saved profile's credentials break, re-login happens in
   that profile's own `CLAUDE_CONFIG_DIR` instead of copying the currently active account.
 - **Status bar** — the active account and its usage % always in view.
+- **Limit reset notifications** — get notified when a used-up session, weekly, or
+  model-specific weekly limit becomes available again, with a one-click **Switch**.
 
 ## Requirements
 
@@ -135,6 +137,7 @@ the account on each computer separately instead of copying credential files betw
 | --- | --- | --- |
 | `tursoftClaudeSwitcher.autoRefresh` | `true` | regularly check usage limits of all accounts |
 | `tursoftClaudeSwitcher.pollIntervalSeconds` | `240` | check interval in seconds (min 60; short intervals with many accounts can hit HTTP 429) |
+| `tursoftClaudeSwitcher.notifyOnLimitReset` | `true` | notify when a used-up limit becomes available again |
 | `tursoftClaudeSwitcher.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
 | `tursoftClaudeSwitcher.credentialsPath` | `""` | override the path to `.credentials.json` |
 | `tursoftClaudeSwitcher.warnThresholdPercent` | `80` | warning threshold (% → red bar) |
