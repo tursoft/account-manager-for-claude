@@ -15,6 +15,8 @@ and re-login.
 
 ## Features
 
+![The account list: limits, colors, filters, sorting, and proposing the next account](docs/panel.gif)
+
 - **Save accounts** — click "Save current" to save the account Claude Code is logged in with,
   or "+ Add account" to log in to another account in an isolated login that does not touch the
   current one (tokens are kept in VS Code's encrypted secret storage).
@@ -36,24 +38,26 @@ and re-login.
 - **Isolated reauthorization** — if a saved profile's credentials break, re-login happens in
   that profile's own `CLAUDE_CONFIG_DIR` instead of copying the currently active account.
 - **Status bar** — the active account and its usage % always in view.
-- **Compact panel** — one row per account with usage bars, reset times, and a **⋯** menu for
-  all actions. **Switch** and **Refresh** buttons sit next to it inside each account's box, with
-  the time of the last update under the account's icon, which is green while the account has limit
-  left, orange once a limit is used up, and gray when usage is unknown or the login expired. The
-  account's name is green while its 5h limit has room and red once the 5h limit or a weekly limit
-  is used up (Claude then refuses sessions too). The reset time next
-  to a bar stays gray, except for a limit that is used up: yellow under 10 minutes, orange under
-  an hour, red beyond a day. Drag
-  and drop to reorder; the order is
-  remembered. Double-click an account's name to copy it (also in the availability calendar).
-- an info box offers to turn usage tracking on while it is off (it feeds the analytics and the
-  calendar's past);
-- **Propose Regular** / **Propose Fable** (right of **Add**; the Fable one only when an account
-  has a Fable limit) — list the three best accounts for that limit, with each one's limit bar,
-  a one-sentence reason, and a **Switch** button. Accounts whose capacity would be lost soonest
-  come first (the available percent per hour until the limit resets), then the most available;
-  accounts with any limit used up, or an expired login, are skipped. When the active account's
-  limit runs out, the next accounts are proposed automatically.
+- **Compact panel** — one row per account with usage bars and reset times, a **⋯** menu for
+  all actions, and **Switch** / **Refresh** buttons inside each account's box. Drag and drop to
+  reorder (the order is remembered); double-click a name to copy it.
+- **Colors that tell the state at a glance** — the account icon is green while the account has
+  limit left, orange once a limit is used up, and gray when usage is unknown or the login expired.
+  The name is green while the 5h limit has room and red once the 5h limit or a weekly limit is
+  used up (Claude then refuses sessions too). A used-up limit's reset time is yellow under
+  10 minutes, orange under an hour, red beyond a day; everything else stays gray.
+- **Propose Regular** / **Propose Fable** — list the three best accounts for that limit, each
+  with its limit bar, a one-sentence reason, and a **Switch** button. Accounts whose capacity
+  would be lost soonest come first (available percent per hour until the limit resets), then the
+  most available; accounts with any limit used up, or an expired login, are skipped. **Propose
+  Fable** appears only when an account has a Fable limit.
+- **Automatic proposal** — when the active account's limit runs out, the next accounts are
+  proposed on their own:
+
+  ![When the active account's limit runs out, the next accounts are proposed](docs/propose-auto.gif)
+
+- **Usage tracking hint** — while usage tracking is off, an info box offers to turn it on (it
+  feeds the analytics and the calendar's past).
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
   usage left (or used up), plus filters by plan (Pro, Max, Team, ...) and by model-specific
   limits (e.g. only accounts with, or without, a Fable limit); one click clears the filters.
@@ -249,6 +253,8 @@ directories would each try to spend the same single-use refresh token.
 
 ## Usage history and analytics
 
+![Usage analytics: bar charts by level, used or available, legend, folding, capacity utilization](docs/analytics.gif)
+
 Turn on `tursoftClaudeSwitcher.usageHistory.enabled` (or the **Collect usage history** switch at the
 top of the analytics page, which also turns it off) to record every saved account's limits once a minute (`usageHistory.intervalSeconds`).
 Readings stay on this computer, in the extension's storage; unchanged readings are stored only
@@ -280,6 +286,8 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
 **Delete collected usage history** removes all recorded readings.
 
 ## Availability calendar
+
+![Availability calendar: week and day views, limit lanes, filters, and the cards below](docs/calendar.gif)
 
 **Show account availability calendar** (the calendar icon in the title bar, left of Refresh) shows when every account can be used,
 as a week from Monday to Sunday or, after clicking a day, hour by hour:

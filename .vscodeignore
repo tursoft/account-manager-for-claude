@@ -15,4 +15,5 @@ tsconfig.json
 .github/**
 scratch/**
 .claude/**
+docs/**
 *.vsix
