@@ -1,8 +1,8 @@
 {
   "name": "account-manager-for-claude",
-  "displayName": "Account Manager for Claude",
+  "displayName": "Claude Account Manager",
   "description": "Seamlessly switch between Claude accounts and subscriptions in Claude Code, with real-time usage limit tracking.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "tursoft",
   "author": {
     "name": "Muhammet Tursak",
@@ -19,8 +19,11 @@
     "claude",
     "claude code",
     "anthropic",
+    "llm",
+    "ai",
     "account",
     "switcher",
+    "manager",
     "usage",
     "limits"
   ],
