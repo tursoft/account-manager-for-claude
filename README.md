@@ -347,6 +347,9 @@ npm install
 | `npm run package` | minified production build (what gets shipped) |
 | `npm run typecheck` | runs `tsc --noEmit`; esbuild does not type-check |
 | `npm run test:smoke` | runs the smoke tests in `test/` |
+| `npm run build:vsix` | production build plus `vsce package`: the installable `.vsix` |
+| `npm run install:vsix` | installs the built `.vsix` into your regular VS Code (`code --install-extension`) |
+| `npm run deploy` | `build:vsix` then `install:vsix`: one command after a code change |
 
 The webview pages (`webview/*.js`: the accounts panel, usage analytics, and availability
 calendar) are bundled by esbuild into `dist/webview/`, so run `npm run compile` (or `watch`) after
@@ -374,14 +377,18 @@ npm run build:vsix
 ```
 
 This creates `tursoft-claude-code-account-switcher-<version>.vsix` in the project root. Install it
-into your regular VS Code:
+into your regular VS Code with
 
 ```bash
-code --install-extension tursoft-claude-code-account-switcher-<version>.vsix
+npm run install:vsix
 ```
 
-Or use **Extensions → ⋯ → Install from VSIX…**, then reload the window. To remove it, uninstall it
-from the Extensions view. Run `npx vsce ls` to list the files that will go into the package;
+or do both steps at once with `npm run deploy`. Both use the `code` command-line tool, so VS Code
+must be on your `PATH` (on Windows the installer adds it; otherwise run **Shell Command: Install
+'code' command in PATH** from the command palette). Alternatively use **Extensions → ⋯ → Install
+from VSIX…**. Note that double-clicking a `.vsix` file in Explorer may open Visual Studio's own
+installer, which cannot install VS Code extensions; use one of the ways above instead. Either way,
+reload the window afterwards. To remove the extension, uninstall it from the Extensions view. Run `npx vsce ls` to list the files that will go into the package;
 exclusions are configured in `.vscodeignore`.
 
 ### Publish to the Visual Studio Marketplace

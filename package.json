@@ -314,7 +314,9 @@
     "package": "node esbuild.js --production",
     "typecheck": "tsc --noEmit",
     "test:smoke": "node test/run-smoke.cjs",
-    "build:vsix": "npm run package && vsce package"
+    "build:vsix": "npm run package && vsce package",
+    "install:vsix": "node -e \"const p=require('./package.json');require('child_process').execFileSync('code',['--install-extension',p.name+'-'+p.version+'.vsix'],{stdio:'inherit',shell:true})\"",
+    "deploy": "npm run build:vsix && npm run install:vsix"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
