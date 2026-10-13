@@ -202,11 +202,14 @@ button:focus-visible {
 
 /* ---- proposing an account --------------------------------------------- */
 
+/* In the toolbar row, pushed to the right by the spacer. */
 .propose-bar {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
   gap: 4px;
-  margin-top: 6px;
+}
+
+#toolbar {
+  flex-wrap: wrap;
 }
 
 .proposal {
@@ -239,13 +242,66 @@ button:focus-visible {
   margin: -2px -4px -2px 0;
 }
 
-.proposal-name {
+.proposal-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proposal-item {
+  padding: 6px 0;
+  border-top: 1px solid color-mix(in srgb, var(--notice-color) 25%, transparent);
+}
+
+.proposal-item:first-child {
+  border-top: none;
+  padding-top: 2px;
+}
+
+.proposal-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+}
+
+.proposal-name {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
   min-width: 0;
+}
+
+.proposal-rank {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  color: var(--vscode-button-foreground);
+  background: var(--notice-color);
+}
+
+.proposal-item:not(.best) .proposal-rank {
+  color: var(--vscode-foreground);
+  background: color-mix(in srgb, var(--notice-color) 30%, transparent);
+}
+
+.proposal-active {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ok);
+}
+
+.proposal-meters {
+  margin-top: 4px;
+  padding-left: 0;
 }
 
 .proposal-name .avatar {
@@ -270,7 +326,14 @@ button:focus-visible {
 }
 
 .proposal-switch {
-  margin-top: 8px;
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 8px;
+}
+
+.proposal-switch .ico {
+  width: 12px;
+  height: 12px;
 }
 
 /* ---- toast ("Copied ...") ----------------------------------------------- */

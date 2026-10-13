@@ -48,10 +48,12 @@ and re-login.
   remembered. Double-click an account's name to copy it (also in the availability calendar).
 - an info box offers to turn usage tracking on while it is off (it feeds the analytics and the
   calendar's past);
-- **Propose account** / **Propose for Fable** (below the footer) — picks the account with the most
-  of that limit available (a later reset wins a tie; accounts with any limit used up, or an
-  expired login, are skipped) and says in one sentence why, with a **Switch** button. When the
-  active account's limit runs out, the next account is proposed automatically.
+- **Propose Regular** / **Propose Fable** (right of **Add**; the Fable one only when an account
+  has a Fable limit) — list the three best accounts for that limit, with each one's limit bar,
+  a one-sentence reason, and a **Switch** button. Accounts whose capacity would be lost soonest
+  come first (the available percent per hour until the limit resets), then the most available;
+  accounts with any limit used up, or an expired login, are skipped. When the active account's
+  limit runs out, the next accounts are proposed automatically.
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
   usage left (or used up), plus filters by plan (Pro, Max, Team, ...) and by model-specific
   limits (e.g. only accounts with, or without, a Fable limit); one click clears the filters.

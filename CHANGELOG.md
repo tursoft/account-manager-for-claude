@@ -29,9 +29,9 @@ First release of the Tursoft fork of
   60 seconds.
 - About sheet with author and fork information.
 - Double-click an account's name to copy it (in the panel and the availability calendar).
-- **Propose account** / **Propose for Fable** buttons pick the best account for a limit (most
-  available, later reset on a tie) with a one-sentence reason and a Switch button; the next account
-  is proposed automatically when the active account's limit runs out.
+- **Propose Regular** / **Propose Fable** list the three best accounts for a limit, most urgent
+  first (capacity that resets soonest), each with its limit bar, a one-sentence reason, and a Switch
+  button; the next accounts are proposed automatically when the active account's limit runs out.
 - The account icon shows the limit state: green while a limit is left, orange once one is used up,
   gray when usage is unknown or the login expired.
 - Account names are green while the 5h limit has room and red once the 5h limit or a weekly limit

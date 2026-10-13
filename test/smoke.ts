@@ -27,7 +27,7 @@ import {
 import { buildTimeline, Segment } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
-import { noProposalReason, propose, rankAccounts } from "../src/propose";
+import { noProposalReason, propose, rankAccounts, urgencyOf } from "../src/propose";
 import {
   DEFAULT_LISTING,
   extraFilterLabels,
@@ -1108,30 +1108,35 @@ function runProposeTests(): void {
   const at = (ms: number) => new Date(now + ms).toISOString();
   const w = (kind: string, percent: number, resetIn: number | null = 2 * h) => ({ kind, label: kind, percent, resetsAt: resetIn === null ? null : at(resetIn) });
   const acc = (id: string, windows: ReturnType<typeof w>[], extra: { isActive?: boolean; needsReauthorization?: boolean } = {}) => ({ id, label: id, windows, ...extra });
-
-  const accounts = [
-    acc("a", [w("session", 100, 1 * h), w("weekly_fable", 10, 100 * h)]),
-    acc("b", [w("session", 30, 3 * h), w("weekly_fable", 60, 50 * h)]),
-    acc("c", [w("session", 30, 4 * h)]),
-    acc("d", [w("session", 5, 2 * h)], { isActive: true }),
-    acc("e", [w("session", 0, 1 * h), w("weekly_fable", 100, 20 * h)]),
-    acc("f", [w("session", 0, 1 * h)], { needsReauthorization: true }),
-    acc("g", []),
-  ];
   const ids = (list: { id: string }[]) => list.map((x) => x.id).join();
 
-  check("5h ranking: most 5h left first; a used-up weekly limit, expired logins, no data are excluded", ids(rankAccounts(accounts, "session", now)) === "d,c,b", ids(rankAccounts(accounts, "session", now)));
-  check("equal availability: the later reset wins (c resets in 4 h, b in 3 h)", ids(rankAccounts(accounts, "session", now)).indexOf("c") < ids(rankAccounts(accounts, "session", now)).indexOf("b"));
-  const five = propose(accounts, "session", now)!;
-  check("5h proposal is the active account d with 95% left", five.account.id === "d" && five.available === 95, five.account.id);
-  check("…and the reason says so in one sentence", five.reason === "It is already the active account: 95% of its 5h limit is available, the most of the 2 other usable accounts, and it resets in 2 h.", five.reason);
-  check("Fable ranking: only accounts with a Fable limit that are usable", ids(rankAccounts(accounts, "weekly_fable", now)) === "b", ids(rankAccounts(accounts, "weekly_fable", now)));
-  const fable = propose(accounts, "weekly_fable", now)!;
-  check("Fable proposal: b (a's 5h is used up, e's Fable is used up)", fable.account.id === "b" && fable.available === 40);
-  check("Fable reason", fable.reason === "40% of its Fable limit is available, and it resets in 2 d 2 h.", fable.reason);
+  // Urgency = available % per hour until reset.
+  check("urgency: 40% left with 1 h to go (40/h) beats 90% left with 5 h to go (18/h)", urgencyOf(w("session", 60, 1 * h), "session", now) > urgencyOf(w("session", 10, 5 * h), "session", now));
+  check("a reset within minutes with capacity left is the most urgent of all", urgencyOf(w("session", 50, 3 * 60_000), "session", now) === Infinity);
+  check("nothing available: no urgency", urgencyOf(w("session", 100, 60_000), "session", now) === 0);
+  check("an unknown reset time assumes a full cycle (5 h for 5h, a week for weekly)", urgencyOf(w("session", 50, null), "session", now) === 10 && Math.abs(urgencyOf(w("weekly_fable", 16, null), "weekly_fable", now) - 0.5) < 1e-9);
 
-  const sameAvail = [acc("x", [w("session", 50, 1 * h)]), acc("y", [w("session", 50, 5 * h)])];
-  check("tie on availability: the reason explains the later reset", propose(sameAvail, "session", now)!.account.id === "y" && propose(sameAvail, "session", now)!.reason.includes("resets later"));
+  const accounts = [
+    acc("fresh", [w("session", 2, 4.5 * h)]), // 98% / 4.5 h = 21.8 per h
+    acc("soon", [w("session", 60, 59 * 60_000)]), // 40% in 59 min -> most urgent
+    acc("mid", [w("session", 30, 3 * h), w("weekly_fable", 60, 50 * h)]), // 70 / 3 = 23.3 per h
+    acc("active", [w("session", 7, 4.3 * h), w("weekly_fable", 24, 160 * h)], { isActive: true }), // 93 / 4.3 = 21.6
+    acc("blocked", [w("session", 0, 1 * h), w("weekly_fable", 100, 20 * h)]), // weekly used up: not usable
+    acc("expired", [w("session", 0, 1 * h)], { needsReauthorization: true }),
+    acc("nodata", []),
+  ];
+  const ranked = rankAccounts(accounts, "session", now);
+  check("5h ranking is by urgency: soon, mid, fresh, active; blocked/expired/no-data excluded", ids(ranked) === "soon,mid,fresh,active", ids(ranked));
+  const p = propose(accounts, "session", now)!;
+  check("the proposal lists three candidates in that order", p.candidates.length === 3 && ids(p.candidates.map((c) => c.account)) === "soon,mid,fresh", ids(p.candidates.map((c) => c.account)));
+  check("the best candidate is the proposal's account", p.account.id === "soon" && p.available === 40 && p.candidates[0].urgency > 40);
+  check("the first reason says why it is urgent", p.candidates[0].reason === "40% of its 5h limit is available, it resets in 59 min, so use that capacity now or lose it, and the most urgent of the 4 usable accounts.", p.candidates[0].reason);
+  check("later candidates get a plain reason", p.candidates[1].reason === "70% of its 5h limit is available, and it resets in 3 h.", p.candidates[1].reason);
+  check("the active account is marked as such when it is a candidate", propose([accounts[3]], "session", now)!.reason.startsWith("It is already the active account: 93% of its 5h limit is available"));
+
+  const fable = propose(accounts, "weekly_fable", now)!;
+  check("Fable: usable accounts with a Fable limit, by urgency (mid 40%/50 h beats active 76%/160 h)", ids(fable.candidates.map((c) => c.account)) === "mid,active", ids(fable.candidates.map((c) => c.account)));
+  check("ties on urgency fall back to the most available", ids(rankAccounts([acc("x", [w("session", 50, 2 * h)]), acc("y", [w("session", 20, 3.2 * h)])], "session", now)) === "y,x");
 
   check("nothing usable: no proposal", propose([acc("z", [w("session", 100, 30 * 60_000)])], "session", now) === null);
   check("reason when every account is used up names the wait", noProposalReason([acc("z", [w("session", 100, 30 * 60_000)])], "session", now) === "Every account is used up; the first is usable again in 30 min.");

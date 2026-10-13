@@ -902,6 +902,7 @@ import {
     proposalEl.innerHTML = "";
     const accounts = state.accounts || [];
     proposeBar.classList.toggle("hidden", accounts.length === 0);
+    // "Propose Fable" only when some account has a Fable limit.
     proposeBar.querySelector("[data-propose=weekly_fable]").classList.toggle("hidden", !accounts.some((a) => (a.windows || []).some((w) => w.kind === "weekly_fable")));
     if (!shownProposal || accounts.length === 0) {
       proposalEl.classList.add("hidden");
@@ -916,28 +917,45 @@ import {
     const body = el("div", "proposal-body");
     const head = el("div", "proposal-head");
     head.appendChild(
-      el("span", "proposal-kicker", automatic ? `Your ${name} limit is used up — next account` : `Proposed account for ${name}`)
+      el("span", "proposal-kicker", automatic ? `Your ${name} limit is used up — next accounts` : `Proposed accounts for ${name}`)
     );
-    const close = iconButton("close", "Dismiss", hideProposal, "proposal-close");
-    head.appendChild(close);
+    head.appendChild(iconButton("close", "Dismiss", hideProposal, "proposal-close"));
     body.appendChild(head);
 
     if (!result) {
       body.appendChild(el("div", "proposal-reason", noProposalReason(accounts, kind)));
     } else {
-      const who = el("div", "proposal-name");
-      who.append(avatar(result.account), el("span", "", result.account.label));
-      body.append(who, el("div", "proposal-reason", result.reason));
-      if (!result.account.isActive) {
-        const sw = el("button", "tb-btn primary proposal-switch");
-        sw.append(icon("swap"), el("span", "", `Switch to ${result.account.label}`));
-        sw.title = `Switch Claude Code to ${result.account.label}`;
-        sw.addEventListener("click", () => {
-          post("switch", result.account.id);
-          hideProposal();
-        });
-        body.appendChild(sw);
-      }
+      const list = el("ol", "proposal-list");
+      result.candidates.forEach((cand, i) => {
+        const item = el("li", "proposal-item" + (i === 0 ? " best" : ""));
+        const row = el("div", "proposal-row");
+        const who = el("div", "proposal-name");
+        who.append(el("span", "proposal-rank", String(i + 1)), avatar(cand.account), el("span", "", cand.account.label));
+        row.appendChild(who);
+        if (!cand.account.isActive) {
+          const sw = el("button", "tb-btn proposal-switch" + (i === 0 ? " primary" : ""));
+          sw.append(icon("swap"), el("span", "", "Switch"));
+          sw.title = `Switch Claude Code to ${cand.account.label}`;
+          sw.addEventListener("click", () => {
+            post("switch", cand.account.id);
+            hideProposal();
+          });
+          row.appendChild(sw);
+        } else {
+          row.appendChild(el("span", "proposal-active", "active"));
+        }
+        item.appendChild(row);
+        // The limit this proposal is about, as the card's usage bar.
+        const w = (cand.account.windows || []).find((x) => x.kind === kind);
+        if (w) {
+          const meters = el("div", "meters proposal-meters");
+          meters.appendChild(meter(w, state.warnThreshold || 80));
+          item.appendChild(meters);
+        }
+        item.appendChild(el("div", "proposal-reason", cand.reason));
+        list.appendChild(item);
+      });
+      body.appendChild(list);
     }
     proposalEl.append(icon(result ? "info" : "warning"), body);
   }
