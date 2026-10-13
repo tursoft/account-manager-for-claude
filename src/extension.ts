@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const viewProvider = new AccountsViewProvider(context.extensionUri, store);
 
   const getInterval = () =>
-    vscode.workspace.getConfiguration("claudeSwitcher").get<number>("pollIntervalSeconds", 240);
+    vscode.workspace.getConfiguration("tursoftClaudeSwitcher").get<number>("pollIntervalSeconds", 240);
 
   const refreshUI = () => {
     statusBar.refresh();
@@ -73,7 +73,7 @@ export function activate(context: vscode.ExtensionContext): void {
         )
         .then((choice) => {
           if (choice === "Save as profile") {
-            void vscode.commands.executeCommand("claudeSwitcher.addCurrentAccount");
+            void vscode.commands.executeCommand("tursoftClaudeSwitcher.addCurrentAccount");
           }
         });
     }
@@ -402,7 +402,7 @@ export function activate(context: vscode.ExtensionContext): void {
   // --- Commands ---
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.addCurrentAccount", async () => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.addCurrentAccount", async () => {
       const res = await switchService.captureCurrent();
       vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
       await synchronizeCurrentProfile();
@@ -415,11 +415,11 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.addAccount", () => addAccount())
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.addAccount", () => addAccount())
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.switchAccount", async (id?: string) => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.switchAccount", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Switch to account…"));
       if (!targetId) {
         return;
@@ -452,7 +452,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.refreshUsage", async (id?: string) => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.refreshUsage", async (id?: string) => {
       if (id) {
         await poller.pollOne(id, true);
         refreshUI();
@@ -463,7 +463,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.sayHi", async (id?: string) => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.sayHi", async (id?: string) => {
       const targetIds = id ? [id] : await pickWarmupTargets(store);
       if (!targetIds || targetIds.length === 0) {
         return;
@@ -481,7 +481,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.openIndependentWindow", async (id?: string) => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.openIndependentWindow", async (id?: string) => {
       const targetIds = id ? [id] : await pickWindowTargets(store);
       if (!targetIds || targetIds.length === 0) {
         return;
@@ -495,7 +495,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.login", async () => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.login", async () => {
       // Save the outgoing login's latest rotation before Claude Code replaces it.
       await synchronizeCurrentProfile();
       await openClaudeLogin();
@@ -503,7 +503,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.browserLogin", async () => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.browserLogin", async () => {
       await synchronizeCurrentProfile();
       const result = await authorizeInBrowser();
       if (result.ok) {
@@ -521,7 +521,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.reauthorizeProfile", async (id?: string) => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.reauthorizeProfile", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Reauthorize profile..."));
       if (targetId) {
         await startProfileReauthorization(targetId);
@@ -531,7 +531,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "claudeSwitcher.completeProfileReauthorization",
+      "tursoftClaudeSwitcher.completeProfileReauthorization",
       async (id?: string) => {
         const targetId = id ?? (await pickAccount(store, "Complete profile reauthorization..."));
         if (!targetId) {
@@ -548,7 +548,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.removeAccount", async (id?: string) => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.removeAccount", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Remove account profile…"));
       if (!targetId) {
         return;
@@ -568,7 +568,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.renameAccount", async (id?: string) => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.renameAccount", async (id?: string) => {
       const targetId = id ?? (await pickAccount(store, "Rename profile…"));
       if (!targetId) {
         return;
@@ -587,7 +587,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.undoSwitch", async () => {
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.undoSwitch", async () => {
       const res = await switchService.undoSwitch();
       profileActivity.setActiveProfile(store.getActiveId());
       vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
@@ -596,21 +596,21 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("claudeSwitcher.openPanel", () => {
-      void vscode.commands.executeCommand("claudeSwitcher.accountsView.focus");
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.openPanel", () => {
+      void vscode.commands.executeCommand("tursoftClaudeSwitcher.accountsView.focus");
     })
   );
 
   // React to setting changes.
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("claudeSwitcher.pollIntervalSeconds")) {
+      if (e.affectsConfiguration("tursoftClaudeSwitcher.pollIntervalSeconds")) {
         poller.restart();
       }
-      if (e.affectsConfiguration("claudeSwitcher.warnThresholdPercent")) {
+      if (e.affectsConfiguration("tursoftClaudeSwitcher.warnThresholdPercent")) {
         refreshUI();
       }
-      if (e.affectsConfiguration("claudeSwitcher.credentialsPath")) {
+      if (e.affectsConfiguration("tursoftClaudeSwitcher.credentialsPath")) {
         watchCredentialsFile();
         onCredentialsFileChanged();
       }

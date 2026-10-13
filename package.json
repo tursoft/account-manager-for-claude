@@ -1,12 +1,12 @@
 {
-  "name": "claude-code-account-switcher",
-  "displayName": "Claude Multi-Account Switcher",
+  "name": "tursoft-claude-code-account-switcher",
+  "displayName": "Tursoft Claude Multi-Account Switcher",
   "description": "Quickly switch between Claude accounts (subscriptions) in Claude Code, with live usage limits.",
-  "version": "0.3.0",
-  "publisher": "KrzysztofZander",
+  "version": "0.3.1",
+  "publisher": "Muhammet Tursak",
   "author": {
-    "name": "Krzysztof Zander",
-    "email": "krzysztof.zander@retencja.pl"
+    "name": "Muhammet Tursak",
+    "email": "tursoft@gmail.com"
   },
   "license": "MIT",
   "engines": {
@@ -31,7 +31,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/KrzysztofZander/claude-account-switcher"
+    "url": "https://github.com/tursoft/claude-account-switcher"
   },
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -41,16 +41,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "claudeSwitcher",
+          "id": "tursoftClaudeSwitcher",
           "title": "Claude Accounts",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "claudeSwitcher": [
+      "tursoftClaudeSwitcher": [
         {
-          "id": "claudeSwitcher.accountsView",
+          "id": "tursoftClaudeSwitcher.accountsView",
           "name": "Accounts",
           "type": "webview"
         }
@@ -58,161 +58,161 @@
     },
     "commands": [
       {
-        "command": "claudeSwitcher.addCurrentAccount",
+        "command": "tursoftClaudeSwitcher.addCurrentAccount",
         "title": "Claude: Save current account as profile",
         "icon": "$(add)"
       },
       {
-        "command": "claudeSwitcher.addAccount",
+        "command": "tursoftClaudeSwitcher.addAccount",
         "title": "Claude: Add another account (isolated login)",
         "icon": "$(person-add)"
       },
       {
-        "command": "claudeSwitcher.switchAccount",
+        "command": "tursoftClaudeSwitcher.switchAccount",
         "title": "Claude: Switch account",
         "icon": "$(arrow-swap)"
       },
       {
-        "command": "claudeSwitcher.refreshUsage",
+        "command": "tursoftClaudeSwitcher.refreshUsage",
         "title": "Claude: Refresh usage limits",
         "icon": "$(refresh)"
       },
       {
-        "command": "claudeSwitcher.sayHi",
+        "command": "tursoftClaudeSwitcher.sayHi",
         "title": "Claude: Say Hi on account",
         "icon": "$(comment)"
       },
       {
-        "command": "claudeSwitcher.openIndependentWindow",
+        "command": "tursoftClaudeSwitcher.openIndependentWindow",
         "title": "Claude: Open independent account window",
         "icon": "$(window)"
       },
       {
-        "command": "claudeSwitcher.login",
+        "command": "tursoftClaudeSwitcher.login",
         "title": "Claude: Log in from terminal (replaces the current account)",
         "icon": "$(sign-in)"
       },
       {
-        "command": "claudeSwitcher.browserLogin",
+        "command": "tursoftClaudeSwitcher.browserLogin",
         "title": "Claude: Authorize in browser (without CLI)",
         "icon": "$(globe)"
       },
       {
-        "command": "claudeSwitcher.reauthorizeProfile",
+        "command": "tursoftClaudeSwitcher.reauthorizeProfile",
         "title": "Claude: Reauthorize account profile",
         "icon": "$(sign-in)"
       },
       {
-        "command": "claudeSwitcher.completeProfileReauthorization",
+        "command": "tursoftClaudeSwitcher.completeProfileReauthorization",
         "title": "Claude: Complete profile reauthorization",
         "icon": "$(pass)"
       },
       {
-        "command": "claudeSwitcher.removeAccount",
+        "command": "tursoftClaudeSwitcher.removeAccount",
         "title": "Claude: Remove account profile"
       },
       {
-        "command": "claudeSwitcher.renameAccount",
+        "command": "tursoftClaudeSwitcher.renameAccount",
         "title": "Claude: Rename account profile"
       },
       {
-        "command": "claudeSwitcher.undoSwitch",
+        "command": "tursoftClaudeSwitcher.undoSwitch",
         "title": "Claude: Undo last switch"
       },
       {
-        "command": "claudeSwitcher.openPanel",
+        "command": "tursoftClaudeSwitcher.openPanel",
         "title": "Claude: Show accounts panel"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "claudeSwitcher.addCurrentAccount",
-          "when": "view == claudeSwitcher.accountsView",
+          "command": "tursoftClaudeSwitcher.addCurrentAccount",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@1"
         },
         {
-          "command": "claudeSwitcher.refreshUsage",
-          "when": "view == claudeSwitcher.accountsView",
+          "command": "tursoftClaudeSwitcher.refreshUsage",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@2"
         },
         {
-          "command": "claudeSwitcher.sayHi",
-          "when": "view == claudeSwitcher.accountsView",
+          "command": "tursoftClaudeSwitcher.sayHi",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@3"
         },
         {
-          "command": "claudeSwitcher.openIndependentWindow",
-          "when": "view == claudeSwitcher.accountsView",
+          "command": "tursoftClaudeSwitcher.openIndependentWindow",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@4"
         },
         {
-          "command": "claudeSwitcher.addAccount",
-          "when": "view == claudeSwitcher.accountsView",
+          "command": "tursoftClaudeSwitcher.addAccount",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@5"
         },
         {
-          "command": "claudeSwitcher.browserLogin",
-          "when": "view == claudeSwitcher.accountsView",
+          "command": "tursoftClaudeSwitcher.browserLogin",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@5.5"
         },
         {
-          "command": "claudeSwitcher.reauthorizeProfile",
-          "when": "view == claudeSwitcher.accountsView",
+          "command": "tursoftClaudeSwitcher.reauthorizeProfile",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@6"
         }
       ],
       "commandPalette": [
         {
-          "command": "claudeSwitcher.removeAccount"
+          "command": "tursoftClaudeSwitcher.removeAccount"
         },
         {
-          "command": "claudeSwitcher.renameAccount"
+          "command": "tursoftClaudeSwitcher.renameAccount"
         }
       ]
     },
     "configuration": {
       "title": "Claude Account Switcher",
       "properties": {
-        "claudeSwitcher.pollIntervalSeconds": {
+        "tursoftClaudeSwitcher.pollIntervalSeconds": {
           "type": "number",
           "default": 240,
           "minimum": 180,
           "markdownDescription": "How often (in seconds) to automatically refresh usage limits for each account. The endpoint is heavily rate-limited — values below 180s are raised to 180s."
         },
-        "claudeSwitcher.autoReloadAfterSwitch": {
+        "tursoftClaudeSwitcher.autoReloadAfterSwitch": {
           "type": "boolean",
           "default": false,
           "markdownDescription": "Automatically reload the VS Code window after switching accounts (required for Claude Code to pick up the new account). When disabled, the extension asks first."
         },
-        "claudeSwitcher.credentialsPath": {
+        "tursoftClaudeSwitcher.credentialsPath": {
           "type": "string",
           "default": "",
           "markdownDescription": "Path to the Claude Code `.credentials.json` file. Empty = default `~/.claude/.credentials.json`."
         },
-        "claudeSwitcher.warnThresholdPercent": {
+        "tursoftClaudeSwitcher.warnThresholdPercent": {
           "type": "number",
           "default": 80,
           "minimum": 1,
           "maximum": 100,
           "markdownDescription": "Usage threshold (%) above which the limit bar turns red."
         },
-        "claudeSwitcher.claudeCommand": {
+        "tursoftClaudeSwitcher.claudeCommand": {
           "type": "string",
           "default": "claude",
           "markdownDescription": "Claude Code CLI command used for login and Say Hi warmups. Use the full path to `claude.cmd`/`claude.exe` if VS Code cannot find `claude` in PATH."
         },
-        "claudeSwitcher.sayHiModel": {
+        "tursoftClaudeSwitcher.sayHiModel": {
           "type": "string",
           "default": "haiku",
           "markdownDescription": "Model passed to `claude -p` for Say Hi warmups. `haiku` is the low-cost/default warmup choice."
         },
-        "claudeSwitcher.sayHiPrompt": {
+        "tursoftClaudeSwitcher.sayHiPrompt": {
           "type": "string",
           "default": "Hi",
           "markdownDescription": "Prompt used by Say Hi warmups."
         },
-        "claudeSwitcher.sayHiTimeoutSeconds": {
+        "tursoftClaudeSwitcher.sayHiTimeoutSeconds": {
           "type": "number",
           "default": 120,
           "minimum": 15,

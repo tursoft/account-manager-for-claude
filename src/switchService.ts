@@ -179,7 +179,7 @@ export class SwitchService {
   /** Reload the window automatically or after confirmation (per setting). */
   private async maybeReload(context: string): Promise<void> {
     const auto = vscode.workspace
-      .getConfiguration("claudeSwitcher")
+      .getConfiguration("tursoftClaudeSwitcher")
       .get<boolean>("autoReloadAfterSwitch", false);
 
     if (auto) {

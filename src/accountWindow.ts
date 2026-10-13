@@ -114,7 +114,7 @@ export class AccountWindowService {
             value: configDir,
           },
         ],
-        "claudeSwitcher.credentialsPath": this.credentials.getCredentialsPath(configDir),
+        "tursoftClaudeSwitcher.credentialsPath": this.credentials.getCredentialsPath(configDir),
       },
     };
   }

@@ -3,6 +3,10 @@
 Quickly switch between Claude accounts (subscriptions) in **Claude Code** inside VS Code,
 with live usage limits for all your accounts at a glance.
 
+> This project is a fork of
+> [KrzysztofZander/claude-account-switcher](https://github.com/KrzysztofZander/claude-account-switcher)
+> by Krzysztof Zander.
+
 ## Why
 
 You have several Claude subscriptions. When one account runs out of usage (the 5-hour or
@@ -38,7 +42,7 @@ and re-login.
 - Claude Code CLI is optional for browser authorization, account switching, and usage checks.
   It is still required for **Say Hi**, CLI-based identity checks, and using Claude Code itself.
 - For CLI-only features, the `claude` command must be available in VS Code's PATH, or
-  `claudeSwitcher.claudeCommand` must point to the full path of `claude`, `claude.exe`, or
+  `tursoftClaudeSwitcher.claudeCommand` must point to the full path of `claude`, `claude.exe`, or
   `claude.cmd`.
 - On Windows PowerShell, Claude Code CLI can be installed with:
 
@@ -127,14 +131,14 @@ the account on each computer separately instead of copying credential files betw
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `claudeSwitcher.pollIntervalSeconds` | `240` | auto-refresh interval (min 180) |
-| `claudeSwitcher.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
-| `claudeSwitcher.credentialsPath` | `""` | override the path to `.credentials.json` |
-| `claudeSwitcher.warnThresholdPercent` | `80` | warning threshold (% → red bar) |
-| `claudeSwitcher.claudeCommand` | `claude` | CLI command used for CLI login and Say Hi; set the full path if VS Code cannot find it |
-| `claudeSwitcher.sayHiModel` | `haiku` | model alias passed to `claude -p` |
-| `claudeSwitcher.sayHiPrompt` | `Hi` | prompt used by Say Hi |
-| `claudeSwitcher.sayHiTimeoutSeconds` | `120` | Say Hi timeout |
+| `tursoftClaudeSwitcher.pollIntervalSeconds` | `240` | auto-refresh interval (min 180) |
+| `tursoftClaudeSwitcher.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
+| `tursoftClaudeSwitcher.credentialsPath` | `""` | override the path to `.credentials.json` |
+| `tursoftClaudeSwitcher.warnThresholdPercent` | `80` | warning threshold (% → red bar) |
+| `tursoftClaudeSwitcher.claudeCommand` | `claude` | CLI command used for CLI login and Say Hi; set the full path if VS Code cannot find it |
+| `tursoftClaudeSwitcher.sayHiModel` | `haiku` | model alias passed to `claude -p` |
+| `tursoftClaudeSwitcher.sayHiPrompt` | `Hi` | prompt used by Say Hi |
+| `tursoftClaudeSwitcher.sayHiTimeoutSeconds` | `120` | Say Hi timeout |
 
 ## Troubleshooting Say Hi
 
@@ -149,7 +153,7 @@ Claude Code CLI. Try these in order:
 irm https://claude.ai/install.ps1 | iex
 ```
 
-4. If the command exists but VS Code still cannot see it, set `claudeSwitcher.claudeCommand` to the
+4. If the command exists but VS Code still cannot see it, set `tursoftClaudeSwitcher.claudeCommand` to the
    full path, for example `C:\Users\you\AppData\Roaming\npm\claude.cmd` or the path returned by
    `where claude`.
 
@@ -170,7 +174,7 @@ account. Independent windows avoid that by setting both:
       "value": "C:\\Users\\you\\.claude-user2"
     }
   ],
-  "claudeSwitcher.credentialsPath": "C:\\Users\\you\\.claude-user2\\.credentials.json"
+  "tursoftClaudeSwitcher.credentialsPath": "C:\\Users\\you\\.claude-user2\\.credentials.json"
 }
 ```
 

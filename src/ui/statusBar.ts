@@ -14,7 +14,7 @@ export class StatusBarController {
 
   constructor(private readonly store: AccountStore) {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    this.item.command = "claudeSwitcher.switchAccount";
+    this.item.command = "tursoftClaudeSwitcher.switchAccount";
     this.item.show();
   }
 
@@ -58,7 +58,7 @@ export class StatusBarController {
     this.item.tooltip = lines.join("\n");
 
     const warn = vscode.workspace
-      .getConfiguration("claudeSwitcher")
+      .getConfiguration("tursoftClaudeSwitcher")
       .get<number>("warnThresholdPercent", 80);
     this.item.backgroundColor =
       typeof session === "number" && session >= warn

@@ -17,7 +17,7 @@ interface ViewAccount {
 
 /** Activity bar panel: list of accounts with usage limits and actions. */
 export class AccountsViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = "claudeSwitcher.accountsView";
+  public static readonly viewType = "tursoftClaudeSwitcher.accountsView";
   private view?: vscode.WebviewView;
 
   constructor(
@@ -39,44 +39,44 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           this.refresh();
           break;
         case "switch":
-          if (msg.id) void vscode.commands.executeCommand("claudeSwitcher.switchAccount", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.switchAccount", msg.id);
           break;
         case "openWindow":
           if (msg.id) {
-            void vscode.commands.executeCommand("claudeSwitcher.openIndependentWindow", msg.id);
+            void vscode.commands.executeCommand("tursoftClaudeSwitcher.openIndependentWindow", msg.id);
           }
           break;
         case "refresh":
-          void vscode.commands.executeCommand("claudeSwitcher.refreshUsage", msg.id);
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.refreshUsage", msg.id);
           break;
         case "refreshAll":
-          void vscode.commands.executeCommand("claudeSwitcher.refreshUsage");
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.refreshUsage");
           break;
         case "sayHi":
-          if (msg.id) void vscode.commands.executeCommand("claudeSwitcher.sayHi", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.sayHi", msg.id);
           break;
         case "sayHiAll":
-          void vscode.commands.executeCommand("claudeSwitcher.sayHi");
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.sayHi");
           break;
         case "add":
-          void vscode.commands.executeCommand("claudeSwitcher.addCurrentAccount");
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.addCurrentAccount");
           break;
         case "login":
-          void vscode.commands.executeCommand("claudeSwitcher.addAccount");
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.addAccount");
           break;
         case "reauthorize":
           if (msg.id) {
-            void vscode.commands.executeCommand("claudeSwitcher.reauthorizeProfile", msg.id);
+            void vscode.commands.executeCommand("tursoftClaudeSwitcher.reauthorizeProfile", msg.id);
           }
           break;
         case "remove":
-          if (msg.id) void vscode.commands.executeCommand("claudeSwitcher.removeAccount", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.removeAccount", msg.id);
           break;
         case "rename":
-          if (msg.id) void vscode.commands.executeCommand("claudeSwitcher.renameAccount", msg.id);
+          if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.renameAccount", msg.id);
           break;
         case "undo":
-          void vscode.commands.executeCommand("claudeSwitcher.undoSwitch");
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.undoSwitch");
           break;
       }
     });
@@ -92,7 +92,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     const activeId = this.store.getActiveId();
     const profiles = this.store.list();
     const warnThreshold = vscode.workspace
-      .getConfiguration("claudeSwitcher")
+      .getConfiguration("tursoftClaudeSwitcher")
       .get<number>("warnThresholdPercent", 80);
 
     void Promise.all(
@@ -146,17 +146,23 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="toolbar">
-    <button id="addBtn" class="primary" title="Save the account Claude Code is logged in with">Save current</button>
-    <button id="loginBtn" title="Log in to another Claude account in an isolated login (the current account is not touched)">+ Add account</button>
-    <button id="sayHiBtn" title="Say Hi on inactive accounts">Hi</button>
-    <button id="refreshBtn" title="Refresh usage limits">⟳</button>
+    <button id="addBtn" class="tb-btn primary" title="Save the account Claude Code is logged in with">Save current</button>
+    <button id="loginBtn" class="tb-btn" title="Log in to another Claude account in an isolated login (the current account is not touched)">Add</button>
+    <span class="spacer"></span>
+    <button id="sayHiBtn" class="icon-btn" title="Say Hi on all inactive accounts" aria-label="Say Hi on all inactive accounts"></button>
+    <button id="refreshBtn" class="icon-btn" title="Refresh usage limits" aria-label="Refresh usage limits"></button>
   </div>
   <div id="list"></div>
   <div id="empty" class="hidden">
-    <p>No saved accounts.</p>
-    <p>Click <b>"Save current"</b> to save the account Claude Code is logged in with, or <b>"+ Add account"</b> to log in to another one.</p>
-    <p>Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</p>
+    <p class="empty-title">No saved accounts</p>
+    <p>Save the account Claude Code is logged in with, or log in to another one.</p>
+    <div class="empty-actions">
+      <button id="emptyAddBtn" class="tb-btn primary">Save current</button>
+      <button id="emptyLoginBtn" class="tb-btn">Add account</button>
+    </div>
+    <p class="hint">Never use <code>/logout</code> to change accounts: it revokes that login on Anthropic's side.</p>
   </div>
+  <div id="menu" class="hidden" role="menu"></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
@@ -168,7 +174,7 @@ function displayUsageError(
   needsReauthorization: boolean
 ): string | undefined {
   if (needsReauthorization) {
-    return "Login was revoked or expired. Use Auth to reauthorize this profile.";
+    return "Login was revoked or expired. Reauthorize this profile.";
   }
   return error;
 }
