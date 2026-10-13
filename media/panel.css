@@ -1,6 +1,8 @@
 :root {
   color-scheme: light dark;
   --border: var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.22)));
+  /* Account boxes: a light gray that follows the theme's text color. */
+  --card-border: color-mix(in srgb, var(--vscode-foreground, #888) 32%, transparent);
   --surface: var(--vscode-sideBar-background, transparent);
   --hover: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.1));
   --accent: var(--vscode-focusBorder, #3794ff);
@@ -300,7 +302,7 @@ button:focus-visible {
 .card {
   position: relative;
   padding: 6px 6px 7px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius);
   background: var(--surface);
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -322,7 +324,7 @@ button:focus-visible {
 }
 
 .card.active {
-  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--card-border));
   background: color-mix(in srgb, var(--ok) 6%, var(--surface));
 }
 
@@ -332,7 +334,7 @@ button:focus-visible {
 
 /* The saved login (refresh token) expired or was revoked. */
 .card.expired {
-  border-color: color-mix(in srgb, var(--warn) 60%, var(--border));
+  border-color: color-mix(in srgb, var(--warn) 65%, var(--card-border));
   border-style: dashed;
   background: color-mix(in srgb, var(--warn) 5%, var(--surface));
 }
@@ -355,7 +357,7 @@ button:focus-visible {
   height: 10px;
 }
 
-.side-btn.reauth {
+.quick.reauth {
   color: var(--warn);
   opacity: 1;
 }
@@ -463,10 +465,10 @@ button:focus-visible {
 
 .ago {
   flex: 0 0 auto;
-  font-size: 10.5px;
+  font-size: 10px;
+  line-height: 1;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  margin-right: 2px;
 }
 
 .card-head .icon-btn {
@@ -561,17 +563,6 @@ button:focus-visible {
 
 /* ---- quick actions beside a card ------------------------------------ */
 
-.row {
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-}
-
-.row .card {
-  flex: 1;
-  min-width: 0;
-}
-
 /* Inside the card: avatar on the left, header, bars and errors in the body. */
 .card {
   display: flex;
@@ -612,15 +603,26 @@ button:focus-visible {
 }
 
 
-.side {
+/* Avatar with the update time under it. */
+.card-lead {
   flex: 0 0 auto;
+  align-self: center;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 2px;
+  align-items: center;
+  gap: 4px;
+  min-width: 28px;
 }
 
-.side-btn.switch:hover {
+/* Quick actions and the "..." menu, together at the right of the header. */
+.head-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.quick.switch:hover {
   color: var(--accent);
 }
 

@@ -232,16 +232,12 @@
     }
     head.appendChild(el("span", "spacer"));
 
-    const ago = fmtAgo(acc.fetchedAt);
-    if (ago) {
-      const agoEl = el("span", "ago", ago);
-      agoEl.title = `Usage updated ${ago} ago`;
-      head.appendChild(agoEl);
-    }
-
-    head.appendChild(
+    const actions = el("span", "head-actions");
+    actions.append(
+      ...quickButtons(acc),
       iconButton("more", "More actions", (btn) => toggleMenu(btn, acc.label, accountMenuItems(acc)), "menu-btn")
     );
+    head.appendChild(actions);
     body.appendChild(head);
 
     if (acc.windows && acc.windows.length) {
@@ -265,7 +261,16 @@
       body.appendChild(err);
     }
 
-    root.append(avatar(acc), body);
+    // Left column: the avatar with the time of the last usage update below it.
+    const lead = el("div", "card-lead");
+    lead.appendChild(avatar(acc));
+    const ago = fmtAgo(acc.fetchedAt);
+    if (ago) {
+      const agoEl = el("span", "ago", ago);
+      agoEl.title = `Usage updated ${ago} ago`;
+      lead.appendChild(agoEl);
+    }
+    root.append(lead, body);
     return root;
   }
 
@@ -304,19 +309,19 @@
     return a;
   }
 
-  /** Always-visible quick actions beside a card: switch (inactive accounts only) and refresh. */
-  function sideButtons(acc) {
-    const side = el("div", "side");
+  /** Quick actions shown left of the card's "..." menu: switch (inactive accounts only) and refresh. */
+  function quickButtons(acc) {
+    const buttons = [];
     if (acc.needsReauthorization) {
       // Switching would fail with a dead login; offer the fix instead.
-      side.appendChild(
-        iconButton("key", "Login expired: reauthorize this account", () => post("reauthorize", acc.id), "side-btn reauth")
+      buttons.push(
+        iconButton("key", "Login expired: reauthorize this account", () => post("reauthorize", acc.id), "quick reauth")
       );
     } else if (!acc.isActive) {
-      side.appendChild(iconButton("swap", "Switch to this account", () => post("switch", acc.id), "side-btn switch"));
+      buttons.push(iconButton("swap", "Switch to this account", () => post("switch", acc.id), "quick switch"));
     }
-    side.appendChild(iconButton("refresh", "Refresh usage", () => post("refresh", acc.id), "side-btn refresh"));
-    return side;
+    buttons.push(iconButton("refresh", "Refresh usage", () => post("refresh", acc.id), "quick refresh"));
+    return buttons;
   }
 
   // ---- dropdown menu ----------------------------------------------------
@@ -808,9 +813,7 @@
     const visible = sortAccounts(accounts.filter(matchesFilter), order);
     noMatchEl.classList.toggle("hidden", visible.length > 0);
     for (const acc of visible) {
-      const row = el("div", "row");
-      row.append(card(acc, state.warnThreshold || 80), sideButtons(acc));
-      listEl.appendChild(row);
+      listEl.appendChild(card(acc, state.warnThreshold || 80));
     }
     revealActiveChange(accounts);
     applyBusy();
@@ -920,11 +923,10 @@
   function applyBusy() {
     const ids = new Set(busy.ids || []);
     progressEl.classList.toggle("hidden", !(busy.all || busy.session || ids.size > 0));
-    for (const row of listEl.querySelectorAll(".row")) {
-      const cardEl = row.querySelector(".card");
-      const on = Boolean(cardEl && ids.has(cardEl.dataset.id));
+    for (const cardEl of listEl.querySelectorAll(".card")) {
+      const on = ids.has(cardEl.dataset.id);
       cardEl.classList.toggle("busy", on);
-      const refresh = row.querySelector(".side-btn.refresh");
+      const refresh = cardEl.querySelector(".quick.refresh");
       if (refresh) refresh.classList.toggle("spin", on);
     }
     const sessionBoxEl = sessionEl.querySelector(".session");

@@ -8,8 +8,8 @@ First release of the Tursoft fork of
 - Renamed the extension to **Tursoft Claude Multi-Account Switcher**; commands and settings now
   use the `tursoftClaudeSwitcher.` prefix (profiles from the original extension are not shared).
 - Redesigned, compact accounts panel: one-line usage bars with reset times beside them, a status
-  dot for the active account, a **⋯** menu per account instead of a row of buttons, and **Switch**
-  and **Refresh** buttons beside each account.
+  dot for the active account, a **⋯** menu per account instead of a row of buttons, **Switch** and
+  **Refresh** buttons next to it, and the time of the last update under the account's icon.
 - Drag and drop (or **Move up / Move down**) to reorder accounts; the order is remembered.
 - Text filter plus **All / Available / Limited** filter, with a button to clear filters.
 - Filter by plan (account type) and by model-specific limits, e.g. only accounts with (or
