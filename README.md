@@ -40,8 +40,6 @@ and re-login.
 - **Fast switching** — from the panel, the status bar, or the command palette (QuickPick).
 - **Live usage limits** — utilization (%) of the 5-hour and weekly windows for each account,
   with time until reset. Data comes from the same source as the `/usage` command.
-- **Say Hi warmup** — run a one-turn `claude -p "Hi"` on inactive saved accounts using
-  `--model haiku` by default, without switching the active `.credentials.json`.
 - **Independent account windows** — open the same project in separate VS Code windows, each
   with its own Claude account and `CLAUDE_CONFIG_DIR`.
 - **Browser authorization** — if Claude Code CLI is unavailable, complete OAuth login in the
@@ -91,7 +89,7 @@ and re-login.
 ## Requirements
 
 - Claude Code CLI is optional for browser authorization, account switching, and usage checks.
-  It is still required for **Say Hi**, CLI-based identity checks, and using Claude Code itself.
+  It is still required for CLI-based login and identity checks, and for using Claude Code itself.
 - For CLI-only features, the `claude` command must be available in VS Code's PATH, or
   `accountManagerForClaude.claudeCommand` must point to the full path of `claude`, `claude.exe`, or
   `claude.cmd`.
@@ -108,9 +106,6 @@ irm https://claude.ai/install.ps1 | iex
   in `~/.claude.json`, so Claude Code shows the right account.
 - **After switching you must reload the VS Code window** so Claude Code picks up the new
   account — the extension offers to do it automatically (auto-reload can be enabled in settings).
-- Saved inactive accounts are warmed up through an isolated `CLAUDE_CONFIG_DIR` under the
-  extension's global storage. This lets "Say Hi" refresh/use that account without changing the
-  currently active Claude Code account.
 - Independent windows use generated `.code-workspace` files under the extension's global storage.
   Each window points Claude Code at the selected account's isolated config directory.
 - Usage is read from the unofficial `api.anthropic.com/api/oauth/usage` endpoint (the same
@@ -172,7 +167,6 @@ the account on each computer separately instead of copying credential files betw
 | `Claude: Add another account (isolated login)` | logs in to another account without touching the current one and saves it |
 | `Claude: Switch account` | QuickPick with usage limits |
 | `Claude: Refresh usage limits` | forces a refresh |
-| `Claude: Say Hi on account` | warms up inactive saved accounts via `claude -p` |
 | `Claude: Open independent account window` | opens this project in a new VS Code window scoped to one account |
 | `Claude: Log in from terminal (replaces the current account)` | opens `claude auth login` for the current config dir, or falls back to browser authorization when CLI is unavailable |
 | `Claude: Authorize in browser (without CLI)` | completes OAuth authorization in the default browser |
@@ -197,15 +191,12 @@ the account on each computer separately instead of copying credential files betw
 | `accountManagerForClaude.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
 | `accountManagerForClaude.credentialsPath` | `""` | override the path to `.credentials.json` |
 | `accountManagerForClaude.warnThresholdPercent` | `80` | warning threshold (%): usage bars and the status bar turn red from it and orange from 75% of it |
-| `accountManagerForClaude.claudeCommand` | `claude` | CLI command used for CLI login and Say Hi; set the full path if VS Code cannot find it |
-| `accountManagerForClaude.sayHiModel` | `haiku` | model alias passed to `claude -p` |
-| `accountManagerForClaude.sayHiPrompt` | `Hi` | prompt used by Say Hi |
-| `accountManagerForClaude.sayHiTimeoutSeconds` | `120` | Say Hi timeout |
+| `accountManagerForClaude.claudeCommand` | `claude` | CLI command used for CLI login; set the full path if VS Code cannot find it |
 
-## Troubleshooting Say Hi
+## Troubleshooting the Claude Code CLI
 
-If Say Hi reports that `claude` is not recognized, the VS Code extension process cannot find the
-Claude Code CLI. Try these in order:
+If the extension reports that `claude` is not recognized, the VS Code extension process cannot find
+the Claude Code CLI. Try these in order:
 
 1. Run `where claude` in PowerShell or CMD.
 2. If it is found, restart VS Code so the extension host gets the refreshed PATH.
@@ -251,8 +242,8 @@ directories would each try to spend the same single-use refresh token.
 - No login data is sent to the extension author, publisher, marketplace backend, or any custom
   third-party server controlled by this extension.
 - Saved profile secrets are stored in VS Code's encrypted **SecretStorage**.
-- Claude Code itself requires local `.credentials.json` files. For account switching, Say Hi,
-  and independent windows, the extension writes credentials only to local Claude Code config
+- Claude Code itself requires local `.credentials.json` files. For account switching and
+  independent windows, the extension writes credentials only to local Claude Code config
   directories on your machine, including isolated per-account `CLAUDE_CONFIG_DIR` folders under
   the extension's global storage.
 - Credentials are never intentionally logged. Protect your machine and OS user account, because
@@ -260,8 +251,7 @@ directories would each try to spend the same single-use refresh token.
   credential files.
 - Network requests made by the extension go only to Anthropic endpoints needed for token refresh,
   usage-limit checks, and identifying which account a login belongs to (`/api/oauth/profile`,
-  the same endpoint Claude Code calls after login). Say Hi is executed through the local Claude Code CLI, which communicates
-  with Anthropic as Claude Code normally does.
+  the same endpoint Claude Code calls after login).
 - This tool is for managing **your own** accounts.
 - The usage endpoint and the token-refresh flow are **unofficial** and may change or stop working
   on Anthropic's side.
@@ -353,7 +343,7 @@ same restored account on two machines at once; each rotation invalidates the oth
 
 - [Node.js](https://nodejs.org/) 18 or newer (npm included)
 - VS Code 1.85 or newer
-- Claude Code installed, for testing login and Say Hi
+- Claude Code installed, for testing login
 
 ```bash
 npm install
