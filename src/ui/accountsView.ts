@@ -323,10 +323,6 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   <title>MultiAccount</title>
 </head>
 <body>
-  <div id="toolbar">
-    <button id="addBtn" class="tb-btn primary" title="Save the account Claude Code is logged in with">Save current</button>
-    <button id="loginBtn" class="tb-btn" title="Log in to another Claude account in an isolated login (the current account is not touched)">Add</button>
-  </div>
   <div id="filters" class="hidden">
     <label class="search">
       <span id="searchIcon"></span>
@@ -364,6 +360,10 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   </div>
   <div id="session"></div>
   <div id="stats" class="hidden" aria-label="Account statistics"></div>
+  <div id="toolbar">
+    <button id="addBtn" class="tb-btn primary" title="Save the account Claude Code is logged in with">Save current</button>
+    <button id="loginBtn" class="tb-btn" title="Log in to another Claude account in an isolated login (the current account is not touched)">Add</button>
+  </div>
   <div id="menu" class="hidden" role="menu"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="about" class="hidden" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">

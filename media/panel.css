@@ -63,13 +63,13 @@ button:focus-visible {
   outline-offset: 1px;
 }
 
-/* ---- toolbar -------------------------------------------------------- */
+/* ---- toolbar (Save current / Add), below the stats footer -------------- */
 
 #toolbar {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 8px;
+  margin-top: 12px;
 }
 
 .tb-btn {
