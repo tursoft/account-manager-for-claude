@@ -281,7 +281,8 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
   actually used, for the selected accounts and period. A 5h limit refills every 5 hours and a
   weekly limit (Fable included) every 7 days, so capacity not used before a reset is lost; the
   figures and charts show used capacity over offered capacity, per limit and for all limits
-  together (per 5h or per week on the charts, overall for the whole period).
+  together (per 5h or per week on the charts, overall for the whole period), and each limit's
+  figure lists every selected account's own utilization underneath.
 
 **Delete collected usage history** removes all recorded readings.
 
@@ -297,7 +298,9 @@ as a week from Monday to Sunday or, after clicking a day, hour by hour:
   keeps its own, so you can try other views without changing the panel;
 - in **Custom order**, drag an account's row onto another (or focus its grip and press Up / Down)
   to reorder; this changes the same saved order the accounts panel uses;
-- below the timeline, a **Right now** card per account: available now, or how long until it is usable again, with
+- below the timeline, a **Right now** card per account with its own numbers for the shown
+  period: how much of the measured time so far was usable (a stacked bar of available / 80%+ /
+  limited), how often a limit ran out and for how long at most, and the projected share ahead; available now, or how long until it is usable again, with
   each limit's current percent and a **Switch** button for accounts that are available;
 - for each limit you tick under **Limits** (**5h**, **Fable**, and, when an account has them,
   weekly and other model-specific limits), a lane under the account's name. With exactly one limit

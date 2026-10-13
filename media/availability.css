@@ -156,6 +156,76 @@ h1 {
   --c: var(--danger);
 }
 
+/* Per-account stats on a card: a stacked share bar and a value, for the past and the projection. */
+.now-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+
+.now-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.now-stat-label {
+  flex: 0 0 38px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.now-stat-bar {
+  flex: 1;
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--grid);
+}
+
+.now-stat-bar .slot {
+  position: static;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.now-stat-value {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.now-stat-value.ok {
+  color: var(--ok);
+}
+
+.now-stat-value.mid {
+  color: var(--warn);
+}
+
+.now-stat-value.bad {
+  color: var(--danger);
+}
+
+.now-stat-value.muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.now-stat-note {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
 .switch {
   position: absolute;
   top: 9px;

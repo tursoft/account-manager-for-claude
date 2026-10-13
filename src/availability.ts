@@ -54,6 +54,54 @@ export interface Timeline {
   nextAvailableAt: number | null;
 }
 
+/** How an account's time in the shown period splits by state, for the past and the projected future. */
+export interface TimelineStats {
+  /** share (%) of the measured past that was free / 80%+ used / limited / unknown */
+  past: Record<LaneState, number>;
+  /** the same for the projected future */
+  future: Record<LaneState, number>;
+  /** milliseconds of measured past and projected future inside the range */
+  pastMs: number;
+  futureMs: number;
+  /** longest stretch (ms) the account was limited in the past; 0 when never */
+  longestBlockedMs: number;
+  /** how many times a limit ran out in the past */
+  blockedCount: number;
+}
+
+/** Splits the overall lane into per-state shares, past and future separately. */
+export function timelineStats(overall: Segment[]): TimelineStats {
+  const empty = (): Record<LaneState, number> => ({ free: 0, high: 0, limited: 0, nodata: 0 });
+  const past = empty();
+  const future = empty();
+  let pastMs = 0;
+  let futureMs = 0;
+  let longest = 0;
+  let count = 0;
+  let prevLimited = false;
+  for (const s of overall) {
+    const ms = Math.max(0, s.end - s.start);
+    if (s.projected) {
+      future[s.state] += ms;
+      futureMs += ms;
+    } else {
+      past[s.state] += ms;
+      pastMs += ms;
+      if (s.state === "limited") {
+        if (!prevLimited) count++;
+        longest = Math.max(longest, ms);
+      }
+      prevLimited = s.state === "limited";
+    }
+  }
+  const pct = (bucket: Record<LaneState, number>, total: number) => {
+    const out = empty();
+    for (const k of Object.keys(bucket) as LaneState[]) out[k] = total > 0 ? Math.round((bucket[k] / total) * 1000) / 10 : 0;
+    return out;
+  };
+  return { past: pct(past, pastMs), future: pct(future, futureMs), pastMs, futureMs, longestBlockedMs: longest, blockedCount: count };
+}
+
 const WEEK_MS = 7 * 86_400_000;
 
 export function stateOf(percent: number): LaneState {

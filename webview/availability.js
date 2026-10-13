@@ -1,6 +1,6 @@
 // Account availability calendar: a week (or one day) timeline per account, with
 // an overall "usable?" lane and one lane per limit (5h, weekly, Fable, ...).
-import { buildTimeline } from "../src/availability";
+import { buildTimeline, timelineStats } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription } from "../src/tone";
 import {
@@ -434,6 +434,58 @@ function renderNow(accounts, timelines, now) {
       pills.appendChild(pill);
     }
     card.appendChild(pills);
+
+    // This period in numbers: how much of the measured past was usable, how often a limit ran
+    // out, and how the projected rest of the period looks.
+    const st = timelineStats(tl.overall);
+    if (st.pastMs > 0 || st.futureMs > 0) {
+      const stats = el("div", "now-stats");
+      if (st.pastMs > 0) {
+        const known = 100 - st.past.nodata;
+        const row = el("div", "now-stat");
+        row.appendChild(el("span", "now-stat-label", "So far"));
+        if (known > 0) {
+          const bar = el("div", "now-stat-bar");
+          for (const state of ["free", "high", "limited"]) {
+            if (st.past[state] > 0) {
+              const seg = el("span", "slot " + state);
+              seg.style.width = (st.past[state] / known) * 100 + "%";
+              bar.appendChild(seg);
+            }
+          }
+          row.appendChild(bar);
+          const freeShare = Math.round((st.past.free / known) * 100);
+          const v = el("span", "now-stat-value " + (freeShare >= 70 ? "ok" : freeShare >= 40 ? "mid" : "bad"), `${freeShare}% usable`);
+          v.title = `Of the ${fmtDuration(st.pastMs * known / 100)} measured so far in this period: ${st.past.free}% available, ${st.past.high}% at 80%+, ${st.past.limited}% limited`;
+          row.appendChild(v);
+        } else {
+          row.appendChild(el("span", "now-stat-value muted", "no history"));
+        }
+        stats.appendChild(row);
+        if (st.blockedCount > 0) {
+          const b = el("div", "now-stat-note", `Ran out ${st.blockedCount === 1 ? "once" : st.blockedCount + " times"}, longest ${fmtDuration(st.longestBlockedMs)}`);
+          stats.appendChild(b);
+        }
+      }
+      if (st.futureMs > 0 && st.future.nodata < 100) {
+        const row = el("div", "now-stat");
+        row.appendChild(el("span", "now-stat-label", "Ahead"));
+        const bar = el("div", "now-stat-bar");
+        for (const state of ["free", "high", "limited"]) {
+          if (st.future[state] > 0) {
+            const seg = el("span", "slot " + state + " projected");
+            seg.style.width = st.future[state] + "%";
+            bar.appendChild(seg);
+          }
+        }
+        row.appendChild(bar);
+        const v = el("span", "now-stat-value " + (st.future.free >= 70 ? "ok" : st.future.free >= 40 ? "mid" : "bad"), `${Math.round(st.future.free)}% usable`);
+        v.title = `Projected for the rest of this period (${fmtDuration(st.futureMs)}): ${st.future.free}% available, ${st.future.limited}% limited`;
+        row.appendChild(v);
+        stats.appendChild(row);
+      }
+      card.appendChild(stats);
+    }
 
     if (!acc.isActive && !acc.needsReauthorization && tl.nextAvailableAt !== null && tl.nextAvailableAt <= now) {
       const sw = el("button", "switch", "Switch");

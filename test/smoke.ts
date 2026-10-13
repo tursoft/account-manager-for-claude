@@ -24,7 +24,7 @@ import {
   utilizationSeries,
   utilizationSummary,
 } from "../src/utilization";
-import { buildTimeline, Segment } from "../src/availability";
+import { buildTimeline, Segment, timelineStats } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
 import { noProposalReason, propose, rankAccounts, urgencyOf } from "../src/propose";
@@ -987,6 +987,20 @@ function runAvailabilityTests(): void {
     fmt(t.overall) === "0-1.5:nodata 1.5-2:limited 2-4:nodata 4-6:limited* 6-10:free*"
   );
   check("next available at the blocking reset", t.nextAvailableAt === 6 * h);
+
+  // Per-account stats from the overall lane: 0-1.5 nodata, 1.5-2 limited, 2-4 nodata (past = 4 h); 4-6 limited*, 6-10 free* (future = 6 h).
+  const st = timelineStats(t.overall);
+  check("stats: past split by state (limited 0.5 h of 4 h = 12.5%, nodata 87.5%)", st.past.limited === 12.5 && st.past.nodata === 87.5 && st.past.free === 0, JSON.stringify(st.past));
+  check("stats: future split (limited 2 h of 6 h = 33.3%, free 66.7%)", st.future.limited === 33.3 && st.future.free === 66.7, JSON.stringify(st.future));
+  check("stats: past and future durations", st.pastMs === 4 * h && st.futureMs === 6 * h);
+  check("stats: one blocked stretch, 30 min long, in the past", st.blockedCount === 1 && st.longestBlockedMs === 0.5 * h);
+  const twice = timelineStats([
+    { start: 0, end: h, state: "limited", projected: false },
+    { start: h, end: 2 * h, state: "free", projected: false },
+    { start: 2 * h, end: 5 * h, state: "limited", projected: false },
+  ]);
+  check("stats: separate blocked stretches are counted, the longest kept", twice.blockedCount === 2 && twice.longestBlockedMs === 3 * h && twice.past.limited === 80);
+  check("stats: an empty lane gives zeros, not NaN", timelineStats([]).past.free === 0 && timelineStats([]).pastMs === 0);
 }
 
 function runListingTests(): void {

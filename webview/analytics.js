@@ -428,9 +428,27 @@ function renderUtilization(kinds, selected, points, from, to, colors) {
     utilFigure("All limits", overall, totalOffered > 0 ? `${totalUsed.toFixed(1)} of ${totalOffered.toFixed(1)} budgets used` : "no data", true)
   );
   for (const s of summaries) {
-    summaryBox.appendChild(
-      utilFigure(s.label, s.overall, s.overall === null ? "no data" : `${s.usedBudgets.toFixed(1)} of ${s.offeredBudgets.toFixed(1)} ${s.kind === "session" ? "5h" : "weekly"} budgets used`)
-    );
+    const figure = utilFigure(s.label, s.overall, s.overall === null ? "no data" : `${s.usedBudgets.toFixed(1)} of ${s.offeredBudgets.toFixed(1)} ${s.kind === "session" ? "5h" : "weekly"} budgets used`);
+    // Each selected account's own utilization of this limit, in its chart color.
+    const perAccount = document.createElement("div");
+    perAccount.className = "util-accounts";
+    for (const a of s.accounts) {
+      const acc = selected.find((x) => x.id === a.id);
+      if (!acc || a.utilization === null) continue;
+      const chip = document.createElement("span");
+      chip.className = "util-account " + utilTone(a.utilization);
+      chip.style.setProperty("--c", acc.color);
+      chip.title = `${acc.label}: ${a.utilization}% of the ${s.label} capacity it was offered in this period was used`;
+      const name = document.createElement("span");
+      name.className = "util-account-name";
+      name.textContent = acc.label;
+      const val = document.createElement("b");
+      val.textContent = `${a.utilization}%`;
+      chip.append(name, val);
+      perAccount.appendChild(chip);
+    }
+    if (perAccount.childElementCount > 0) figure.appendChild(perAccount);
+    summaryBox.appendChild(figure);
   }
 
   for (const { kind, label } of kinds) {
