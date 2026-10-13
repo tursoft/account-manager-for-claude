@@ -252,6 +252,25 @@
     return root;
   }
 
+  /** Initials of an account name or email: "jane.doe@x.com" -> "JD", "Work" -> "W". */
+  function initials(label) {
+    const name = String(label || "?").split("@")[0];
+    const words = name.split(/[\s._\-+]+/).filter(Boolean);
+    const letters = words.length > 1 ? words[0][0] + words[1][0] : (words[0] || "?")[0];
+    return letters.toUpperCase();
+  }
+
+  /** Round avatar left of a card, with a stable color per account. */
+  function avatar(acc) {
+    const a = el("div", "avatar" + (acc.isActive ? " active" : ""), initials(acc.label));
+    let hash = 0;
+    for (const ch of acc.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    a.style.setProperty("--avatar-hue", String(hash % 360));
+    a.title = acc.isActive ? `${acc.label} (active)` : acc.label;
+    a.setAttribute("aria-hidden", "true");
+    return a;
+  }
+
   /** Always-visible quick actions beside a card: switch (inactive accounts only) and refresh. */
   function sideButtons(acc) {
     const side = el("div", "side");
@@ -646,7 +665,7 @@
     noMatchEl.classList.toggle("hidden", visible.length > 0);
     for (const acc of visible) {
       const row = el("div", "row");
-      row.append(card(acc, state.warnThreshold || 80), sideButtons(acc));
+      row.append(avatar(acc), card(acc, state.warnThreshold || 80), sideButtons(acc));
       listEl.appendChild(row);
     }
     revealActiveChange(accounts);
