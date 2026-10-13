@@ -289,7 +289,18 @@
     return PROVIDERS[acc.provider] || PROVIDERS.claude;
   }
 
-  /** Round avatar inside a card: the provider's mark on a stable per-account color. */
+  /** Ring colors that tell accounts apart (assigned in list order, so neighbours differ). */
+  const ACCOUNT_COLORS = [
+    "#4c9aff", "#a371f7", "#2bc4c4", "#e86bb0", "#e3b341",
+    "#7c83ff", "#a5d64c", "#56d4f5", "#c678dd", "#f0883e",
+  ];
+
+  function accountColor(acc) {
+    const index = (state.accounts || []).findIndex((a) => a.id === acc.id);
+    return ACCOUNT_COLORS[(index < 0 ? 0 : index) % ACCOUNT_COLORS.length];
+  }
+
+  /** Round avatar inside a card: the provider's mark, ringed in the account's own color. */
   function avatar(acc) {
     const provider = providerOf(acc);
     const a = el("div", "avatar" + (acc.isActive ? " active" : "") + (acc.needsReauthorization ? " expired" : ""));
@@ -298,10 +309,8 @@
     svg.setAttribute("class", "provider-mark");
     svg.innerHTML = provider.glyph;
     a.style.setProperty("--provider-color", provider.color);
+    a.style.setProperty("--account-color", accountColor(acc));
     a.appendChild(svg);
-    let hash = 0;
-    for (const ch of acc.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-    a.style.setProperty("--avatar-hue", String(hash % 360));
     a.title = `${provider.name} account: ${acc.label}${acc.isActive ? " (active)" : ""}`;
     a.setAttribute("aria-hidden", "true");
     return a;
@@ -858,11 +867,16 @@
     const usable = accounts.filter((a) => !a.needsReauthorization && (a.windows || []).length > 0);
     const count = (pred) => accounts.filter(pred).length;
 
+    const countsRow = el("div", "stats-row");
+    const nextRow = el("div", "stats-row");
+    nextRow.appendChild(el("span", "stats-label", "Next available"));
+    statsEl.append(countsRow, nextRow);
+    let row = countsRow;
     const chip = (cls, title, ...parts) => {
       const c = el("span", "stat" + (cls ? " " + cls : ""));
       c.title = title;
       c.append(...parts);
-      statsEl.appendChild(c);
+      row.appendChild(c);
     };
     chip("", "Accounts shown by the current filters / all saved accounts", el("b", "", `${visible}/${accounts.length}`), el("span", "", " shown"));
     chip("ok", "Every limit below 100%", el("b", "", String(count((a) => !a.needsReauthorization && limitState(a) === "available"))), el("span", "", " available"));
@@ -873,10 +887,11 @@
     }
 
     // When is the next account usable: overall, then per limit.
+    row = nextRow;
     const scopes = { fable: "Fable" };
     for (const acc of accounts) Object.assign(scopes, scopesOf(acc));
     const limits = [
-      ["Next", "any account", (acc) => acc.windows],
+      ["Any", "any account", (acc) => acc.windows],
       ["5h", "the 5-hour session limit", (acc) => byKind(acc, (k) => k === "session")],
       ["Weekly", "the weekly limit", (acc) => byKind(acc, (k) => k === "weekly_all")],
       ...Object.entries(scopes)
