@@ -370,6 +370,19 @@ button:focus-visible {
   color: var(--warn);
 }
 
+/* "Next available" chips: green when a limit is usable now, red with the wait otherwise. */
+.stat.next.ok {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+}
+
+.stat.next.danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.stat.next.muted b {
+  color: var(--muted);
+}
+
 /* The detected login just changed to this account. */
 .card.flash {
   animation: card-flash 1.6s ease-out;

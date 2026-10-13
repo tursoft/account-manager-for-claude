@@ -807,39 +807,95 @@
   const statsEl = document.getElementById("stats");
 
   /** Footer chips: totals, availability, and free 5h / model-specific limits. */
+  /**
+   * When the earliest of `accounts` can use a limit again: "now" when one already
+   * can, else the earliest reset of a used-up one; null when no account has it.
+   */
+  function nextAvailability(accounts, pick) {
+    let earliest = Infinity;
+    let any = false;
+    let free = 0;
+    for (const acc of accounts) {
+      const windows = pick(acc);
+      if (windows === null) continue;
+      any = true;
+      const blocked = windows.filter((w) => w.percent >= 100);
+      if (blocked.length === 0) {
+        free++;
+        continue;
+      }
+      // Usable again once every used-up window has reset.
+      const at = Math.max(...blocked.map((w) => (w.resetsAt ? Date.parse(w.resetsAt) : Infinity)));
+      earliest = Math.min(earliest, Number.isFinite(at) ? at : Infinity);
+    }
+    if (!any) return null;
+    return { now: free > 0, at: earliest, free };
+  }
+
+  /** Footer chips: shown/total, availability counts, and when each limit is next usable. */
   function renderStats(accounts) {
     statsEl.innerHTML = "";
     statsEl.classList.toggle("hidden", accounts.length === 0);
     if (accounts.length === 0) return;
+
     const visible = accounts.filter(matchesFilter).length;
+    // An expired login cannot be used, whatever its last usage said.
+    const usable = accounts.filter((a) => !a.needsReauthorization && (a.windows || []).length > 0);
     const count = (pred) => accounts.filter(pred).length;
-    const freeWindow = (acc, test) => (acc.windows || []).some((w) => test(w) && w.percent < 100);
-    const chips = [
-      [accounts.length, "accounts", "Saved accounts"],
-      [visible, "shown", "Accounts matching the current filters"],
-      [count((a) => limitState(a) === "available"), "available", "Every limit below 100%", "ok"],
-      [count((a) => limitState(a) === "limited"), "limited", "At least one limit used up", "danger"],
-      [count((a) => freeWindow(a, (w) => w.kind === "session")), "5h free", "5-hour session limit below 100%"],
-    ];
+
+    const chip = (cls, title, ...parts) => {
+      const c = el("span", "stat" + (cls ? " " + cls : ""));
+      c.title = title;
+      c.append(...parts);
+      statsEl.appendChild(c);
+    };
+    chip("", "Accounts shown by the current filters / all saved accounts", el("b", "", `${visible}/${accounts.length}`), el("span", "", " shown"));
+    chip("ok", "Every limit below 100%", el("b", "", String(count((a) => !a.needsReauthorization && limitState(a) === "available"))), el("span", "", " available"));
+    chip("danger", "At least one limit used up", el("b", "", String(count((a) => limitState(a) === "limited"))), el("span", "", " limited"));
     const expired = count((a) => a.needsReauthorization);
     if (expired > 0) {
-      chips.push([expired, "login expired", "Saved login expired or revoked; reauthorize these accounts", "warn"]);
+      chip("warn", "Saved login expired or revoked; reauthorize these accounts", el("b", "", String(expired)), el("span", "", " login expired"));
     }
-    const scopes = {};
+
+    // When is the next account usable: overall, then per limit.
+    const scopes = { fable: "Fable" };
     for (const acc of accounts) Object.assign(scopes, scopesOf(acc));
-    for (const [key, name] of Object.entries(scopes).sort()) {
-      chips.push([
-        count((a) => freeWindow(a, (w) => w.kind === `weekly_${key}`)),
-        `${name} free`,
-        `${name} weekly limit below 100%`,
-      ]);
+    const limits = [
+      ["Next", "any account", (acc) => acc.windows],
+      ["5h", "the 5-hour session limit", (acc) => byKind(acc, (k) => k === "session")],
+      ["Weekly", "the weekly limit", (acc) => byKind(acc, (k) => k === "weekly_all")],
+      ...Object.entries(scopes)
+        .sort()
+        .map(([key, name]) => [name, `the ${name} weekly limit`, (acc) => byKind(acc, (k) => k === `weekly_${key}`)]),
+    ];
+    for (const [name, what, pick] of limits) {
+      const next = nextAvailability(usable, pick);
+      let value, cls, title;
+      if (!next) {
+        value = "-";
+        cls = "muted";
+        title = `No account reports ${what}`;
+      } else if (next.now) {
+        value = "Now";
+        cls = "ok";
+        title = `${next.free} of the usable accounts can use ${what} now`;
+      } else if (Number.isFinite(next.at)) {
+        value = fmtDuration(Math.max(0, next.at - Date.now()));
+        cls = "danger";
+        title = `Every account has used up ${what}; the first is usable again at ${new Date(next.at).toLocaleString()}`;
+      } else {
+        value = "?";
+        cls = "danger";
+        title = `Every account has used up ${what}; reset time unknown`;
+      }
+      chip("next " + cls, title, el("span", "", name + " "), el("b", "", value));
     }
-    for (const [n, text, title, tone] of chips) {
-      const chip = el("span", "stat" + (tone ? " " + tone : ""));
-      chip.title = title;
-      chip.append(el("b", "", String(n)), el("span", "", " " + text));
-      statsEl.appendChild(chip);
-    }
+  }
+
+  /** The account's windows matching `test` by kind, or null when it has none. */
+  function byKind(acc, test) {
+    const windows = (acc.windows || []).filter((w) => test(w.kind || ""));
+    return windows.length ? windows : null;
   }
 
   /** Top progress bar while anything loads; shimmer and a spinning refresh icon on updating cards. */
