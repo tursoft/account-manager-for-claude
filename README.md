@@ -3,11 +3,8 @@
 # Account Manager for Claude
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-Install-0e639c?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
-[![Version](https://vsmarketplacebadges.dev/version-short/tursoft.account-manager-for-claude.svg)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
-[![Installs](https://vsmarketplacebadges.dev/installs-short/tursoft.account-manager-for-claude.svg)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
 [![Downloads](https://vsmarketplacebadges.dev/downloads-short/tursoft.account-manager-for-claude.svg)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
 [![GitHub](https://img.shields.io/badge/GitHub-account--manager--for--claude-181717?logo=github)](https://github.com/tursoft/account-manager-for-claude)
-[![GitHub stars](https://img.shields.io/github/stars/tursoft/account-manager-for-claude?logo=github)](https://github.com/tursoft/account-manager-for-claude)
 
 Quickly switch between Claude accounts (subscriptions) in **Claude Code** inside VS Code,
 with live usage limits for all your accounts at a glance.
