@@ -331,7 +331,7 @@ button.ghost:hover {
   font-weight: 600;
 }
 
-.row-label.sub {
+.row-label.lane-label {
   padding-left: 42px;
   font-size: 11px;
   color: var(--muted);
@@ -481,7 +481,7 @@ button.ghost:hover {
   margin: 3px 0;
 }
 
-.seg {
+.slot {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -490,30 +490,30 @@ button.ghost:hover {
   transition: filter 0.12s ease;
 }
 
-.track.thin .seg {
+.track.thin .slot {
   border-radius: 3px;
 }
 
-.seg:hover {
+.slot:hover {
   filter: brightness(1.18);
 }
 
-.seg.free,
+.slot.free,
 .sw.free {
   background: color-mix(in srgb, var(--ok) 75%, transparent);
 }
 
-.seg.high,
+.slot.high,
 .sw.high {
   background: color-mix(in srgb, var(--warn) 85%, transparent);
 }
 
-.seg.limited,
+.slot.limited,
 .sw.limited {
   background: color-mix(in srgb, var(--danger) 85%, transparent);
 }
 
-.seg.nodata,
+.slot.nodata,
 .sw.nodata {
   background: repeating-linear-gradient(
     -45deg,
@@ -524,7 +524,7 @@ button.ghost:hover {
 }
 
 /* The future is a projection: lighter, with diagonal stripes. */
-.seg.projected:not(.nodata),
+.slot.projected:not(.nodata),
 .sw.projected {
   opacity: 0.55;
   background-image: repeating-linear-gradient(

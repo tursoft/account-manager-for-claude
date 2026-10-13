@@ -163,14 +163,14 @@ function track(segments, resets, from, to, now, name, thin) {
   const t = el("div", "track" + (thin ? " thin" : ""));
   t.style.setProperty("--cols", ui.view === "day" ? 24 : 7);
   for (const s of segments) {
-    const seg = el("div", `seg ${s.state}${s.projected ? " projected" : ""}`);
-    seg.style.left = pos(s.start, from, to) + "%";
-    seg.style.width = Math.max(0.15, pos(s.end, from, to) - pos(s.start, from, to)) + "%";
+    const slot = el("div", `slot ${s.state}${s.projected ? " projected" : ""}`);
+    slot.style.left = pos(s.start, from, to) + "%";
+    slot.style.width = Math.max(0.15, pos(s.end, from, to) - pos(s.start, from, to)) + "%";
     const pct = s.percent !== undefined && s.state !== "nodata" ? ` (${s.percent}%)` : "";
-    seg.dataset.tip =
+    slot.dataset.tip =
       `${name}: ${STATE_TEXT[s.state]}${pct}\n${fmtWhen(s.start)} – ${fmtWhen(s.end)}` +
       (s.projected ? "\nProjected from the latest reading" : "");
-    t.appendChild(seg);
+    t.appendChild(slot);
   }
   for (const r of resets || []) {
     if (r < from || r >= to) continue;
@@ -324,7 +324,7 @@ function render() {
       for (const lane of tl.lanes) {
         const r = el("div", "row lane-row");
         r.append(
-          el("div", "row-label sub", shortLane(lane.kind, lane.label)),
+          el("div", "row-label lane-label", shortLane(lane.kind, lane.label)),
           track(lane.segments, lane.resets, from, to, now, `${acc.label} · ${lane.label}`, true)
         );
         group.appendChild(r);
