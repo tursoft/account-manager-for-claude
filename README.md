@@ -1,5 +1,3 @@
-<p align="center"><img src="media/icon.png" width="128" alt="Account Manager for Claude logo"></p>
-
 # Account Manager for Claude
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-Install-0e639c?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
