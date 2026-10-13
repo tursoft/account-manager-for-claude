@@ -129,8 +129,11 @@ export async function fetchUsage(creds: OAuthCreds): Promise<FetchResult> {
  * Periodically polls usage limits for all accounts. Tokens come from CredentialSync,
  * which refreshes them only under Claude Code's own locks and writes every rotation
  * back to all local copies, so polling never strands Claude Code with a spent token.
- * Respects a per-account backoff (on 429) and a hard 180s minimum interval.
+ * Respects a per-account backoff (on 429) and a hard minimum interval. An interval
+ * of 0 (or less) disables the periodic check; only the startup poll runs then.
  */
+export const MIN_POLL_INTERVAL_SECONDS = 60;
+
 export class UsagePoller {
   private timer: NodeJS.Timeout | undefined;
   private polling: Promise<void> | undefined;
@@ -144,8 +147,11 @@ export class UsagePoller {
 
   start(): void {
     this.stop();
-    const intervalMs = Math.max(180, this.getIntervalSeconds()) * 1000;
-    this.timer = setInterval(() => void this.pollAll(false), intervalMs);
+    const seconds = this.getIntervalSeconds();
+    if (seconds > 0) {
+      const intervalMs = Math.max(MIN_POLL_INTERVAL_SECONDS, seconds) * 1000;
+      this.timer = setInterval(() => void this.pollAll(false), intervalMs);
+    }
     void this.pollAll(false);
   }
 

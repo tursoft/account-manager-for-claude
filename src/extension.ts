@@ -49,8 +49,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new StatusBarController(store);
   const viewProvider = new AccountsViewProvider(context.extensionUri, store);
 
+  const config = () => vscode.workspace.getConfiguration("tursoftClaudeSwitcher");
   const getInterval = () =>
-    vscode.workspace.getConfiguration("tursoftClaudeSwitcher").get<number>("pollIntervalSeconds", 240);
+    config().get<boolean>("autoRefresh", true) ? config().get<number>("pollIntervalSeconds", 240) : 0;
 
   const refreshUI = () => {
     statusBar.refresh();
@@ -604,7 +605,10 @@ export function activate(context: vscode.ExtensionContext): void {
   // React to setting changes.
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("tursoftClaudeSwitcher.pollIntervalSeconds")) {
+      if (
+        e.affectsConfiguration("tursoftClaudeSwitcher.pollIntervalSeconds") ||
+        e.affectsConfiguration("tursoftClaudeSwitcher.autoRefresh")
+      ) {
         poller.restart();
       }
       if (e.affectsConfiguration("tursoftClaudeSwitcher.warnThresholdPercent")) {

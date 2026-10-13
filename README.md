@@ -133,7 +133,8 @@ the account on each computer separately instead of copying credential files betw
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `tursoftClaudeSwitcher.pollIntervalSeconds` | `240` | auto-refresh interval (min 180) |
+| `tursoftClaudeSwitcher.autoRefresh` | `true` | regularly check usage limits of all accounts |
+| `tursoftClaudeSwitcher.pollIntervalSeconds` | `240` | check interval in seconds (min 60; short intervals with many accounts can hit HTTP 429) |
 | `tursoftClaudeSwitcher.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
 | `tursoftClaudeSwitcher.credentialsPath` | `""` | override the path to `.credentials.json` |
 | `tursoftClaudeSwitcher.warnThresholdPercent` | `80` | warning threshold (% → red bar) |

@@ -174,11 +174,16 @@
     "configuration": {
       "title": "Claude Account Switcher",
       "properties": {
+        "tursoftClaudeSwitcher.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Regularly check the usage limits of all saved accounts (every `#tursoftClaudeSwitcher.pollIntervalSeconds#` seconds). When disabled, usage is only checked at startup, on manual refresh, and when a used-up limit is due to reset."
+        },
         "tursoftClaudeSwitcher.pollIntervalSeconds": {
           "type": "number",
           "default": 240,
-          "minimum": 180,
-          "markdownDescription": "How often (in seconds) to automatically refresh usage limits for each account. The endpoint is heavily rate-limited — values below 180s are raised to 180s."
+          "minimum": 60,
+          "markdownDescription": "How often (in seconds, minimum 60 = 1 minute) to check usage limits for each account when `#tursoftClaudeSwitcher.autoRefresh#` is on. The usage endpoint is rate-limited: short intervals with many accounts can hit HTTP 429, after which that account is paused for 5 minutes."
         },
         "tursoftClaudeSwitcher.autoReloadAfterSwitch": {
           "type": "boolean",
