@@ -37,6 +37,7 @@ export class StatusBarController {
         ? `Claude Code is logged in as ${unsaved}, which is not saved as a profile. Use "Save current account".`
         : "Click to add/switch a Claude account";
       this.item.backgroundColor = undefined;
+      this.item.color = undefined;
       return;
     }
 
@@ -57,12 +58,18 @@ export class StatusBarController {
     lines.push("Click to switch account.");
     this.item.tooltip = lines.join("\n");
 
-    const warn = vscode.workspace
-      .getConfiguration("tursoftClaudeSwitcher")
-      .get<number>("warnThresholdPercent", 80);
+    // Color by the most used limit, since that one decides whether the account
+    // can still be used: green < 60%, orange 60-80%, red >= 80%.
+    const highest = usage?.windows.length ? Math.max(...usage.windows.map((w) => w.percent)) : undefined;
+    this.item.color =
+      highest === undefined
+        ? undefined
+        : new vscode.ThemeColor(
+            highest >= 80 ? "charts.red" : highest >= 60 ? "charts.orange" : "charts.green"
+          );
     this.item.backgroundColor =
-      typeof session === "number" && session >= warn
-        ? new vscode.ThemeColor("statusBarItem.warningBackground")
+      highest !== undefined && highest >= 100
+        ? new vscode.ThemeColor("statusBarItem.errorBackground")
         : undefined;
   }
 
