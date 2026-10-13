@@ -390,8 +390,11 @@ function render() {
             },
             y: {
               stacked,
-              beginAtZero: true,
-              suggestedMax: ui.mode === "limit" && !stacked ? 100 : undefined,
+              // Always 0-100% (a limit is 100%), whatever the data. A stacked bar adds the
+              // accounts up, so it keeps 0-100% as a minimum but may grow past it.
+              min: 0,
+              max: stacked ? undefined : 100,
+              suggestedMax: stacked ? 100 : undefined,
               ticks: { color: muted, callback: (v) => v + "%" },
               grid: { color: grid },
             },
@@ -400,7 +403,10 @@ function render() {
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: (c) => (c.parsed.y === null ? null : ` ${c.dataset.label}: ${c.parsed.y}%`),
+                label: (c) =>
+                  c.parsed.y === null
+                    ? null
+                    : ` ${c.dataset.label}: ${c.parsed.y}%${c.parsed.y > 100 && !stacked ? " (above the 0-100% scale)" : ""}`,
               },
             },
           },

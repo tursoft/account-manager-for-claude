@@ -254,7 +254,8 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
   or hide it in every chart (one, several, or all accounts can share a chart);
 - **Limit %** (how full each limit was) or **Usage** (how much of the limit was used in each
   interval, from the change between readings; a drop counts as a reset);
-- line, area, bar, stacked bar, pie, or doughnut charts.
+- line, area, bar, stacked bar, pie, or doughnut charts; the vertical axis always spans 0-100%
+  (a stacked bar may grow past it when accounts add up).
 
 **Delete collected usage history** removes all recorded readings.
 
