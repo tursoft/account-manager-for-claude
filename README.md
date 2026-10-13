@@ -257,7 +257,7 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
 **Show account availability calendar** (in the **⋯** menu) shows when every account can be used,
 as a week from Monday to Sunday or, after clicking a day, hour by hour:
 
-- a **Right now** card per account: available now, or how long until it is usable again, with
+- below the timeline, a **Right now** card per account: available now, or how long until it is usable again, with
   each limit's current percent and a **Switch** button for accounts that are available;
 - per account an overall lane (blocked while any limit is used up) and, for each limit you tick
   under **Limits**, its own lane: **5h**, **Fable**, and, when an account has them, weekly and

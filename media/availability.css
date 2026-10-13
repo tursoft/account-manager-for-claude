@@ -54,11 +54,21 @@ h1 {
 
 /* ---- "right now" cards ----------------------------------------------- */
 
+/* The account cards sit below the timeline. */
+.now-section {
+  margin-top: 24px;
+}
+
+.section-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .now-strip {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 10px;
-  margin-bottom: 18px;
 }
 
 .now-card {

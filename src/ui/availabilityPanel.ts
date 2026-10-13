@@ -134,8 +134,6 @@ export class AvailabilityPanel {
     </div>
   </header>
 
-  <section id="now" class="now-strip" aria-label="Right now"></section>
-
   <section class="toolbar">
     <div class="nav">
       <button id="prevBtn" class="icon" title="Previous" aria-label="Previous">‹</button>
@@ -161,6 +159,12 @@ export class AvailabilityPanel {
   </section>
 
   <section id="calendar" class="calendar" aria-label="Availability timeline"></section>
+
+  <section class="now-section" aria-labelledby="nowTitle">
+    <h2 id="nowTitle" class="section-title">Right now</h2>
+    <div id="now" class="now-strip"></div>
+  </section>
+
   <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
 
   <script nonce="${nonce}" src="${script}"></script>
