@@ -289,18 +289,7 @@
     return PROVIDERS[acc.provider] || PROVIDERS.claude;
   }
 
-  /** Ring colors that tell accounts apart (assigned in list order, so neighbours differ). */
-  const ACCOUNT_COLORS = [
-    "#4c9aff", "#a371f7", "#2bc4c4", "#e86bb0", "#e3b341",
-    "#7c83ff", "#a5d64c", "#56d4f5", "#c678dd", "#f0883e",
-  ];
-
-  function accountColor(acc) {
-    const index = (state.accounts || []).findIndex((a) => a.id === acc.id);
-    return ACCOUNT_COLORS[(index < 0 ? 0 : index) % ACCOUNT_COLORS.length];
-  }
-
-  /** Round avatar inside a card: the provider's mark, ringed in the account's own color. */
+  /** Round avatar inside a card: the provider's mark on the provider's color. */
   function avatar(acc) {
     const provider = providerOf(acc);
     const a = el("div", "avatar" + (acc.isActive ? " active" : "") + (acc.needsReauthorization ? " expired" : ""));
@@ -309,7 +298,6 @@
     svg.setAttribute("class", "provider-mark");
     svg.innerHTML = provider.glyph;
     a.style.setProperty("--provider-color", provider.color);
-    a.style.setProperty("--account-color", accountColor(acc));
     a.appendChild(svg);
     a.title = `${provider.name} account: ${acc.label}${acc.isActive ? " (active)" : ""}`;
     a.setAttribute("aria-hidden", "true");

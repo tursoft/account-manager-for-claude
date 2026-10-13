@@ -5,7 +5,6 @@ import { buildTimeline } from "../src/availability";
 const vscode = acquireVsCodeApi();
 const $ = (id) => document.getElementById(id);
 
-const COLORS = ["#4c9aff", "#a371f7", "#2bc4c4", "#e86bb0", "#e3b341", "#7c83ff", "#a5d64c", "#56d4f5", "#c678dd", "#f0883e"];
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const STATE_TEXT = { free: "Available", high: "80%+ used", limited: "Limited", nodata: "No data" };
@@ -146,9 +145,8 @@ function starburst() {
   return `<path d="${d}"/>`;
 }
 
-function avatar(color) {
+function avatar() {
   const a = el("span", "avatar");
-  a.style.setProperty("--ring", color);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 16 16");
   svg.innerHTML = starburst();
@@ -198,7 +196,7 @@ function renderNow(accounts, timelines, now) {
     const tl = timelines[i];
     const card = el("div", "now-card" + (acc.isActive ? " active" : ""));
     const head = el("div", "now-head");
-    head.append(avatar(COLORS[i % COLORS.length]));
+    head.append(avatar());
     const name = el("div", "now-name", acc.label);
     name.title = acc.label;
     head.appendChild(name);
@@ -315,7 +313,7 @@ function render() {
     const group = el("div", "group" + (acc.expired ? " expired" : ""));
     const row = el("div", "row overall-row");
     const label = el("div", "row-label");
-    label.append(avatar(COLORS[i % COLORS.length]));
+    label.append(avatar());
     const name = el("span", "name", acc.label);
     name.title = acc.plan ? `${acc.label} (${acc.plan})` : acc.label;
     label.appendChild(name);

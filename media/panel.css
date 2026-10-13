@@ -592,15 +592,12 @@ button:focus-visible {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  /* Provider color (Claude orange), ringed in the account's own color. */
+  /* Provider color (Claude orange); no border. */
   background: radial-gradient(
     circle at 30% 25%,
     color-mix(in srgb, var(--provider-color, #d97757) 80%, #fff),
     var(--provider-color, #d97757) 70%
   );
-  box-shadow:
-    0 0 0 2px var(--vscode-sideBar-background, #1e1e1e),
-    0 0 0 3.5px var(--account-color, transparent);
   user-select: none;
 }
 
