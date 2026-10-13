@@ -1,0 +1,435 @@
+// Usage analytics page: charts of the collected usage history, one chart per
+// limit kind (5h session, weekly, Fable, ...), for one or more accounts.
+import {
+  ArcElement,
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  DoughnutController,
+  Filler,
+  Legend,
+  LinearScale,
+  LineController,
+  LineElement,
+  PieController,
+  PointElement,
+  Tooltip,
+} from "chart.js";
+import { bucketSeries, bucketSizeFor, bucketStarts, kindsIn, seriesTotal } from "../src/historySeries";
+
+Chart.register(
+  ArcElement,
+  BarController,
+  BarElement,
+  CategoryScale,
+  DoughnutController,
+  Filler,
+  Legend,
+  LinearScale,
+  LineController,
+  LineElement,
+  PieController,
+  PointElement,
+  Tooltip
+);
+
+const vscode = acquireVsCodeApi();
+const $ = (id) => document.getElementById(id);
+
+// Same palette as the accounts panel's avatar rings, in account order.
+const COLORS = ["#4c9aff", "#a371f7", "#2bc4c4", "#e86bb0", "#e3b341", "#7c83ff", "#a5d64c", "#56d4f5", "#c678dd", "#f0883e"];
+const DAY = 86_400_000;
+const RANGES = { "1d": DAY, "1w": 7 * DAY, "1m": 30 * DAY, "3m": 90 * DAY };
+
+const saved = vscode.getState() || {};
+const ui = {
+  range: saved.range || "1w",
+  mode: saved.mode || "limit",
+  chartType: saved.chartType || "line",
+  selected: saved.selected || null, // null = all accounts
+  customFrom: saved.customFrom || null,
+  customTo: saved.customTo || null,
+};
+let meta = { enabled: false, intervalSeconds: 60, retentionDays: 90, accounts: [] };
+let data = null; // { from, to, points, accounts }
+let charts = [];
+let reloadTimer = null;
+
+function persist() {
+  vscode.setState(ui);
+}
+
+// ---- range ---------------------------------------------------------------
+
+function currentRange() {
+  const now = Date.now();
+  if (ui.range === "custom" && ui.customFrom && ui.customTo) {
+    return { from: ui.customFrom, to: Math.min(ui.customTo, now), live: ui.customTo >= now };
+  }
+  if (ui.range === "all") {
+    return { from: now - meta.retentionDays * DAY, to: now, live: true };
+  }
+  return { from: now - (RANGES[ui.range] || RANGES["1w"]), to: now, live: true };
+}
+
+function requestData() {
+  const { from, to } = currentRange();
+  vscode.postMessage({ type: "query", from, to });
+}
+
+function toLocalInput(t) {
+  const d = new Date(t - new Date(t).getTimezoneOffset() * 60_000);
+  return d.toISOString().slice(0, 16);
+}
+
+// ---- controls ------------------------------------------------------------
+
+function setSeg(container, attr, value) {
+  for (const b of container.querySelectorAll(`[data-${attr}]`)) {
+    const on = b.dataset[attr] === value;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-checked", String(on));
+  }
+}
+
+$("range").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-range]");
+  if (!b) return;
+  ui.range = b.dataset.range;
+  if (ui.range === "custom" && !(ui.customFrom && ui.customTo)) {
+    ui.customTo = Date.now();
+    ui.customFrom = ui.customTo - 7 * DAY;
+  }
+  persist();
+  syncControls();
+  requestData();
+});
+
+for (const id of ["fromInput", "toInput"]) {
+  $(id).addEventListener("change", () => {
+    const from = Date.parse($("fromInput").value);
+    const to = Date.parse($("toInput").value);
+    if (Number.isFinite(from) && Number.isFinite(to) && to > from) {
+      ui.customFrom = from;
+      ui.customTo = to;
+      persist();
+      requestData();
+    }
+  });
+}
+
+$("mode").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-mode]");
+  if (!b) return;
+  ui.mode = b.dataset.mode;
+  persist();
+  syncControls();
+  render();
+});
+
+$("chartType").addEventListener("change", (e) => {
+  ui.chartType = e.target.value;
+  persist();
+  render();
+});
+
+$("allBtn").addEventListener("click", () => {
+  ui.selected = null;
+  persist();
+  render();
+});
+
+$("noneBtn").addEventListener("click", () => {
+  ui.selected = [];
+  persist();
+  render();
+});
+
+$("enableBtn").addEventListener("click", () => vscode.postMessage({ type: "enableHistory" }));
+$("settingsBtn").addEventListener("click", () => vscode.postMessage({ type: "openSettings" }));
+
+function syncControls() {
+  setSeg($("range"), "range", ui.range);
+  setSeg($("mode"), "mode", ui.mode);
+  $("chartType").value = ui.chartType;
+  $("custom").classList.toggle("hidden", ui.range !== "custom");
+  if (ui.range === "custom" && ui.customFrom && ui.customTo) {
+    $("fromInput").value = toLocalInput(ui.customFrom);
+    $("toInput").value = toLocalInput(ui.customTo);
+  }
+}
+
+// ---- accounts ------------------------------------------------------------
+
+/** Saved accounts first (panel order), then accounts only found in the history. */
+function allAccounts() {
+  const list = (data?.accounts || meta.accounts).map((a, i) => ({ ...a, color: COLORS[i % COLORS.length] }));
+  const known = new Set(list.map((a) => a.id));
+  for (const p of data?.points || []) {
+    if (known.has(p.id)) continue;
+    known.add(p.id);
+    list.push({ id: p.id, label: (p.label || p.id.slice(0, 8)) + " (removed)", plan: p.plan, color: COLORS[list.length % COLORS.length] });
+  }
+  return list;
+}
+
+function isSelected(id) {
+  return ui.selected === null || ui.selected.includes(id);
+}
+
+function renderAccountChips(accounts) {
+  const box = $("accounts");
+  box.innerHTML = "";
+  for (const acc of accounts) {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (isSelected(acc.id) ? " on" : "");
+    chip.style.setProperty("--c", acc.color);
+    chip.title = acc.plan ? `${acc.label} (${acc.plan})` : acc.label;
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    const name = document.createElement("span");
+    name.textContent = acc.label;
+    chip.append(dot, name);
+    chip.addEventListener("click", () => {
+      const ids = ui.selected === null ? accounts.map((a) => a.id) : ui.selected.slice();
+      const i = ids.indexOf(acc.id);
+      if (i >= 0) ids.splice(i, 1);
+      else ids.push(acc.id);
+      ui.selected = ids.length === accounts.length ? null : ids;
+      persist();
+      render();
+    });
+    box.appendChild(chip);
+  }
+}
+
+// ---- rendering -------------------------------------------------------------
+
+function cssVar(name, fallback) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim() || fallback;
+}
+
+function fmtBucket(t, rangeMs) {
+  const d = new Date(t);
+  if (rangeMs <= DAY) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (rangeMs <= 8 * DAY) {
+    return d.toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function fmtRange(from, to) {
+  const o = { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" };
+  return `${new Date(from).toLocaleString([], o)} – ${new Date(to).toLocaleString([], o)}`;
+}
+
+function summaryCard(value, label) {
+  const c = document.createElement("div");
+  c.className = "card stat";
+  const v = document.createElement("div");
+  v.className = "value";
+  v.textContent = value;
+  const l = document.createElement("div");
+  l.className = "caption";
+  l.textContent = label;
+  c.append(v, l);
+  return c;
+}
+
+function render() {
+  for (const c of charts) c.destroy();
+  charts = [];
+  $("charts").innerHTML = "";
+  $("summary").innerHTML = "";
+
+  const accounts = allAccounts();
+  renderAccountChips(accounts);
+  if (!data) return;
+
+  const { from, to } = data;
+  const rangeMs = to - from;
+  const points = data.points;
+  const inRange = points.filter((p) => p.t >= from);
+  const selected = accounts.filter((a) => isSelected(a.id));
+  const kinds = kindsIn(points);
+
+  $("summary").append(
+    summaryCard(String(inRange.length), "readings in range"),
+    summaryCard(String(new Set(inRange.map((p) => p.id)).size), "accounts with data"),
+    summaryCard(String(kinds.length), "limit types"),
+    summaryCard(fmtRange(from, to), "range")
+  );
+
+  const empty = $("emptyNotice");
+  if (inRange.length === 0 || selected.length === 0 || kinds.length === 0) {
+    empty.classList.remove("hidden");
+    $("emptyText").textContent =
+      selected.length === 0
+        ? "No accounts selected. Pick one or more accounts above."
+        : meta.enabled
+          ? "No readings in this range yet. Data appears as usage is collected."
+          : "No readings in this range. Turn on usage collection to start recording.";
+    return;
+  }
+  empty.classList.add("hidden");
+
+  const bucketMs = bucketSizeFor(rangeMs);
+  const starts = bucketStarts(from, to, bucketMs);
+  const labels = starts.map((t) => fmtBucket(t, rangeMs));
+  const text = cssVar("--vscode-foreground", "#ccc");
+  const muted = cssVar("--vscode-descriptionForeground", "#999");
+  const grid = cssVar("--vscode-editorWidget-border", "rgba(128,128,128,0.25)");
+  const isPie = ui.chartType === "pie" || ui.chartType === "doughnut";
+
+  for (const { kind, label } of kinds) {
+    const card = document.createElement("div");
+    card.className = "card chart-card";
+    const head = document.createElement("div");
+    head.className = "chart-head";
+    const title = document.createElement("h2");
+    title.textContent = label;
+    const sub = document.createElement("span");
+    sub.className = "caption";
+    sub.textContent = isPie
+      ? ui.mode === "limit"
+        ? "Average % used in the range, per account"
+        : "Total % of the limit used in the range, per account"
+      : ui.mode === "limit"
+        ? `Highest % used per ${fmtDuration(bucketMs)}`
+        : `% of the limit used per ${fmtDuration(bucketMs)}`;
+    head.append(title, sub);
+    const wrap = document.createElement("div");
+    wrap.className = "canvas-wrap" + (isPie ? " pie" : "");
+    const canvas = document.createElement("canvas");
+    wrap.appendChild(canvas);
+    card.append(head, wrap);
+    $("charts").appendChild(card);
+
+    const series = selected
+      .map((acc) => ({ acc, values: bucketSeries(points, acc.id, kind, from, to, bucketMs, ui.mode) }))
+      .filter((s) => s.values.some((v) => v !== null));
+
+    if (series.length === 0) {
+      wrap.classList.add("no-data");
+      wrap.textContent = "No data for the selected accounts.";
+      continue;
+    }
+
+    let config;
+    if (isPie) {
+      const totals = series.map((s) => ({ acc: s.acc, total: seriesTotal(s.values, ui.mode) ?? 0 }));
+      config = {
+        type: ui.chartType,
+        data: {
+          labels: totals.map((t) => t.acc.label),
+          datasets: [
+            {
+              data: totals.map((t) => t.total),
+              backgroundColor: totals.map((t) => t.acc.color),
+              borderColor: cssVar("--vscode-editor-background", "#1e1e1e"),
+              borderWidth: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "right", labels: { color: text, boxWidth: 10 } },
+            tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}%` } },
+          },
+        },
+      };
+    } else {
+      const bar = ui.chartType === "bar" || ui.chartType === "stacked";
+      const stacked = ui.chartType === "stacked";
+      config = {
+        type: bar ? "bar" : "line",
+        data: {
+          labels,
+          datasets: series.map(({ acc, values }) => ({
+            label: acc.label,
+            data: values,
+            borderColor: acc.color,
+            backgroundColor: bar ? acc.color + "cc" : acc.color + "33",
+            fill: ui.chartType === "area" ? "origin" : false,
+            borderWidth: bar ? 0 : 2,
+            borderRadius: bar ? 3 : 0,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            tension: 0.25,
+            spanGaps: false,
+            stepped: false,
+          })),
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: {
+              stacked,
+              ticks: { color: muted, maxRotation: 0, autoSkip: true, autoSkipPadding: 18 },
+              grid: { color: grid, display: false },
+            },
+            y: {
+              stacked,
+              beginAtZero: true,
+              suggestedMax: ui.mode === "limit" && !stacked ? 100 : undefined,
+              ticks: { color: muted, callback: (v) => v + "%" },
+              grid: { color: grid },
+            },
+          },
+          plugins: {
+            legend: { labels: { color: text, boxWidth: 10, usePointStyle: true } },
+            tooltip: {
+              callbacks: {
+                label: (c) => (c.parsed.y === null ? null : ` ${c.dataset.label}: ${c.parsed.y}%`),
+              },
+            },
+          },
+        },
+      };
+    }
+    charts.push(new Chart(canvas, config));
+  }
+}
+
+function fmtDuration(ms) {
+  const m = Math.round(ms / 60_000);
+  if (m < 60) return `${m} min`;
+  if (m < 1440) return `${m / 60} h`;
+  return m === 1440 ? "day" : `${m / 1440} days`;
+}
+
+function renderStatus() {
+  $("status").textContent = meta.enabled
+    ? `Collecting every ${meta.intervalSeconds}s · keeping ${meta.retentionDays} days · stored only on this computer`
+    : "Usage collection is off";
+  $("offNotice").classList.toggle("hidden", meta.enabled);
+}
+
+// ---- messages --------------------------------------------------------------
+
+window.addEventListener("message", (event) => {
+  const msg = event.data;
+  if (msg.type === "meta") {
+    meta = msg;
+    renderStatus();
+    requestData();
+  } else if (msg.type === "data") {
+    data = msg;
+    render();
+  } else if (msg.type === "newData") {
+    // Only ranges that end now change with new readings; reload at most every 30 s.
+    if (!currentRange().live || reloadTimer) return;
+    reloadTimer = setTimeout(() => {
+      reloadTimer = null;
+      requestData();
+    }, 30_000);
+  }
+});
+
+syncControls();
+vscode.postMessage({ type: "ready" });

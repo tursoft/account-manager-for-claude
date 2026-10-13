@@ -13,7 +13,8 @@ import { sameIdentity } from "../src/identity";
 import { ProfileActivityRegistry } from "../src/profileActivity";
 import { SwitchService } from "../src/switchService";
 import { findResetWindows } from "../src/limitNotifier";
-import { HISTORY_HEARTBEAT_MS, UsageHistory } from "../src/usageHistory";
+import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHistory";
+import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal, usageDelta } from "../src/historySeries";
 import { ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "../src/types";
 
 let failures = 0;
@@ -821,7 +822,36 @@ async function runUsageHistoryTests(): Promise<void> {
 }
 
 function runHistorySeriesTests(): void {
+  console.log("history series:");
+  const m = 60_000;
+  const p = (t: number, session: number, fable?: number): HistoryPoint => ({
+    t: t * m,
+    id: "a",
+    w: fable === undefined ? { session } : { session, weekly_fable: fable },
+    n: { session: "Session (5h)", weekly_fable: "Weekly (Fable)" },
+  });
+  // Minutes 0..60: 10% -> 30% -> reset -> 5%, then a long gap, then 50% at minute 200.
+  const points = [p(-5, 8), p(0, 10, 1), p(20, 30), p(40, 5), p(200, 50)];
+
+  check("usage delta of a rise", usageDelta(10, 30) === 20);
+  check("usage delta across a reset", usageDelta(30, 5) === 5);
+  check(
+    "kinds ordered session first",
+    kindsIn(points).map((k) => `${k.kind}:${k.label}`).join() === "session:Session (5h),weekly_fable:Weekly (Fable)"
+  );
+  check("bucket size keeps about 100 buckets", bucketSizeFor(86_400_000) === 15 * m);
+
+  const limit = bucketSeries(points, "a", "session", 0, 120 * m, 30 * m, "limit");
+  check("limit mode: highest value per bucket, carried, gap after 30 min", JSON.stringify(limit) === "[30,30,5,null]");
+  const usage = bucketSeries(points, "a", "session", 0, 120 * m, 30 * m, "usage");
+  check("usage mode: summed deltas incl. reset, seeded before the range", JSON.stringify(usage) === "[22,5,0,null]");
+  check("other accounts are ignored", bucketSeries(points, "b", "session", 0, 60 * m, 30 * m, "limit").every((v) => v === null));
+  check("pie total: average in limit mode", seriesTotal([30, 5, null], "limit") === 17.5);
+  check("pie total: sum in usage mode", seriesTotal([22, 5, 0, null], "usage") === 27);
+}
+
 runProfileActivityTests();
+runHistorySeriesTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();

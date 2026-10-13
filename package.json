@@ -151,6 +151,11 @@
       {
         "command": "tursoftClaudeSwitcher.clearUsageHistory",
         "title": "Claude: Delete collected usage history"
+      },
+      {
+        "command": "tursoftClaudeSwitcher.openAnalytics",
+        "title": "Claude: Show usage analytics",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -201,14 +206,19 @@
           "group": "3_backup@2"
         },
         {
-          "command": "tursoftClaudeSwitcher.about",
+          "command": "tursoftClaudeSwitcher.openAnalytics",
           "when": "view == tursoftClaudeSwitcher.accountsView",
-          "group": "9_about@1"
+          "group": "4_views@1"
         },
         {
           "command": "tursoftClaudeSwitcher.openSettings",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "9_about@0"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.about",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "9_about@1"
         }
       ],
       "commandPalette": [
@@ -310,6 +320,7 @@
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.2.0",
+    "chart.js": "^4.5.1",
     "esbuild": "^0.24.0",
     "typescript": "^5.4.0"
   },

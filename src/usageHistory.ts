@@ -2,29 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { UsageSnapshot } from "./types";
 
-/**
- * One recorded usage reading of an account. Limits are keyed by window kind
- * (`session`, `weekly_all`, `weekly_fable`, ...).
- */
-export interface HistoryPoint {
-  /** epoch ms of the reading */
-  t: number;
-  /** profile id */
-  id: string;
-  /** profile label at the time (accounts can be renamed or removed later) */
-  label?: string;
-  /** subscription type at the time */
-  plan?: string;
-  /** percent used per window kind */
-  w: Record<string, number>;
-  /** reset time (ISO) per window kind, when known */
-  r?: Record<string, string>;
-  /** display label per window kind, e.g. "Weekly (Fable)" */
-  n?: Record<string, string>;
-}
+import { HISTORY_HEARTBEAT_MS, HistoryPoint } from "./historyTypes";
 
-/** Unchanged readings are still written this often, so charts show the account was checked. */
-export const HISTORY_HEARTBEAT_MS = 15 * 60_000;
+export { HISTORY_HEARTBEAT_MS, HistoryPoint };
 
 const DAY_MS = 86_400_000;
 

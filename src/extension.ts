@@ -30,6 +30,7 @@ import { TokenRefresher } from "./oauth";
 import { ProfileActivityRegistry } from "./profileActivity";
 import { SwitchService } from "./switchService";
 import { AccountsViewProvider } from "./ui/accountsView";
+import { AnalyticsPanel } from "./ui/analyticsPanel";
 import { StatusBarController } from "./ui/statusBar";
 import { fetchUsage, MIN_POLL_INTERVAL_SECONDS, UsagePoller } from "./usage";
 import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "./types";
@@ -477,7 +478,9 @@ export function activate(context: vscode.ExtensionContext): void {
       limitNotifier.onSnapshot(id, previous, next);
       if (historyEnabled()) {
         const profile = store.get(id);
-        void history.record(id, next, { label: profile?.label, plan: profile?.subscriptionType });
+        void history
+          .record(id, next, { label: profile?.label, plan: profile?.subscriptionType })
+          .then((written) => written && AnalyticsPanel.notifyNewData());
       }
     },
     applyCurrentState
@@ -813,6 +816,12 @@ export function activate(context: vscode.ExtensionContext): void {
       clearInterval(historyPruneTimer);
     },
   });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.openAnalytics", () =>
+      AnalyticsPanel.show(context.extensionUri, { store, history, getConfig: config })
+    )
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("tursoftClaudeSwitcher.clearUsageHistory", async () => {

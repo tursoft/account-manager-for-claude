@@ -147,6 +147,8 @@ the account on each computer separately instead of copying credential files betw
 | `Claude: Restore account list from backup` | merges a backup into the list (never replaces newer tokens) |
 | `Claude: About Tursoft Claude Multi-Account Switcher` | shows version, author, and fork information |
 | `Claude: Open extension settings` | opens the Settings editor filtered to this extension |
+| `Claude: Show usage analytics` | charts the collected usage history |
+| `Claude: Delete collected usage history` | removes all recorded usage readings |
 
 ## Settings
 
@@ -228,6 +230,24 @@ directories would each try to spend the same single-use refresh token.
   on Anthropic's side.
 - Currently the file-based `.credentials.json` model is supported (Windows/Linux). The macOS
   Keychain is not supported yet.
+
+## Usage history and analytics
+
+Turn on `tursoftClaudeSwitcher.usageHistory.enabled` (or **Turn on collection** on the analytics
+page) to record every saved account's limits once a minute (`usageHistory.intervalSeconds`).
+Readings stay on this computer, in the extension's storage; unchanged readings are stored only
+every 15 minutes, and data older than `usageHistory.retentionDays` (90) is deleted.
+
+**Show usage analytics** (in the panel's **⋯** menu) charts that history, one chart per limit
+(5h, weekly, Fable, ...):
+
+- ranges of 1 day, 1 week, 1 month, 3 months, everything kept, or a custom from/to;
+- one, several, or all accounts on the same chart, in the panel's account colors;
+- **Limit %** (how full each limit was) or **Usage** (how much of the limit was used in each
+  interval, from the change between readings; a drop counts as a reset);
+- line, area, bar, stacked bar, pie, or doughnut charts.
+
+**Delete collected usage history** removes all recorded readings.
 
 ## Backup and restore
 

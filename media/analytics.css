@@ -1,0 +1,296 @@
+:root {
+  --fg: var(--vscode-foreground);
+  --muted: var(--vscode-descriptionForeground);
+  --border: var(--vscode-widget-border, var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25)));
+  --surface: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.06));
+  --accent: var(--vscode-focusBorder, #3794ff);
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px 24px 32px;
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--vscode-editor-background);
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---- header ---------------------------------------------------------- */
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+button.ghost,
+button.primary {
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button.ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+button.ghost:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+button.primary {
+  border: none;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+button.primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+button.link {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+}
+
+/* ---- controls -------------------------------------------------------- */
+
+.controls,
+.accounts-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin-bottom: 12px;
+}
+
+.control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.seg button {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.seg button:hover {
+  color: var(--fg);
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.seg button.on {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+select,
+input[type="datetime-local"] {
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-input-border, var(--border));
+  border-radius: 6px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+
+.custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+/* ---- account chips --------------------------------------------------- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 3px 10px 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.chip span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip .dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.chip.on {
+  opacity: 1;
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--c) 60%, var(--border));
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+}
+
+/* ---- summary and charts ---------------------------------------------- */
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.card.stat {
+  padding: 10px 14px;
+}
+
+.value {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.caption {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 14px;
+}
+
+.chart-card {
+  padding: 14px 16px 12px;
+}
+
+.chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.canvas-wrap {
+  position: relative;
+  height: 260px;
+}
+
+.canvas-wrap.pie {
+  height: 240px;
+}
+
+.canvas-wrap.no-data {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---- notices --------------------------------------------------------- */
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--vscode-editorInfo-foreground, var(--accent));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--vscode-editorInfo-foreground, var(--accent)) 10%, transparent);
+  line-height: 1.5;
+}
+
+@media (max-width: 520px) {
+  body {
+    padding: 14px 16px 24px;
+  }
+
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}
