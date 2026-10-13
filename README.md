@@ -386,7 +386,7 @@ careful with **Switch**, **Remove**, and logins while testing.
 npm run build:vsix
 ```
 
-This creates `tursoft-claude-code-account-switcher-<version>.vsix` in the project root. Install it
+This creates `account-manager-for-claude-<version>.vsix` in the project root. Install it
 into your regular VS Code with
 
 ```bash

@@ -1,5 +1,5 @@
 {
-  "name": "tursoft-claude-code-account-switcher",
+  "name": "account-manager-for-claude",
   "displayName": "Account Manager for Claude",
   "description": "Seamlessly switch between Claude accounts and subscriptions in Claude Code, with real-time usage limit tracking.",
   "version": "1.0.0",
