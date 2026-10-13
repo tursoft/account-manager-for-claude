@@ -5,7 +5,7 @@
  */
 
 export type LimitFilter = "all" | "available" | "limited";
-export type SortKey = "custom" | "available" | "remaining" | "reset" | "plan" | "name";
+export type SortKey = "custom" | "available" | "remaining" | "reset" | "resetFable" | "plan" | "name";
 
 /** One usage limit of an account, as the views receive it. */
 export interface ListWindow {
@@ -48,6 +48,7 @@ export const SORTS: { key: SortKey; label: string }[] = [
   { key: "available", label: "Available first, then soonest available" },
   { key: "remaining", label: "Most usage left first" },
   { key: "reset", label: "Resetting soonest first" },
+  { key: "resetFable", label: "Resetting soonest by Fable limit" },
   { key: "plan", label: "Plan (Enterprise, Team, Max, Pro, Free)" },
   { key: "name", label: "Name A–Z" },
 ];
@@ -116,6 +117,13 @@ function nextReset(acc: ListAccount): number {
   return times.length ? Math.min(...times) : Infinity;
 }
 
+/** Reset time of the Fable weekly limit; Infinity when the account has none (or no reset time is known). */
+function fableReset(acc: ListAccount): number {
+  const fable = (acc.windows || []).find((w) => w.kind === "weekly_fable");
+  const t = fable?.resetsAt ? Date.parse(fable.resetsAt) : NaN;
+  return Number.isFinite(t) ? t : Infinity;
+}
+
 /** Percent left on the most used limit; -1 when usage is unknown. */
 function headroom(acc: ListAccount): number {
   const windows = acc.windows || [];
@@ -167,6 +175,7 @@ export function sortAccounts<T extends ListAccount>(list: T[], order: Map<string
     },
     remaining: (a, b) => headroom(b) - headroom(a),
     reset: (a, b) => nextReset(a) - nextReset(b),
+    resetFable: (a, b) => fableReset(a) - fableReset(b),
     plan: (a, b) => planRank(a) - planRank(b),
     name: (a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
   };

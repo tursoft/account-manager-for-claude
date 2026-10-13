@@ -50,7 +50,8 @@ and re-login.
   usage left (or used up), plus filters by plan (Pro, Max, Team, ...) and by model-specific
   limits (e.g. only accounts with, or without, a Fable limit); one click clears the filters.
 - **Sorting** — keep your own drag-and-drop order, or sort by availability (usable accounts
-  first, then the ones that free up soonest), usage left, next reset, plan, or name.
+  first, then the ones that free up soonest), usage left, next reset, next reset of the Fable limit,
+  plan, or name.
 - **Current session hint** — if Claude Code is logged in with an account that is not saved yet,
   it is shown at the bottom of the list with **Save to account list**; if nothing is logged in,
   the panel says so. New accounts are named after their email and can be renamed later.

@@ -26,6 +26,7 @@ import {
   matchesListing,
   normalizeListing,
   scopesOf,
+  SORTS,
   sortAccounts,
   SortKey,
 } from "../src/listing";
@@ -954,6 +955,18 @@ function runListingTests(): void {
   check("most usage left first, ties in custom order", sorted("remaining") === "avail30>avail80>limitedLate>limitedSoon>unknown");
   check("resetting soonest first, unknown last", sorted("reset") === "limitedSoon>avail30>avail80>limitedLate>unknown");
   check("plan: team, max, pro, free, unknown", sorted("plan") === "avail30>limitedSoon>limitedLate>avail80>unknown");
+  // Fable resets: f1 in 50 h, f2 in 5 h, f3 has no Fable limit, f4 has one without a reset time.
+  const fable = (id: string, resetIn: number | undefined): ListAccount => ({
+    id,
+    label: id,
+    windows: [{ kind: "weekly_fable", label: "Weekly (Fable)", percent: 40, resetsAt: resetIn === undefined ? null : new Date(now + resetIn).toISOString() }],
+  });
+  const fableAccounts: ListAccount[] = [fable("f1", 50 * h), fable("f2", 5 * h), { id: "f3", label: "f3", windows: [win("session", "Session (5h)", 10, h)] }, fable("f4", undefined)];
+  check(
+    "Fable reset: soonest first, then accounts without a Fable reset in custom order",
+    sortAccounts(fableAccounts, new Map(fableAccounts.map((a, i) => [a.id, i])), "resetFable").map((a) => a.id).join(">") === "f2>f1>f3>f4"
+  );
+  check("the Fable reset sort is offered and valid in saved settings", SORTS.some((s) => s.key === "resetFable") && normalizeListing({ sort: "resetFable" }).sort === "resetFable");
   check("name A-Z ignores case", sorted("name") === "avail30>avail80>limitedLate>limitedSoon>unknown");
   check("sorting does not change the input", accounts.map((a) => a.id).join() === "limitedLate,avail30,unknown,limitedSoon,avail80");
 
