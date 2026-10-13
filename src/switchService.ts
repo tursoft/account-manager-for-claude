@@ -3,7 +3,7 @@ import { AccountStore } from "./accountStore";
 import { CredentialSync } from "./credentialSync";
 import { hasUsableOAuthCreds } from "./credentialValidation";
 import { CredentialsManager } from "./credentials";
-import { identityLabel } from "./identity";
+import { defaultProfileLabel, identityLabel } from "./identity";
 
 export interface SwitchResult {
   ok: boolean;
@@ -23,8 +23,12 @@ export class SwitchService {
     private readonly isActiveElsewhere: (id: string) => boolean = () => false
   ) {}
 
-  /** Saves the currently logged-in account (from the file) as a new profile. */
-  async captureCurrent(): Promise<{ ok: boolean; message: string }> {
+  /**
+   * Saves the currently logged-in account (from the file) as a new profile, named
+   * after its email (the user can rename it afterwards). `createdId` is set when a
+   * new profile was added.
+   */
+  async captureCurrent(): Promise<{ ok: boolean; message: string; createdId?: string }> {
     const creds = this.credentials.readCurrent();
     if (!creds) {
       return {
@@ -51,26 +55,11 @@ export class SwitchService {
       };
     }
 
-    const suggested = owner.identity?.email
-      ? owner.identity.email
-      : creds.subscriptionType
-        ? `${creds.subscriptionType} account`
-        : "New account";
-    const label = await vscode.window.showInputBox({
-      title: "Save current Claude account",
-      prompt: "Profile name (e.g. Work, Personal, Max #1)",
-      value: suggested,
-      validateInput: (v) => (v.trim().length === 0 ? "Enter a name" : undefined),
-    });
-    if (label === undefined) {
-      return { ok: false, message: "Cancelled." };
-    }
-
-    const profile = await this.store.addFromCreds(label.trim(), creds, {
+    const profile = await this.store.addFromCreds(defaultProfileLabel(owner.identity, creds), creds, {
       identity: owner.identity,
     });
     await this.sync.captureOAuthAccount(profile.id, this.credentials.getConfigDir());
-    return { ok: true, message: `Saved profile "${profile.label}".` };
+    return { ok: true, message: `Saved profile "${profile.label}".`, createdId: profile.id };
   }
 
   /** Switches to the given profile: save outgoing login + write target + (optionally) reload. */

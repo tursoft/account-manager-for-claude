@@ -13,7 +13,7 @@ import {
 import { CredentialSync, CurrentAccountState } from "./credentialSync";
 import { hasUsableOAuthCreds, sameNonEmptyToken } from "./credentialValidation";
 import { CredentialsManager } from "./credentials";
-import { identityLabel, profileIdentity, sameIdentity } from "./identity";
+import { defaultProfileLabel, identityLabel, profileIdentity, sameIdentity } from "./identity";
 import { getAccountConfigDir } from "./isolatedConfig";
 import { LimitResetNotifier } from "./limitNotifier";
 import { TokenRefresher } from "./oauth";
@@ -358,27 +358,27 @@ export function activate(context: vscode.ExtensionContext): void {
       return;
     }
 
-    const label = await vscode.window.showInputBox({
-      title: "Save the new Claude account",
-      prompt: "Profile name (e.g. Work, Personal, Max #1)",
-      value: identity?.email ?? (creds.subscriptionType ? `${creds.subscriptionType} account` : "New account"),
-      validateInput: (v) => (v.trim().length === 0 ? "Enter a name" : undefined),
-    });
-    if (label === undefined) {
-      fs.rmSync(configDir, { recursive: true, force: true });
-      return;
-    }
-    const profile = await store.addFromCreds(label.trim(), creds, {
+    const profile = await store.addFromCreds(defaultProfileLabel(identity, creds), creds, {
       id,
       identity,
       activate: false,
     });
     await sync.captureOAuthAccount(profile.id, configDir);
-    vscode.window.showInformationMessage(
+    offerRename(
+      profile.id,
       `Saved "${profile.label}". The current Claude Code account was not changed; use Switch when you need it.`
     );
     await poller.pollOne(profile.id, true);
     refreshUI();
+  };
+
+  /** Confirms a newly saved profile (named after its email) with a shortcut to rename it. */
+  const offerRename = (id: string, message: string) => {
+    void vscode.window.showInformationMessage(message, "Rename").then((choice) => {
+      if (choice === "Rename") {
+        void vscode.commands.executeCommand("tursoftClaudeSwitcher.renameAccount", id);
+      }
+    });
   };
 
   const addAccount = async () => {
@@ -437,7 +437,11 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("tursoftClaudeSwitcher.addCurrentAccount", async () => {
       const res = await switchService.captureCurrent();
-      vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
+      if (res.createdId) {
+        offerRename(res.createdId, res.message);
+      } else {
+        vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
+      }
       await synchronizeCurrentProfile();
       const activeId = store.getActiveId();
       if (res.ok && activeId) {

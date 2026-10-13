@@ -53,6 +53,18 @@ export function profileMatchesIdentity(
   return saved ? sameIdentity(saved, identity) : false;
 }
 
+/** Name for a newly saved profile: the account email when known (renamable later). */
+export function defaultProfileLabel(
+  identity: ClaudeAuthIdentity | undefined,
+  creds: { subscriptionType?: string }
+): string {
+  return (
+    identity?.email ??
+    identity?.orgName ??
+    (creds.subscriptionType ? `${creds.subscriptionType} account` : "New account")
+  );
+}
+
 export function identityLabel(identity: ClaudeAuthIdentity): string {
   return (
     identity.email ?? identity.orgName ?? identity.accountUuid ?? identity.orgId ?? "unknown account"
