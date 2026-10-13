@@ -74,14 +74,22 @@ export class CredentialSync {
     ) => Promise<ClaudeAuthIdentity | undefined> = defaultIdentityLookup
   ) {}
 
-  /** Looks up (and caches per access token) the account behind a credential set. */
-  async identify(creds: OAuthCreds, configDir?: string): Promise<ClaudeAuthIdentity | undefined> {
+  /**
+   * Looks up (and caches per access token) the account behind a credential set.
+   * A failed lookup is not retried for a while, unless `retryFailed` is set (an
+   * explicit refresh by the user).
+   */
+  async identify(
+    creds: OAuthCreds,
+    configDir?: string,
+    options: { retryFailed?: boolean } = {}
+  ): Promise<ClaudeAuthIdentity | undefined> {
     const key = tokenFingerprint(creds.accessToken);
     const cached = this.identityCache.get(key);
     if (cached?.identity) {
       return cached.identity;
     }
-    if (cached && Date.now() - cached.checkedAt < FAILED_IDENTITY_RETRY_MS) {
+    if (!options.retryFailed && cached && Date.now() - cached.checkedAt < FAILED_IDENTITY_RETRY_MS) {
       return undefined;
     }
     const identity = await this.lookupIdentity(creds, configDir);
@@ -102,7 +110,7 @@ export class CredentialSync {
   }
 
   /** Determines which saved profile a credentials file belongs to. */
-  async resolveFileOwner(configDir: string): Promise<FileOwner> {
+  async resolveFileOwner(configDir: string, options: { retryFailed?: boolean } = {}): Promise<FileOwner> {
     const creds = this.credentials.readCurrent(configDir);
     if (!creds || !hasUsableOAuthCreds(creds)) {
       return { verified: false };
@@ -111,7 +119,7 @@ export class CredentialSync {
     if (byTokens) {
       return { creds, ownerId: byTokens, verified: true };
     }
-    const identity = await this.identify(creds, configDir);
+    const identity = await this.identify(creds, configDir, options);
     if (!identity) {
       return { creds, verified: false };
     }
@@ -130,9 +138,9 @@ export class CredentialSync {
    * finds its owner, imports a newer token generation, records identity details and
    * Claude Code's `oauthAccount` snapshot for later switches.
    */
-  async syncCurrent(): Promise<CurrentAccountState> {
+  async syncCurrent(options: { retryFailed?: boolean } = {}): Promise<CurrentAccountState> {
     const configDir = this.credentials.getConfigDir();
-    const owner = await this.resolveFileOwner(configDir);
+    const owner = await this.resolveFileOwner(configDir, options);
     if (!owner.creds) {
       return { ownerId: this.store.getActiveId(), loggedIn: false };
     }
@@ -143,9 +151,20 @@ export class CredentialSync {
         await this.store.setActiveId(undefined);
         return { unsavedIdentity: owner.identity, loggedIn: true, subscriptionType };
       }
+      // Not provably unsaved: a profile saved without an identity could still own it.
+      // But a login whose account differs from the remembered active profile (or
+      // with no remembered profile) is certainly not that profile, so it is shown
+      // as the current, unsaved login instead of silently keeping a stale marker.
+      const activeId = this.store.getActiveId();
+      const active = activeId ? this.store.get(activeId) : undefined;
+      const activeIdentity = active ? profileIdentity(active) : undefined;
+      if (owner.identity && (!active || (activeIdentity && !sameIdentity(activeIdentity, owner.identity)))) {
+        await this.store.setActiveId(undefined);
+        return { unsavedIdentity: owner.identity, loggedIn: true, subscriptionType };
+      }
       // Unknown owner (offline, expired token, no CLI): keep the remembered marker
       // but never import tokens that might belong to another account.
-      return { ownerId: this.store.getActiveId(), loggedIn: true, subscriptionType };
+      return { ownerId: activeId, loggedIn: true, subscriptionType };
     }
 
     const id = owner.ownerId;

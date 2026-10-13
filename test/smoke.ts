@@ -383,6 +383,26 @@ async function runCredentialSyncTests(): Promise<void> {
       fs.rmSync(f.root, { recursive: true, force: true });
     }
 
+    // 2b. Another account while an older profile has no recorded identity: the owner is
+    // not provable, but it is certainly not the remembered active profile.
+    {
+      const f = createSyncFixture({
+        "other-access": { accountUuid: "acct-other", email: "other@example.com" },
+      });
+      await f.store.addFromCreds("Old", creds("old1", 3_600_000), { activate: false });
+      await f.store.addFromCreds("A", creds("a1", 3_600_000), {
+        identity: { accountUuid: "acct-a", email: "a@example.com" },
+      });
+      f.manager.writeCreds(creds("other", 3_600_000));
+      const state = await f.sync.syncCurrent();
+      check(
+        "shows a different login as unsaved despite unidentified profiles",
+        state.unsavedIdentity?.email === "other@example.com" && !state.ownerId
+      );
+      check("drops the stale active marker", f.store.getActiveId() === undefined);
+      fs.rmSync(f.root, { recursive: true, force: true });
+    }
+
     // 3. A newer generation in the isolated dir is used without spending anything.
     {
       const f = createSyncFixture();

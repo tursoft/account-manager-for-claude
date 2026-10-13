@@ -180,9 +180,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   };
 
-  const synchronizeCurrentProfile = async () => {
+  const synchronizeCurrentProfile = async (options: { retryFailed?: boolean } = {}) => {
     try {
-      applyCurrentState(await sync.syncCurrent());
+      applyCurrentState(await sync.syncCurrent(options));
     } catch {
       profileActivity.setActiveProfile(store.getActiveId());
     }
@@ -641,9 +641,13 @@ export function activate(context: vscode.ExtensionContext): void {
   const refreshAll = () => {
     refreshingAll ??= Promise.resolve(
       vscode.window.withProgress({ location: { viewId: AccountsViewProvider.viewType } }, async () => {
-        await synchronizeCurrentProfile();
-        await refreshCurrentUsage(currentUnsaved, true);
+        // Check the login Claude Code (CLI or extension) uses now, retrying a failed
+        // account lookup; polling then records identities of older profiles, so
+        // check once more before showing the result.
+        await synchronizeCurrentProfile({ retryFailed: true });
         await poller.pollAll(true);
+        await synchronizeCurrentProfile({ retryFailed: true });
+        await refreshCurrentUsage(currentUnsaved, true);
         refreshUI();
       })
     ).finally(() => {
