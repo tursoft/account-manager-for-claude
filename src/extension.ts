@@ -31,6 +31,7 @@ import { ProfileActivityRegistry } from "./profileActivity";
 import { SwitchService } from "./switchService";
 import { AccountsViewProvider } from "./ui/accountsView";
 import { AnalyticsPanel } from "./ui/analyticsPanel";
+import { AvailabilityPanel } from "./ui/availabilityPanel";
 import { StatusBarController } from "./ui/statusBar";
 import { fetchUsage, MIN_POLL_INTERVAL_SECONDS, UsagePoller } from "./usage";
 import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "./types";
@@ -102,6 +103,7 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBar.refresh();
     viewProvider.refresh();
     limitNotifier.schedule(store.list());
+    AvailabilityPanel.notifyChanged();
   };
 
   // --- Current account tracking ---
@@ -820,6 +822,12 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("tursoftClaudeSwitcher.openAnalytics", () =>
       AnalyticsPanel.show(context.extensionUri, { store, history, getConfig: config })
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.openAvailability", () =>
+      AvailabilityPanel.show(context.extensionUri, { store, history, getConfig: config })
     )
   );
 

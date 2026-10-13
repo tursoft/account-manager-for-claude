@@ -15,6 +15,7 @@ import { SwitchService } from "../src/switchService";
 import { findResetWindows } from "../src/limitNotifier";
 import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHistory";
 import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal, usageDelta } from "../src/historySeries";
+import { buildTimeline, Segment } from "../src/availability";
 import { ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "../src/types";
 
 let failures = 0;
@@ -850,8 +851,42 @@ function runHistorySeriesTests(): void {
   check("pie total: sum in usage mode", seriesTotal([22, 5, 0, null], "usage") === 27);
 }
 
+function runAvailabilityTests(): void {
+  console.log("availability timeline:");
+  const h = 3_600_000;
+  const iso = (t: number) => new Date(t).toISOString();
+  const points: HistoryPoint[] = [
+    { t: 1 * h, id: "a", w: { session: 50 }, n: { session: "Session (5h)" } },
+    { t: 1.5 * h, id: "a", w: { session: 100 }, n: { session: "Session (5h)" } },
+  ];
+  const account = {
+    id: "a",
+    windows: [
+      { kind: "session", label: "Session (5h)", percent: 100, resetsAt: iso(6 * h) },
+      { kind: "weekly_fable", label: "Weekly (Fable)", percent: 20, resetsAt: iso(12 * h) },
+    ],
+  };
+  const t = buildTimeline(account, points, 0, 10 * h, 4 * h);
+  const fmt = (segs: Segment[]) =>
+    segs.map((s) => `${s.start / h}-${s.end / h}:${s.state}${s.projected ? "*" : ""}`).join(" ");
+
+  check("lanes ordered session first", t.lanes.map((l) => l.kind).join() === "session,weekly_fable");
+  check(
+    "session lane: history, gap, projection until the reset, then free",
+    fmt(t.lanes[0].segments) === "0-1:nodata 1-1.5:free 1.5-2:limited 2-4:nodata 4-6:limited* 6-10:free*"
+  );
+  check("reset marker at the reset time", t.lanes[0].resets.join() === String(6 * h));
+  check("fable lane: unknown past, projected free", fmt(t.lanes[1].segments) === "0-4:nodata 4-10:free*");
+  check(
+    "overall lane: blocked while any limit is, free only when all are known",
+    fmt(t.overall) === "0-1.5:nodata 1.5-2:limited 2-4:nodata 4-6:limited* 6-10:free*"
+  );
+  check("next available at the blocking reset", t.nextAvailableAt === 6 * h);
+}
+
 runProfileActivityTests();
 runHistorySeriesTests();
+runAvailabilityTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();

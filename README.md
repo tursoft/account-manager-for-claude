@@ -148,6 +148,7 @@ the account on each computer separately instead of copying credential files betw
 | `Claude: About Tursoft Claude Multi-Account Switcher` | shows version, author, and fork information |
 | `Claude: Open extension settings` | opens the Settings editor filtered to this extension |
 | `Claude: Show usage analytics` | charts the collected usage history |
+| `Claude: Show account availability calendar` | week/day timeline of when each account and limit is usable |
 | `Claude: Delete collected usage history` | removes all recorded usage readings |
 
 ## Settings
@@ -248,6 +249,21 @@ every 15 minutes, and data older than `usageHistory.retentionDays` (90) is delet
 - line, area, bar, stacked bar, pie, or doughnut charts.
 
 **Delete collected usage history** removes all recorded readings.
+
+## Availability calendar
+
+**Show account availability calendar** (in the **⋯** menu) shows when every account can be used,
+as a week from Monday to Sunday or, after clicking a day, hour by hour:
+
+- a **Right now** card per account: available now, or how long until it is usable again, with
+  each limit's current percent and a **Switch** button for accounts that are available;
+- per account an overall lane (blocked while any limit is used up) and, with **Show each limit**,
+  one lane per limit: 5h, weekly, and model-specific limits such as Fable;
+- green = available, amber = 80%+ used, red = limited, grey = no data; markers show reset times
+  and a red line shows now.
+
+The past comes from collected usage history; the future is projected from the latest reading
+(a used-up limit stays blocked until its reset time, then counts as free) and is drawn striped.
 
 ## Backup and restore
 

@@ -156,6 +156,11 @@
         "command": "tursoftClaudeSwitcher.openAnalytics",
         "title": "Claude: Show usage analytics",
         "icon": "$(graph)"
+      },
+      {
+        "command": "tursoftClaudeSwitcher.openAvailability",
+        "title": "Claude: Show account availability calendar",
+        "icon": "$(calendar)"
       }
     ],
     "menus": {
@@ -204,6 +209,11 @@
           "command": "tursoftClaudeSwitcher.restoreAccounts",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "3_backup@2"
+        },
+        {
+          "command": "tursoftClaudeSwitcher.openAvailability",
+          "when": "view == tursoftClaudeSwitcher.accountsView",
+          "group": "4_views@0"
         },
         {
           "command": "tursoftClaudeSwitcher.openAnalytics",

@@ -1,0 +1,624 @@
+:root {
+  --fg: var(--vscode-foreground);
+  --muted: var(--vscode-descriptionForeground);
+  --border: var(--vscode-widget-border, var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25)));
+  --grid: color-mix(in srgb, var(--fg) 8%, transparent);
+  --surface: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.06));
+  --ok: var(--vscode-charts-green, #3fb950);
+  --warn: var(--vscode-charts-yellow, #d29922);
+  --danger: var(--vscode-charts-red, #f85149);
+  --claude: #d97757;
+  --label-w: 210px;
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px 24px 32px;
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--vscode-editor-background);
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---- header ---------------------------------------------------------- */
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  margin: 4px 0 16px;
+  max-width: 720px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ---- "right now" cards ----------------------------------------------- */
+
+.now-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.now-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.now-card.active {
+  border-color: color-mix(in srgb, var(--ok) 50%, var(--border));
+}
+
+.now-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.now-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-status {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.now-status .when {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.now-status.ok {
+  color: var(--ok);
+}
+
+.now-status.bad {
+  color: var(--danger);
+}
+
+.now-status.warn {
+  color: var(--warn);
+}
+
+.now-status.muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pill {
+  padding: 1px 7px;
+  font-size: 11px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+.pill.free {
+  --c: var(--ok);
+}
+
+.pill.high {
+  --c: var(--warn);
+}
+
+.pill.limited {
+  --c: var(--danger);
+}
+
+.switch {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  padding: 2px 10px;
+  font-size: 11.5px;
+  border: none;
+  border-radius: 5px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  cursor: pointer;
+}
+
+.switch:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.now-card:has(.switch) .now-head {
+  padding-right: 58px;
+}
+
+.badge {
+  flex: 0 0 auto;
+  padding: 0 5px;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* Provider mark: white starburst on Claude orange, ringed in the account color. */
+.avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--claude) 80%, #fff), var(--claude) 70%);
+  box-shadow:
+    0 0 0 1.5px var(--vscode-editor-background),
+    0 0 0 3px var(--ring, transparent);
+}
+
+.avatar svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+/* ---- toolbar --------------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  margin-bottom: 12px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.range-label {
+  margin-left: 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+button.icon,
+button.ghost {
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+button.icon {
+  width: 26px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+button.ghost {
+  padding: 0 12px;
+}
+
+button.icon:hover,
+button.ghost:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.seg button {
+  padding: 3px 12px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.seg button.on {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sw {
+  display: inline-block;
+  width: 18px;
+  height: 8px;
+  border-radius: 3px;
+}
+
+/* ---- calendar ------------------------------------------------------- */
+
+.calendar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--label-w) 1fr;
+  align-items: center;
+}
+
+.row-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
+  border-right: 1px solid var(--border);
+  align-self: stretch;
+}
+
+.row-label .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.row-label.sub {
+  padding-left: 42px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.head-row {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--border);
+  background: var(--vscode-editor-background);
+}
+
+.corner {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.head-cells {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+}
+
+.head-cell {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 0 15px;
+  border: none;
+  border-left: 1px solid var(--grid);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.head-cell:first-child {
+  border-left: none;
+}
+
+.head-cell:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.head-cell.hour {
+  padding: 7px 0;
+  cursor: default;
+  font-size: 11px;
+}
+
+.head-cell.weekend {
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
+}
+
+.head-cell .dow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.head-cell .dom {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.head-cell.hour .dom {
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.head-cell.today .dom {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 11px;
+}
+
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.now-label {
+  position: absolute;
+  top: 1px;
+  transform: translateX(-50%);
+  padding: 0 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 14px;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.group {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.group:last-child {
+  border-bottom: none;
+}
+
+.group.expired .track {
+  opacity: 0.5;
+}
+
+.overall-row {
+  min-height: 30px;
+}
+
+.lane-row {
+  min-height: 16px;
+}
+
+/* A timeline track: day (or hour) gridlines behind positioned segments. */
+.track {
+  position: relative;
+  height: 16px;
+  margin: 4px 0;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size: calc(100% / var(--cols)) 100%;
+}
+
+.track.thin {
+  height: 8px;
+  margin: 3px 0;
+}
+
+.seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: filter 0.12s ease;
+}
+
+.track.thin .seg {
+  border-radius: 3px;
+}
+
+.seg:hover {
+  filter: brightness(1.18);
+}
+
+.seg.free,
+.sw.free {
+  background: color-mix(in srgb, var(--ok) 75%, transparent);
+}
+
+.seg.high,
+.sw.high {
+  background: color-mix(in srgb, var(--warn) 85%, transparent);
+}
+
+.seg.limited,
+.sw.limited {
+  background: color-mix(in srgb, var(--danger) 85%, transparent);
+}
+
+.seg.nodata,
+.sw.nodata {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--fg) 7%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+  box-shadow: none;
+}
+
+/* The future is a projection: lighter, with diagonal stripes. */
+.seg.projected:not(.nodata),
+.sw.projected {
+  opacity: 0.55;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.22) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+.reset {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--fg);
+  opacity: 0.75;
+  z-index: 1;
+}
+
+.now-mark {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--danger);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ---- notices and tooltip ---------------------------------------------- */
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 12px;
+  padding: 9px 14px;
+  border: 1px solid var(--vscode-editorInfo-foreground, #3794ff);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--vscode-editorInfo-foreground, #3794ff) 10%, transparent);
+}
+
+button.primary {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  cursor: pointer;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 10;
+  max-width: 320px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-line;
+  color: var(--vscode-editorHoverWidget-foreground, var(--fg));
+  background: var(--vscode-editorHoverWidget-background, var(--surface));
+  border: 1px solid var(--vscode-editorHoverWidget-border, var(--border));
+  border-radius: 6px;
+  box-shadow: 0 6px 18px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.3));
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --label-w: 130px;
+  }
+
+  body {
+    padding: 14px 16px 24px;
+  }
+
+  .legend {
+    margin-left: 0;
+  }
+
+  .head-cell .ticks {
+    display: none;
+  }
+}
