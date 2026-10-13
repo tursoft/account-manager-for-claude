@@ -1,5 +1,5 @@
 import { AccountStore } from "./accountStore";
-import { CredentialSync } from "./credentialSync";
+import { CredentialSync, CurrentAccountState } from "./credentialSync";
 import { profileIdentity, sameIdentity } from "./identity";
 import { OAuthCreds, UsageSnapshot, UsageWindow } from "./types";
 
@@ -153,7 +153,8 @@ export class UsagePoller {
       id: string,
       previous: UsageSnapshot | undefined,
       next: UsageSnapshot
-    ) => void
+    ) => void,
+    private readonly onCurrentState?: (state: CurrentAccountState) => void
   ) {}
 
   start(): void {
@@ -190,7 +191,10 @@ export class UsagePoller {
 
   private async runPollAll(force: boolean): Promise<void> {
     try {
-      await this.sync.syncCurrent();
+      // Each poll also re-detects the login Claude Code uses, so a change made
+      // elsewhere (another window, the CLI, /login) shows up in the panel.
+      const current = await this.sync.syncCurrent();
+      this.onCurrentState?.(current);
     } catch {
       /* polling still works from the vault */
     }

@@ -450,8 +450,13 @@ export function activate(context: vscode.ExtensionContext): void {
     await importIsolatedLogin(id, configDir);
   };
 
-  const poller = new UsagePoller(store, sync, getInterval, refreshUI, (id, previous, next) =>
-    limitNotifier.onSnapshot(id, previous, next)
+  const poller = new UsagePoller(
+    store,
+    sync,
+    getInterval,
+    refreshUI,
+    (id, previous, next) => limitNotifier.onSnapshot(id, previous, next),
+    applyCurrentState
   );
 
   // Publish the remembered owner before asynchronous startup work, so another
@@ -645,7 +650,9 @@ export function activate(context: vscode.ExtensionContext): void {
       );
       if (confirm === "Remove") {
         await store.remove(targetId);
-        profileActivity.setActiveProfile(store.getActiveId());
+        // The removed profile may have been the current login: detect it again so
+        // the panel offers it as an unsaved session.
+        await synchronizeCurrentProfile();
         refreshUI();
       }
     })
@@ -822,6 +829,16 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       if (e.affectsConfiguration("tursoftClaudeSwitcher.credentialsPath")) {
         watchCredentialsFile();
+        onCredentialsFileChanged();
+      }
+    })
+  );
+
+  // A login can also change while this window is in the background (another
+  // window, a terminal `claude /login`); check again when the user comes back.
+  context.subscriptions.push(
+    vscode.window.onDidChangeWindowState((e) => {
+      if (e.focused) {
         onCredentialsFileChanged();
       }
     })

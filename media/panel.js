@@ -8,6 +8,7 @@
   let menuAnchor = null;
   let dragId = null;
   let pendingRender = false;
+  let lastActiveId;
 
   const ICONS = {
     more: '<circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/>',
@@ -653,6 +654,21 @@
       row.append(card(acc, state.warnThreshold || 80), sideButtons(acc));
       listEl.appendChild(row);
     }
+    revealActiveChange(accounts);
+  }
+
+  /** When the detected login changes to a saved account, scroll to its card and flash it. */
+  function revealActiveChange(accounts) {
+    const active = accounts.find((a) => a.isActive);
+    const activeId = active ? active.id : null;
+    const changed = lastActiveId !== undefined && activeId !== lastActiveId;
+    lastActiveId = activeId;
+    if (!changed || !activeId) return;
+    const cardEl = listEl.querySelector(`.card[data-id="${CSS.escape(activeId)}"]`);
+    if (!cardEl) return;
+    cardEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    cardEl.classList.add("flash");
+    setTimeout(() => cardEl.classList.remove("flash"), 1600);
   }
 
   // Refresh countdowns every minute (but don't yank an open menu away).

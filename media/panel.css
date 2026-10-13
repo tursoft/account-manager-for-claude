@@ -250,6 +250,21 @@ button:focus-visible {
   background: var(--ok);
 }
 
+/* The detected login just changed to this account. */
+.card.flash {
+  animation: card-flash 1.6s ease-out;
+}
+
+@keyframes card-flash {
+  0%,
+  30% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok) 70%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
 .card-head {
   display: flex;
   align-items: center;
