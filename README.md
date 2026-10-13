@@ -6,437 +6,259 @@
 [![Downloads](https://vsmarketplacebadges.dev/downloads-short/tursoft.account-manager-for-claude.svg)](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude)
 [![GitHub](https://img.shields.io/badge/GitHub-account--manager--for--claude-181717?logo=github)](https://github.com/tursoft/account-manager-for-claude)
 
-Quickly switch between Claude accounts (subscriptions) in **Claude Code** inside VS Code,
-with live usage limits for all your accounts at a glance.
+Use several Claude subscriptions in **Claude Code** and switch between them with one click.
+See every account's usage limits at a glance, and let the extension tell you which account to use
+next.
 
 - **Install:** [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude),
-  or run `ext install tursoft.account-manager-for-claude` in the Quick Open box (`Ctrl+P`).
+  or run `ext install tursoft.account-manager-for-claude` in Quick Open (`Ctrl+P`).
 - **Source:** [github.com/tursoft/account-manager-for-claude](https://github.com/tursoft/account-manager-for-claude)
 
 > Built on [KrzysztofZander/claude-account-switcher](https://github.com/KrzysztofZander/claude-account-switcher)
-> by Krzysztof Zander, which provided the original account-switching core. This version has been
-> substantially extended: a redesigned accounts panel with a reworked UI/UX, plus new features
-> including usage analytics with capacity-utilization tracking, an availability calendar,
-> account proposals that suggest the best account to switch to, and much more.
-
-## Why
-
-You have several Claude subscriptions. When one account runs out of usage (the 5-hour or
-weekly window), switch Claude Code to another account with a single click — no manual logout
-and re-login.
+> by Krzysztof Zander, which provided the original account-switching core. This version adds a
+> redesigned panel and UI/UX, usage analytics with capacity-utilization tracking, an availability
+> calendar, account proposals, and much more.
 
 ## Features
 
 ![The account list: limits, colors, filters, sorting, and proposing the next account](docs/panel.gif)
 
-- **Save accounts** — when Claude Code is logged in with an account that is not saved yet, the
-  panel shows it in a box with a **Save** button (the command palette has it too); **Add account**
-  logs in to another account in an isolated login that does not touch the current one (tokens are
-  kept in VS Code's encrypted secret storage).
-- **Stays logged in** — the extension behaves like one more Claude Code process: it refreshes
-  rotating OAuth tokens only under Claude Code's own refresh lock and writes every rotation back
-  to all local copies, so neither Claude Code nor the extension is left with a spent token.
-- **Fast switching** — from the panel, the status bar, or the command palette (QuickPick).
-- **Live usage limits** — utilization (%) of the 5-hour and weekly windows for each account,
-  with time until reset. Data comes from the same source as the `/usage` command.
-- **Independent account windows** — open the same project in separate VS Code windows, each
-  with its own Claude account and `CLAUDE_CONFIG_DIR`.
-- **Browser authorization** — if Claude Code CLI is unavailable, complete OAuth login in the
-  default browser; a dedicated command is available even when the CLI is installed.
-- **Login helper** — prefers an integrated terminal with `claude auth login` when the CLI is
-  available, then falls back to browser authorization. Completed logins are detected
-  automatically.
-- **Isolated reauthorization** — if a saved profile's credentials break, re-login happens in
-  that profile's own `CLAUDE_CONFIG_DIR` instead of copying the currently active account.
-- **Status bar** — the active account and its usage % always in view.
-- **Compact panel** — one row per account with usage bars and reset times, a **⋯** menu for
-  all actions, and **Switch** / **Refresh** buttons inside each account's box. Drag and drop to
-  reorder (the order is remembered); double-click a name to copy it.
-- **Colors that tell the state at a glance** — the account icon is green while the account has
-  limit left, orange once a limit is used up, and gray when usage is unknown or the login expired.
-  The name is green while the 5h limit has room and red once the 5h limit or a weekly limit is
-  used up (Claude then refuses sessions too). A used-up limit's reset time is yellow under
-  10 minutes, orange under an hour, red beyond a day; everything else stays gray.
-- **Propose** / **Propose for Fable** — list the three best *other* accounts for that limit, each
-  with its limit bar, a one-sentence reason, and a **Switch** button. Accounts whose capacity
-  would be lost soonest come first (available percent per hour until the limit resets), then the
-  most available; accounts with any limit used up, or an expired login, are skipped. A Propose
-  button appears only when it has another usable account to offer (for Fable, one with a Fable
-  limit). The filter bar, the sort menu, and the statistics footer appear from two accounts on; with
-  a single account the panel is just that account's card.
-- **Automatic proposal** — when the active account's limit runs out, the next accounts are
-  proposed on their own:
+**Accounts panel**
+
+- **Save and add accounts.** A detected login that isn't saved yet appears in its own box with a
+  **Save** button. **Add account** logs in to another account without touching the current one.
+- **Switch in one click** from an account card, the status bar, or the command palette.
+- **Live usage limits** for the 5-hour, weekly, and model-specific (e.g. Fable) windows, with the
+  time until each resets. The data is the same as Claude Code's `/usage`.
+- **Colors show the state.** The icon is green while an account has limit left, orange once a
+  limit is used up, and gray when usage is unknown. The name turns red when the 5h or a weekly
+  limit is used up. A used-up limit's reset time turns yellow under 10 minutes, orange under an
+  hour, and red beyond a day.
+- **Filter and sort** by text, availability, plan (Pro, Max, Team, ...), or model limit. Sort by
+  availability, usage left, next reset, plan, name, or your own drag-and-drop order.
+- **Adapts to your setup.** Filters, sorting, and statistics appear once you have two accounts.
+  With one account, the panel shows just its card.
+- **Status bar** with the active account and its usage, colored green, orange, or red.
+- **Notifications** when a used-up limit becomes available again, with a **Switch** button.
+
+**Account proposals**
+
+- **Propose** and **Propose for Fable** list the three best other accounts for that limit, each
+  with its limit bar, a one-line reason, and a **Switch** button.
+- Accounts whose capacity would be lost soonest come first: the most available percent per hour
+  until the limit resets. Accounts with a used-up limit or an expired login are skipped.
+- When the active account's limit runs out, the next accounts are proposed automatically:
 
   ![When the active account's limit runs out, the next accounts are proposed](docs/propose-auto.gif)
 
-- **Usage tracking hint** — while usage tracking is off, an info box offers to turn it on (it
-  feeds the analytics and the calendar's past).
-- **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
-  usage left (or used up), plus filters by plan (Pro, Max, Team, ...) and by model-specific
-  limits (e.g. only accounts with, or without, a Fable limit); one click clears the filters.
-- **Sorting** — keep your own drag-and-drop order, or sort by availability (usable accounts
-  first, then the ones that free up soonest), usage left, next reset, next reset of the Fable limit,
-  plan, or name.
-- **Current session hint** — if Claude Code is logged in with an account that is not saved yet,
-  it is shown at the bottom of the list with **Save to account list**; if nothing is logged in,
-  the panel says so. New accounts are named after their email and can be renamed later.
-- **Limit reset notifications** — get notified when a used-up session, weekly, or
-  model-specific weekly limit becomes available again, with a one-click **Switch**.
-- **Backup / restore** — export the account list (including tokens) to an AES-256
-  password-protected ZIP and restore it later or on another machine.
+**Logins that stay valid**
 
-## Requirements
+- The extension refreshes tokens the same way Claude Code does, so neither side is left with a
+  spent token and you don't have to log in again every day. See [Token handling](#token-handling).
+- **Browser login** works without the Claude Code CLI. **Reauthorize** fixes a broken saved login
+  without touching the active account.
+- **Independent windows** open the same project in separate VS Code windows, each with its own
+  account. See [Parallel windows](#parallel-windows).
+- **Backup and restore** the account list in a password-protected ZIP. See
+  [Backup and restore](#backup-and-restore).
 
-- Claude Code CLI is optional for browser authorization, account switching, and usage checks.
-  It is still required for CLI-based login and identity checks, and for using Claude Code itself.
-- For CLI-only features, the `claude` command must be available in VS Code's PATH, or
-  `accountManagerForClaude.claudeCommand` must point to the full path of `claude`, `claude.exe`, or
-  `claude.cmd`.
-- On Windows PowerShell, Claude Code CLI can be installed with:
-
-```powershell
-irm https://claude.ai/install.ps1 | iex
-```
-
-## How it works
-
-- Claude Code credentials live in `~/.claude/.credentials.json`. Switching accounts swaps the
-  contents of that file (a `.bak` backup is kept so you can undo) and the cached `oauthAccount`
-  in `~/.claude.json`, so Claude Code shows the right account.
-- **After switching you must reload the VS Code window** so Claude Code picks up the new
-  account — the extension offers to do it automatically (auto-reload can be enabled in settings).
-- Independent windows use generated `.code-workspace` files under the extension's global storage.
-  Each window points Claude Code at the selected account's isolated config directory.
-- Usage is read from the unofficial `api.anthropic.com/api/oauth/usage` endpoint (the same
-  source as `/usage`). It is **heavily rate-limited**, so refreshing is capped to a safe interval
-  (240s by default, minimum 180s) plus a manual ⟳ refresh.
-
-### Token handling (why you no longer need to re-authorize daily)
-
-Claude Code's OAuth refresh tokens are **single-use**: every refresh returns a new refresh token
-and invalidates the old one. When two programs hold copies of the same login and one of them
-refreshes without telling the other, the other one gets `invalid_grant` and asks you to log in
-again. This extension therefore:
-
-1. **Uses Claude Code's own refresh lock.** Before spending a refresh token it takes the same
-   locks Claude Code uses (`<configDir>/.oauth_refresh.lock` and `<configDir>.lock`) in every
-   config directory holding that login. Claude Code waits for the lock, then re-reads the file
-   and adopts the new tokens instead of spending the old ones.
-2. **Writes every rotation back** (compare-and-swap) to each local credentials file that still
-   holds the spent token, and to the saved profile.
-3. **Always uses the newest generation** across the saved profile, `~/.claude` and the
-   profile's isolated config directory, and refreshes only when the access token is expiring.
-4. **Watches `.credentials.json`** and imports Claude Code's own rotations immediately, and
-   identifies the logged-in account by its account id (via `/api/oauth/profile`), so a profile
-   is recognized even after both of its tokens rotated.
-5. **Saves the outgoing account first when switching**, under the lock, so the account you
-   switch away from keeps its latest tokens.
-6. **Never retries a refresh token the server rejected**, and recovers automatically as soon as
-   any copy contains a newer valid login.
-
-### Do not use `/logout` to change accounts
-
-`/logout` (and `claude auth logout`) **revokes the refresh token on Anthropic's side**. If that
-login was saved as a profile, the saved copy dies with it and must be reauthorized. To change
-accounts use **Switch**, to add one use **+ Add account**, or run `/login` directly — `/login`
-does not revoke the previous login.
-
-Each `claude auth login` creates an independent login, so logging in on another computer does
-not affect this one. Profiles are stored per machine (VS Code SecretStorage is not synced); add
-the account on each computer separately instead of copying credential files between machines.
-
-## Usage
-
-1. Log in to Claude Code with account #1.
-2. Open the **MultiAccount** panel (activity bar icon): the detected login is shown in a box;
-   click **Save this account**.
-3. Click **"+ Add account"** and log in with account #2. The current Claude Code account is not
-   changed; the new account is saved automatically when the login completes.
-4. From now on, switch with one click via the switch icon on an account row (shown on hover), the
-   row's **⋯** menu, the status bar, or `Claude: Switch account`. After confirmation the window
-   reloads and Claude Code runs on the selected account.
-5. Drag rows to reorder accounts (or use **Move up / Move down** in the **⋯** menu). The order is
-   remembered and also used by the status bar QuickPick.
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `Claude: Save current account as profile` | saves the currently logged-in account (the panel's detected-login box does the same) |
-| `Claude: Add another account (isolated login)` | logs in to another account without touching the current one and saves it |
-| `Claude: Switch account` | QuickPick with usage limits |
-| `Claude: Refresh usage limits` | forces a refresh |
-| `Claude: Open independent account window` | opens this project in a new VS Code window scoped to one account |
-| `Claude: Log in from terminal (replaces the current account)` | opens `claude auth login` for the current config dir, or falls back to browser authorization when CLI is unavailable |
-| `Claude: Authorize in browser (without CLI)` | completes OAuth authorization in the default browser |
-| `Claude: Reauthorize account profile` | opens isolated login for a saved profile without touching the active account |
-| `Claude: Complete profile reauthorization` | imports the completed isolated login into that same profile |
-| `Claude: Undo last switch` | restores the previous account from `.bak` |
-| `Claude: Remove / Rename account profile` | manage profiles |
-| `Claude: Back up account list (password-protected ZIP)` | saves all profiles and their tokens to an encrypted ZIP |
-| `Claude: Restore account list from backup` | merges a backup into the list (never replaces newer tokens) |
-| `Claude: About Account Manager for Claude` | shows version, author, and fork information |
-| `Claude: Show usage analytics` | charts the collected usage history |
-| `Claude: Show account availability calendar` | week/day timeline of when each account and limit is usable |
-| `Claude: Delete collected usage history` | removes all recorded usage readings |
-
-## Settings
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `accountManagerForClaude.autoRefresh` | `true` | regularly check usage limits of all accounts |
-| `accountManagerForClaude.pollIntervalSeconds` | `240` | check interval in seconds (min 60; short intervals with many accounts can hit HTTP 429) |
-| `accountManagerForClaude.notifyOnLimitReset` | `true` | notify when a used-up limit becomes available again |
-| `accountManagerForClaude.autoReloadAfterSwitch` | `false` | auto-reload the window after switching |
-| `accountManagerForClaude.credentialsPath` | `""` | override the path to `.credentials.json` |
-| `accountManagerForClaude.warnThresholdPercent` | `80` | warning threshold (%): usage bars and the status bar turn red from it and orange from 75% of it |
-| `accountManagerForClaude.claudeCommand` | `claude` | CLI command used for CLI login; set the full path if VS Code cannot find it |
-
-## Troubleshooting the Claude Code CLI
-
-If the extension reports that `claude` is not recognized, the VS Code extension process cannot find
-the Claude Code CLI. Try these in order:
-
-1. Run `where claude` in PowerShell or CMD.
-2. If it is found, restart VS Code so the extension host gets the refreshed PATH.
-3. If it is not found, install Claude Code CLI. On Windows PowerShell, the official installer is:
-
-```powershell
-irm https://claude.ai/install.ps1 | iex
-```
-
-4. If the command exists but VS Code still cannot see it, set `accountManagerForClaude.claudeCommand` to the
-   full path, for example `C:\Users\you\AppData\Roaming\npm\claude.cmd` or the path returned by
-   `where claude`.
-
-## Parallel VS Code windows
-
-Use **Claude: Open independent account window** or the **Window** button on an account card.
-The extension writes the saved account credentials to a per-account config directory, generates a
-`.code-workspace` file for the current folder/workspace, and opens it in a new VS Code window.
-
-The default Claude Code login file is global, so two regular VS Code windows share the same active
-account. Independent windows avoid that by setting both:
-
-```json
-{
-  "claudeCode.environmentVariables": [
-    {
-      "name": "CLAUDE_CONFIG_DIR",
-      "value": "C:\\Users\\you\\.claude-user2"
-    }
-  ],
-  "accountManagerForClaude.credentialsPath": "C:\\Users\\you\\.claude-user2\\.credentials.json"
-}
-```
-
-Open one generated window per account you want to run. The extension refuses to open a second
-active window for the same saved profile: two Claude Code sessions in different config
-directories would each try to spend the same single-use refresh token.
-
-## Security and disclaimers
-
-- This extension does **not** collect telemetry, analytics, account identifiers, prompts,
-  credentials, tokens, usage data, or any other personal data.
-- No login data is sent to the extension author, publisher, marketplace backend, or any custom
-  third-party server controlled by this extension.
-- Saved profile secrets are stored in VS Code's encrypted **SecretStorage**.
-- Claude Code itself requires local `.credentials.json` files. For account switching and
-  independent windows, the extension writes credentials only to local Claude Code config
-  directories on your machine, including isolated per-account `CLAUDE_CONFIG_DIR` folders under
-  the extension's global storage.
-- Credentials are never intentionally logged. Protect your machine and OS user account, because
-  anyone with local filesystem access to your user profile may be able to read Claude Code
-  credential files.
-- Network requests made by the extension go only to Anthropic endpoints needed for token refresh,
-  usage-limit checks, and identifying which account a login belongs to (`/api/oauth/profile`,
-  the same endpoint Claude Code calls after login).
-- This tool is for managing **your own** accounts.
-- The usage endpoint and the token-refresh flow are **unofficial** and may change or stop working
-  on Anthropic's side.
-- Currently the file-based `.credentials.json` model is supported (Windows/Linux). The macOS
-  Keychain is not supported yet.
-
-## Usage history and analytics
+## Usage analytics
 
 ![Usage analytics: bar charts by level, used or available, legend, folding, capacity utilization](docs/analytics.gif)
 
-Turn on `accountManagerForClaude.usageHistory.enabled` (or the **Collect usage history** switch at the
-top of the analytics page, which also turns it off) to record every saved account's limits once a minute (`usageHistory.intervalSeconds`).
-Readings stay on this computer, in the extension's storage; unchanged readings are stored only
-every 15 minutes, and data older than `usageHistory.retentionDays` (90) is deleted.
+Turn on **Collect usage history** (on the analytics page or in settings) to record every account's
+limits once a minute. Readings stay on this computer and are kept for 90 days by default.
 
-**Show usage analytics** (the chart icon in the panel's title bar) charts that history, one chart per limit
-(5h, weekly, Fable, ...):
+Open **Show usage analytics** (the chart icon in the panel's title bar) to see:
 
-- ranges of 1 day, 1 week, 1 month, 3 months, everything kept, or a custom from/to;
-- one shared legend at the left lists the accounts, each name in its chart color with a checkbox;
-  tick or untick an account to show or hide it in every chart (one, several, or all accounts can
-  share a chart);
-- **Used %** (how much of each limit was used) or **Available %** (how much was left); where a
-  chart interval holds several readings, Used % shows the highest and Available % the lowest;
-- bar (the default), stacked bar, line, or area charts; the vertical axis always spans 0-100%
-  (a stacked bar may grow past it when accounts add up). Bars are colored by level like the
-  panel's usage bars: green below 60%, orange from 60%, red from 80% used;
-- hovering a chart shows thin dashed guide lines to both axes;
-- every chart folds up with the arrow in its header (or a double-click on the header); a folded
-  chart keeps a small sparkline in the header, and the fold state is remembered;
-- a Refresh button in the header reloads the charts; they also reload every 2 minutes on their
-  own (and shortly after new readings arrive), with "updated … ago" showing the data's age;
-- **Capacity utilization** below the charts: how much of the capacity each limit offered was
-  actually used, for the selected accounts and period. A 5h limit refills every 5 hours and a
-  weekly limit (Fable included) every 7 days, so capacity not used before a reset is lost; the
-  figures and charts show used capacity over offered capacity, per limit and for all limits
-  together (per 5h or per week on the charts, overall for the whole period), and each limit's
-  figure lists every selected account's own utilization underneath;
-- **By calendar period** under that: the same utilization grouped by **weekday** (every Monday in
-  the range together, ...), **hour of day** (the daily rhythm), **week**, or **month**, as a bar
-  per period colored by level with each account as a line over it, and the best and lowest period
-  named in the caption.
+- **Charts per limit** (5h, weekly, Fable, ...) over 1 day, 1 week, 1 month, 3 months, everything,
+  or a custom range. Show **Used %** or **Available %** as bar, stacked bar, line, or area charts.
+  Bars are green below 60%, orange from 60%, and red from 80% used.
+- **A shared legend** with a checkbox per account to show or hide it in every chart.
+- **Capacity utilization:** how much of the capacity each limit offered was actually used. A 5h
+  limit refills every 5 hours and a weekly limit every 7 days, so capacity not used before a reset
+  is lost. You see the overall figure, a figure per limit and per account, and charts over time.
+- **By calendar period:** the same utilization grouped by weekday, hour of day, week, or month,
+  with the best and lowest period named.
 
-**Delete collected usage history** removes all recorded readings.
+Charts fold into a small sparkline, show guide lines on hover, and refresh every 2 minutes.
+**Delete collected usage history** removes all readings.
 
 ## Availability calendar
 
 ![Availability calendar: week and day views, limit lanes, filters, and the cards below](docs/calendar.gif)
 
-**Show account availability calendar** (the calendar icon in the title bar, left of Refresh) shows when every account can be used,
-as a week from Monday to Sunday or, after clicking a day, hour by hour:
+Open **Show account availability calendar** (the calendar icon in the title bar) to see when each
+account can be used, for a week or hour by hour for a single day.
 
-- the same search, **All / Available / Limited**, plan and model-limit filters and sort orders as
-  the accounts panel; the calendar starts from the panel's current choices when it opens and then
-  keeps its own, so you can try other views without changing the panel;
-- in **Custom order**, drag an account's row onto another (or focus its grip and press Up / Down)
-  to reorder; this changes the same saved order the accounts panel uses;
-- below the timeline, a **Right now** card per account with its own numbers for the shown
-  period: how much of the measured time so far was usable (a stacked bar of available / 80%+ /
-  limited), how often a limit ran out and for how long at most, and the projected share ahead; available now, or how long until it is usable again, with
-  each limit's current percent and a **Switch** button for accounts that are available;
-- for each limit you tick under **Limits** (**5h**, **Fable**, and, when an account has them,
-  weekly and other model-specific limits), a lane under the account's name. With exactly one limit
-  ticked, its bar sits beside the name instead; with none ticked, an overall bar shows whether any
-  limit blocks the account;
-- green = available, amber = 80%+ used, red = limited, grey = no data; markers show reset times
-  and a red line shows now.
+- Pick which limits to show (5h, weekly, Fable, ...). Each gets its own lane per account.
+- Green is available, amber is 80%+ used, red is limited, and gray is no data. Markers show reset
+  times and a red line shows now.
+- The past comes from collected usage history. The future is projected from the latest reading
+  and drawn striped.
+- Use the same filters and sorting as the panel, and drag rows to reorder in custom order.
+- A **Right now** card per account shows its current state, how usable it was in the period, how
+  often it ran out, and a **Switch** button.
 
-The past comes from collected usage history (turn collection on from the analytics page); the future is projected from the latest reading
-(a used-up limit stays blocked until its reset time, then counts as free) and is drawn striped.
+## Getting started
 
-## Backup and restore
+1. Log in to Claude Code with your first account.
+2. Open the **MultiAccount** panel from the activity bar and click **Save this account**.
+3. Click **Add account** and log in with another account. The current account is not changed.
+4. Switch with the blue **Switch** button on a card, the status bar, or `Claude: Switch account`.
+5. **Reload the window after switching** so Claude Code picks up the new account. The extension
+   offers to do it, or turn on `autoReloadAfterSwitch`.
 
-Use **Back up** / **Restore** in the panel's **⋯** title menu (or the commands above). The
-backup is a standard ZIP whose single entry `accounts.json` is AES-256 encrypted with your
-password, so it can also be opened with 7-Zip. It contains **login tokens**: anyone with the file
-and the password can use those accounts, so store it like a password. The backup also keeps
-the panel's sort and filter choices and your user-level extension settings (except
-`credentialsPath`, which is specific to each machine); restoring applies them.
+> **Never use `/logout` to change accounts.** It revokes that login on Anthropic's side, and a
+> saved copy dies with it. Use **Switch**, **Add account**, or `/login` instead.
 
-Restoring merges the backup into the current list. Missing accounts are added. For accounts that
-already exist, the backup's tokens are used only if they are newer. Refresh tokens rotate, so
-tokens in an old backup may already be spent. Use **Reauthorize** on such accounts. Do not run the
-same restored account on two machines at once; each rotation invalidates the other copy.
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `Claude: Switch account` | Pick an account, with its usage limits |
+| `Claude: Save current account as profile` | Save the account Claude Code is logged in with |
+| `Claude: Add another account (isolated login)` | Log in to another account without touching the current one |
+| `Claude: Refresh accounts, current login and limits` | Re-read everything now |
+| `Claude: Refresh usage limits` | Re-read usage limits now |
+| `Claude: Show accounts panel` | Open the accounts panel |
+| `Claude: Show usage analytics` | Open the analytics page |
+| `Claude: Show account availability calendar` | Open the availability calendar |
+| `Claude: Open independent account window` | Open this project in a new window for one account |
+| `Claude: Log in from terminal (replaces the current account)` | Run `claude auth login` (or browser login without the CLI) |
+| `Claude: Authorize in browser (without CLI)` | Log in through the browser |
+| `Claude: Reauthorize account profile` | Log a saved account in again, without touching the active one |
+| `Claude: Complete profile reauthorization` | Finish a reauthorization |
+| `Claude: Undo last switch` | Restore the previous account |
+| `Claude: Rename account profile` / `Remove account profile` | Manage saved accounts |
+| `Claude: Back up account list (password-protected ZIP)` | Save all accounts to an encrypted ZIP |
+| `Claude: Restore account list from backup` | Merge a backup into the list |
+| `Claude: Delete collected usage history` | Remove all usage readings |
+| `Claude: About Account Manager for Claude` | Version, author, and project information |
+
+## Settings
+
+All settings start with `accountManagerForClaude.`.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `autoRefresh` | `true` | Check all accounts' usage limits regularly |
+| `pollIntervalSeconds` | `240` | Seconds between checks (minimum 60; short intervals with many accounts can hit rate limits) |
+| `notifyOnLimitReset` | `true` | Notify when a used-up limit is available again |
+| `autoReloadAfterSwitch` | `false` | Reload the window automatically after switching |
+| `warnThresholdPercent` | `80` | Usage bars and the status bar turn red from this percent, and orange from 75% of it |
+| `usageHistory.enabled` | `false` | Collect usage history for analytics and the calendar |
+| `usageHistory.intervalSeconds` | `60` | Seconds between usage readings (minimum 60) |
+| `usageHistory.retentionDays` | `90` | Days of usage history to keep |
+| `credentialsPath` | `""` | Custom path to `.credentials.json` (empty means `~/.claude/.credentials.json`) |
+| `claudeCommand` | `claude` | The Claude Code CLI command; use the full path if VS Code can't find it |
+
+## How it works
+
+- **Switching** replaces `~/.claude/.credentials.json` and the cached account in `~/.claude.json`.
+  A `.bak` copy lets you undo. Saved accounts are kept in VS Code's encrypted SecretStorage.
+- **Usage** comes from Anthropic's unofficial usage endpoint, the same source as `/usage`. It is
+  rate-limited, so checks run every 240 seconds by default, plus manual refresh.
+
+### Token handling
+
+Claude Code's refresh tokens work only once: each refresh replaces the token and invalidates the
+old one. If two programs share a login and one refreshes, the other is logged out. To prevent
+this, the extension:
+
+- takes Claude Code's own refresh lock before refreshing, so Claude Code waits and picks up the
+  new token;
+- writes every new token back to all local copies and to the saved account;
+- always uses the newest token it can find, and refreshes only when the current one is expiring;
+- watches `.credentials.json` and picks up Claude Code's own refreshes immediately;
+- saves the account you switch away from first, so it keeps its latest token;
+- never retries a token the server rejected.
+
+Each login is independent, so logging in on another computer doesn't affect this one. Saved
+accounts are stored per machine; add them on each computer, or use a backup.
+
+### Parallel windows
+
+By default all VS Code windows share one Claude Code login. **Open independent account window**
+(or the **Window** item on a card) opens the project in a new window that uses its own config
+directory through `CLAUDE_CONFIG_DIR`. You can run one window per account. The extension won't
+open a second window for the same account, because both would spend the same refresh token.
+
+### Backup and restore
+
+**Back up** and **Restore** are in the panel's **⋯** menu. The backup is a ZIP encrypted with
+AES-256 and your password; 7-Zip can open it too. It also stores your panel choices and settings
+(except `credentialsPath`).
+
+- **It contains login tokens.** Anyone with the file and the password can use those accounts.
+- Restoring merges into the current list. It adds missing accounts and uses the backup's tokens
+  only if they are newer.
+- Tokens in an old backup may already be spent; use **Reauthorize** on those accounts.
+- Don't use the same restored account on two machines at once.
+
+## Requirements and troubleshooting
+
+- VS Code 1.85 or newer, on Windows or Linux. The macOS Keychain isn't supported yet.
+- The Claude Code CLI is optional for switching, usage checks, and browser login. Logging in from
+  the terminal needs it.
+
+If the extension says `claude` is not recognized:
+
+1. Run `where claude` in PowerShell or CMD.
+2. If it's found, restart VS Code so it picks up the updated PATH.
+3. If it isn't found, install the CLI. On Windows: `irm https://claude.ai/install.ps1 | iex`
+4. If VS Code still can't find it, set `claudeCommand` to the full path, e.g.
+   `C:\Users\you\AppData\Roaming\npm\claude.cmd`.
+
+## Privacy and security
+
+- **No telemetry.** The extension collects no data and sends nothing to its author, publisher,
+  or any third-party server.
+- **Network requests go only to Anthropic**, for token refresh, usage limits, and identifying an
+  account (`/api/oauth/profile`, the same call Claude Code makes after login).
+- Saved accounts are kept in VS Code's encrypted SecretStorage. Credentials are written only to
+  local Claude Code config folders and are never logged.
+- Anyone with access to your user profile can read Claude Code's credential files, so protect your
+  computer account.
+- Use it only for **your own** accounts. The usage endpoint and the token refresh are unofficial
+  and may change on Anthropic's side.
 
 ## Development
 
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 18 or newer (npm included)
-- VS Code 1.85 or newer
-- Claude Code installed, for testing login
-
-```bash
-npm install
-```
-
-### Compile
+Requires [Node.js](https://nodejs.org/) 18+ and VS Code 1.85+. Run `npm install` first.
 
 | Script | What it does |
 | --- | --- |
-| `npm run compile` | one-off development build to `dist/extension.js` (with source maps) |
-| `npm run watch` | rebuilds on every change in `src/` |
-| `npm run package` | minified production build (what gets shipped) |
-| `npm run typecheck` | runs `tsc --noEmit`; esbuild does not type-check |
-| `npm run test:smoke` | runs the smoke tests in `test/` |
-| `npm run build:vsix` | production build plus `vsce package`: the installable `.vsix` |
-| `npm run install:vsix` | installs the built `.vsix` into your regular VS Code (`code --install-extension`) |
-| `npm run deploy` | `build:vsix` then `install:vsix`: one command after a code change |
-| `npm run publish` | typecheck + tests, then `vsce publish` of the version in `package.json` |
-| `npm run release` | typecheck + tests, then `vsce publish patch`: bump, commit, tag, publish |
+| `npm run compile` / `watch` | Development build, once or on every change |
+| `npm run package` | Minified production build |
+| `npm run typecheck` | Type-check with `tsc` (the build itself doesn't) |
+| `npm run test:smoke` | Run the tests |
+| `npm run build:vsix` | Build the installable `.vsix` |
+| `npm run install:vsix` | Install the built `.vsix` into VS Code |
+| `npm run deploy` | Build and install in one step |
+| `npm run publish` / `release` | Check, then publish to the Marketplace (`release` also bumps the patch version) |
 
-The webview pages (`webview/*.js`: the accounts panel, usage analytics, and availability
-calendar) are bundled by esbuild into `dist/webview/`, so run `npm run compile` (or `watch`) after
-editing them; only the stylesheets in `media/` are loaded as-is. Logic shared by pages, such as
-sorting and filtering the account list, lives in `src/` and is imported by the page scripts.
+- **Run and debug:** open the folder and press **F5** to start an Extension Development Host. Run
+  **Developer: Reload Window** there after changes, and **Developer: Open Webview Developer Tools**
+  to debug the pages. The development host uses your real Claude credentials, so be careful with
+  Switch, Remove, and logins.
+- **Webview code:** `webview/*.js` is bundled into `dist/webview/`, so rebuild after editing it.
+  Shared logic lives in `src/`.
+- **Install the `.vsix` from VS Code**, not by double-clicking it in Explorer: that may open
+  Visual Studio's installer, which can't install VS Code extensions.
 
-### Run and debug in VS Code
+### Publishing
 
-1. Open this folder in VS Code.
-2. Press **F5** (or **Run and Debug → Run Extension**). This compiles the extension and opens an
-   **Extension Development Host** window with it loaded.
-3. In that window, open the **MultiAccount** icon in the activity bar.
-4. After editing code, run **Developer: Reload Window** (`Ctrl+R` / `Cmd+R`) in the Extension
-   Development Host. Keep `npm run watch` running to rebuild automatically.
-5. To debug the webview, run **Developer: Open Webview Developer Tools** in the Extension
-   Development Host.
+1. Create a publisher at <https://marketplace.visualstudio.com/manage>. Its ID must match
+   `publisher` in `package.json`.
+2. In Azure DevOps (<https://dev.azure.com>), create a Personal Access Token with
+   **Organization: All accessible organizations** and the scope **Marketplace → Manage**.
+3. Run `npx vsce login <publisher-id>`, or set the token in the `VSCE_PAT` environment variable.
+   Never commit it.
+4. Update `CHANGELOG.md`, then run `npm run publish` or `npm run release`. Both stop if the type
+   check or tests fail.
 
-The development host shares your real `~/.claude` credentials and VS Code SecretStorage. Be
-careful with **Switch**, **Remove**, and logins while testing.
-
-### Package and install locally
-
-```bash
-npm run build:vsix
-```
-
-This creates `account-manager-for-claude-<version>.vsix` in the project root. Install it
-into your regular VS Code with
-
-```bash
-npm run install:vsix
-```
-
-or do both steps at once with `npm run deploy`. Both use the `code` command-line tool, so VS Code
-must be on your `PATH` (on Windows the installer adds it; otherwise run **Shell Command: Install
-'code' command in PATH** from the command palette). Alternatively use **Extensions → ⋯ → Install
-from VSIX…**. Note that double-clicking a `.vsix` file in Explorer may open Visual Studio's own
-installer, which cannot install VS Code extensions; use one of the ways above instead. Either way,
-reload the window afterwards. To remove the extension, uninstall it from the Extensions view. Run `npx vsce ls` to list the files that will go into the package;
-exclusions are configured in `.vscodeignore`.
-
-### Publish to the Visual Studio Marketplace
-
-1. **Create a publisher** at <https://marketplace.visualstudio.com/manage> (sign in with a
-   Microsoft account). The publisher **ID** (lowercase, no spaces, e.g. `tursoft`) must match
-   the `publisher` field in `package.json` exactly.
-2. **Create a Personal Access Token** in Azure DevOps (<https://dev.azure.com> → *User settings →
-   Personal access tokens*) with **Organization: All accessible organizations** and the scope
-   **Marketplace → Manage**.
-3. **Make the token available** in one of two ways: log in once with vsce (it prompts for the
-   token and stores it), or put it in the `VSCE_PAT` environment variable, which is what a CI job
-   or a script-only workflow uses. Never commit the token.
-
-   ```bash
-   npx vsce login <publisher-id>
-   ```
-
-4. **Bump the version** in `package.json` and add an entry to `CHANGELOG.md`. Alternatively, let
-   vsce bump the version for you (see the next step).
-5. **Publish** with the npm scripts, which run the typecheck and the smoke tests first and
-   stop if either fails:
-
-   ```bash
-   npm run publish             # publishes the version in package.json
-   npm run release             # or: bump the patch version, commit, tag and publish
-   ```
-
-   (`npx vsce publish minor` / `major` do the same for bigger bumps.) `vscode:prepublish` runs
-   the production build automatically. You can also upload a `.vsix` built with
-   `npm run build:vsix` manually on the publisher management page.
-
-The listing usually appears within a few minutes. The Marketplace shows `README.md` as the
-extension page, `CHANGELOG.md` as the changelog, and uses `icon` and `galleryBanner` from
-`package.json`. To publish to [Open VSX](https://open-vsx.org/) (VSCodium, Cursor, etc.) too,
-use `npx ovsx publish -p <token>` with a token from open-vsx.org.
+To publish to [Open VSX](https://open-vsx.org/) as well, run `npx ovsx publish -p <token>`.
 
 ## License
 
