@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 import * as vscode from "vscode";
 import { AccountStore } from "./accountStore";
 import { AccountWindowService } from "./accountWindow";
@@ -24,6 +25,7 @@ import {
 import { defaultProfileLabel, identityLabel, profileIdentity, sameIdentity } from "./identity";
 import { getAccountConfigDir } from "./isolatedConfig";
 import { LimitResetNotifier } from "./limitNotifier";
+import { UsageHistory } from "./usageHistory";
 import { TokenRefresher } from "./oauth";
 import { ProfileActivityRegistry } from "./profileActivity";
 import { SwitchService } from "./switchService";
@@ -471,7 +473,13 @@ export function activate(context: vscode.ExtensionContext): void {
     sync,
     getInterval,
     refreshUI,
-    (id, previous, next) => limitNotifier.onSnapshot(id, previous, next),
+    (id, previous, next) => {
+      limitNotifier.onSnapshot(id, previous, next);
+      if (historyEnabled()) {
+        const profile = store.get(id);
+        void history.record(id, next, { label: profile?.label, plan: profile?.subscriptionType });
+      }
+    },
     applyCurrentState
   );
   poller.onBusyChange = (ids, all) => viewProvider.setBusy(ids, all);
@@ -778,6 +786,48 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
+  // --- Usage history ---
+
+  const history = new UsageHistory(path.join(context.globalStorageUri.fsPath, "usage-history"));
+  const historyEnabled = () => config().get<boolean>("usageHistory.enabled", false);
+  let historyTimer: NodeJS.Timeout | undefined;
+  let historyPruneTimer: NodeJS.Timeout | undefined;
+
+  /** While collection is on, reads every account's usage once per configured period. */
+  const restartHistoryCollection = () => {
+    clearInterval(historyTimer);
+    clearInterval(historyPruneTimer);
+    historyTimer = historyPruneTimer = undefined;
+    if (!historyEnabled()) {
+      return;
+    }
+    const seconds = Math.max(MIN_POLL_INTERVAL_SECONDS, config().get<number>("usageHistory.intervalSeconds", 60));
+    historyTimer = setInterval(() => void poller.pollAll(false), seconds * 1000);
+    const prune = () => void history.prune(config().get<number>("usageHistory.retentionDays", 90));
+    prune();
+    historyPruneTimer = setInterval(prune, 86_400_000);
+  };
+  context.subscriptions.push({
+    dispose: () => {
+      clearInterval(historyTimer);
+      clearInterval(historyPruneTimer);
+    },
+  });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.clearUsageHistory", async () => {
+      const confirm = await vscode.window.showWarningMessage(
+        "Delete all collected usage history? Charts and the availability calendar lose their past data.",
+        { modal: true },
+        "Delete history"
+      );
+      if (confirm === "Delete history") {
+        await history.clear();
+        vscode.window.showInformationMessage("Usage history deleted.");
+      }
+    })
+  );
+
   // --- Backup / restore ---
 
   // Machine-specific settings stay out of backups.
@@ -960,6 +1010,9 @@ export function activate(context: vscode.ExtensionContext): void {
       ) {
         poller.restart();
       }
+      if (e.affectsConfiguration("tursoftClaudeSwitcher.usageHistory")) {
+        restartHistoryCollection();
+      }
       if (e.affectsConfiguration("tursoftClaudeSwitcher.warnThresholdPercent")) {
         refreshUI();
       }
@@ -984,6 +1037,7 @@ export function activate(context: vscode.ExtensionContext): void {
   void synchronizeCurrentProfile().then(() => {
     refreshUI();
     poller.start();
+    restartHistoryCollection();
   });
 }
 

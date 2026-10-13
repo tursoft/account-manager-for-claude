@@ -147,6 +147,10 @@
         "command": "tursoftClaudeSwitcher.openSettings",
         "title": "Claude: Open extension settings",
         "icon": "$(gear)"
+      },
+      {
+        "command": "tursoftClaudeSwitcher.clearUsageHistory",
+        "title": "Claude: Delete collected usage history"
       }
     ],
     "menus": {
@@ -272,6 +276,23 @@
           "default": 120,
           "minimum": 15,
           "markdownDescription": "Maximum time to wait for a Say Hi warmup command."
+        },
+        "tursoftClaudeSwitcher.usageHistory.enabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Collect a usage reading of every saved account every `#tursoftClaudeSwitcher.usageHistory.intervalSeconds#` seconds and keep it on this computer, for the usage analytics charts and the availability calendar. Readings that repeat the previous values are not stored again (except every 15 minutes)."
+        },
+        "tursoftClaudeSwitcher.usageHistory.intervalSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 60,
+          "markdownDescription": "How often (in seconds, minimum 60) usage is read while `#tursoftClaudeSwitcher.usageHistory.enabled#` is on. Short periods with many accounts can hit the usage endpoint's rate limit (HTTP 429), which pauses that account for 5 minutes."
+        },
+        "tursoftClaudeSwitcher.usageHistory.retentionDays": {
+          "type": "number",
+          "default": 90,
+          "minimum": 1,
+          "markdownDescription": "How many days of collected usage history to keep."
         }
       }
     }

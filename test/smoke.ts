@@ -13,6 +13,7 @@ import { sameIdentity } from "../src/identity";
 import { ProfileActivityRegistry } from "../src/profileActivity";
 import { SwitchService } from "../src/switchService";
 import { findResetWindows } from "../src/limitNotifier";
+import { HISTORY_HEARTBEAT_MS, UsageHistory } from "../src/usageHistory";
 import { ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "../src/types";
 
 let failures = 0;
@@ -767,12 +768,49 @@ function runLimitResetTests(): void {
   );
 }
 
+async function runUsageHistoryTests(): Promise<void> {
+  console.log("usage history:");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "usage-history-"));
+  const history = new UsageHistory(dir);
+  const snap = (session: number, fable: number): UsageSnapshot => ({
+    fetchedAt: 0,
+    sessionPercent: session,
+    weeklyPercent: null,
+    windows: [
+      { kind: "session", label: "Session (5h)", percent: session, severity: "normal", resetsAt: null },
+      { kind: "weekly_fable", label: "Weekly (Fable)", percent: fable, severity: "normal", resetsAt: null },
+    ],
+  });
+  const t0 = Date.UTC(2026, 0, 31, 23, 0);
+  check("records the first reading", await history.record("a", snap(10, 5), { label: "A" }, t0));
+  check("skips an unchanged reading", !(await history.record("a", snap(10, 5), { label: "A" }, t0 + 60_000)));
+  check("records a changed reading", await history.record("a", snap(12, 5), { label: "A" }, t0 + 120_000));
+  check(
+    "records an unchanged reading after the heartbeat",
+    await history.record("a", snap(12, 5), { label: "A" }, t0 + 120_000 + HISTORY_HEARTBEAT_MS)
+  );
+  // Next month (February): a separate file.
+  await history.record("b", snap(1, 2), { label: "B" }, Date.UTC(2026, 1, 1, 1, 0));
+
+  const all = await history.query(t0 - 1, Date.UTC(2026, 1, 2));
+  check("queries across month files", all.length === 4 && all[3].id === "b");
+  check("keeps limit values per kind", all[1].w.session === 12 && all[1].w.weekly_fable === 5);
+  check("keeps window labels", all[0].n?.weekly_fable === "Weekly (Fable)");
+  check("filters by time range", (await history.query(t0 + 60_000, t0 + 130_000)).length === 1);
+
+  await history.prune(10, Date.UTC(2026, 1, 20));
+  const afterPrune = await history.query(0, Date.UTC(2026, 2, 1));
+  check("prune removes months past retention", afterPrune.length === 1 && afterPrune[0].id === "b");
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 runProfileActivityTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();
 runAccountStoreTests()
   .then(runBackupTests)
+  .then(runUsageHistoryTests)
   .then(runClaudeLockTests)
   .then(runCredentialSyncTests)
   .then(runUsagePollerTests)
