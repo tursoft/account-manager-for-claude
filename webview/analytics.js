@@ -45,7 +45,7 @@ const RANGES = { "1d": DAY, "1w": 7 * DAY, "1m": 30 * DAY, "3m": 90 * DAY };
 const saved = vscode.getState() || {};
 const ui = {
   range: saved.range || "1w",
-  mode: saved.mode || "limit",
+  mode: saved.mode === "available" ? "available" : "used", // older saved states used "limit" / "usage"
   chartType: saved.chartType || "line",
   selected: saved.selected || null, // null = all accounts
   customFrom: saved.customFrom || null,
@@ -286,13 +286,12 @@ function render() {
     title.textContent = label;
     const sub = document.createElement("span");
     sub.className = "caption";
+    const used = ui.mode === "used";
     sub.textContent = isPie
-      ? ui.mode === "limit"
-        ? "Average % used in the range, per account"
-        : "Total % of the limit used in the range, per account"
-      : ui.mode === "limit"
+      ? `Average % ${used ? "used" : "available"} in the range, per account`
+      : used
         ? `Highest % used per ${fmtDuration(bucketMs)}`
-        : `% of the limit used per ${fmtDuration(bucketMs)}`;
+        : `Lowest % available per ${fmtDuration(bucketMs)}`;
     head.append(title, sub);
     const wrap = document.createElement("div");
     wrap.className = "canvas-wrap" + (isPie ? " pie" : "");
@@ -313,7 +312,7 @@ function render() {
 
     let config;
     if (isPie) {
-      const totals = series.map((s) => ({ acc: s.acc, total: seriesTotal(s.values, ui.mode) ?? 0 }));
+      const totals = series.map((s) => ({ acc: s.acc, total: seriesTotal(s.values) ?? 0 }));
       config = {
         type: ui.chartType,
         data: {
@@ -370,8 +369,8 @@ function render() {
             },
             y: {
               stacked,
-              // Always 0-100% (a limit is 100%), whatever the data. A stacked bar adds the
-              // accounts up, so it keeps 0-100% as a minimum but may grow past it.
+              // Always 0-100% (a limit is 100%). A stacked bar adds the accounts up, so it
+              // keeps 0-100% as a minimum but may grow past it.
               min: 0,
               max: stacked ? undefined : 100,
               suggestedMax: stacked ? 100 : undefined,
@@ -383,10 +382,7 @@ function render() {
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: (c) =>
-                  c.parsed.y === null
-                    ? null
-                    : ` ${c.dataset.label}: ${c.parsed.y}%${c.parsed.y > 100 && !stacked ? " (above the 0-100% scale)" : ""}`,
+                label: (c) => (c.parsed.y === null ? null : ` ${c.dataset.label}: ${c.parsed.y}%`),
               },
             },
           },

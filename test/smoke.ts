@@ -14,7 +14,7 @@ import { ProfileActivityRegistry } from "../src/profileActivity";
 import { SwitchService } from "../src/switchService";
 import { findResetWindows } from "../src/limitNotifier";
 import { HISTORY_HEARTBEAT_MS, HistoryPoint, UsageHistory } from "../src/usageHistory";
-import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal, usageDelta } from "../src/historySeries";
+import { bucketSeries, bucketSizeFor, kindsIn, seriesTotal } from "../src/historySeries";
 import { buildTimeline, Segment } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
@@ -868,21 +868,18 @@ function runHistorySeriesTests(): void {
   // Minutes 0..60: 10% -> 30% -> reset -> 5%, then a long gap, then 50% at minute 200.
   const points = [p(-5, 8), p(0, 10, 1), p(20, 30), p(40, 5), p(200, 50)];
 
-  check("usage delta of a rise", usageDelta(10, 30) === 20);
-  check("usage delta across a reset", usageDelta(30, 5) === 5);
   check(
     "kinds ordered session first",
     kindsIn(points).map((k) => `${k.kind}:${k.label}`).join() === "session:Session (5h),weekly_fable:Weekly (Fable)"
   );
   check("bucket size keeps about 100 buckets", bucketSizeFor(86_400_000) === 15 * m);
 
-  const limit = bucketSeries(points, "a", "session", 0, 120 * m, 30 * m, "limit");
-  check("limit mode: highest value per bucket, carried, gap after 30 min", JSON.stringify(limit) === "[30,30,5,null]");
-  const usage = bucketSeries(points, "a", "session", 0, 120 * m, 30 * m, "usage");
-  check("usage mode: summed deltas incl. reset, seeded before the range", JSON.stringify(usage) === "[22,5,0,null]");
-  check("other accounts are ignored", bucketSeries(points, "b", "session", 0, 60 * m, 30 * m, "limit").every((v) => v === null));
-  check("pie total: average in limit mode", seriesTotal([30, 5, null], "limit") === 17.5);
-  check("pie total: sum in usage mode", seriesTotal([22, 5, 0, null], "usage") === 27);
+  const used = bucketSeries(points, "a", "session", 0, 120 * m, 30 * m, "used");
+  check("used: highest percent per bucket, carried over, a gap after 30 min", JSON.stringify(used) === "[30,30,5,null]");
+  const available = bucketSeries(points, "a", "session", 0, 120 * m, 30 * m, "available");
+  check("available: what was left at the busiest point of each bucket", JSON.stringify(available) === "[70,70,95,null]");
+  check("other accounts are ignored", bucketSeries(points, "b", "session", 0, 60 * m, 30 * m, "used").every((v) => v === null));
+  check("pie total: the average over buckets with data", seriesTotal([30, 5, null]) === 17.5 && seriesTotal([null]) === null);
 }
 
 function runAvailabilityTests(): void {

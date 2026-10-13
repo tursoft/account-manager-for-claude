@@ -9,8 +9,8 @@ import { HISTORY_HEARTBEAT_MS, HistoryPoint } from "./historyTypes";
 /** A value older than this is not carried forward: collection was off or failing. */
 export const CARRY_MS = 2 * HISTORY_HEARTBEAT_MS;
 
-/** "limit" = percent used at the time; "usage" = how much of the limit was used during a bucket. */
-export type SeriesMode = "limit" | "usage";
+/** "used" = percent of the limit used; "available" = percent of it still left (100 minus used). */
+export type SeriesMode = "used" | "available";
 
 export interface LimitKind {
   kind: string;
@@ -49,17 +49,9 @@ export function bucketStarts(from: number, to: number, bucketMs: number): number
 }
 
 /**
- * Usage between consecutive readings: the increase of the percent, or, when the
- * percent dropped (the limit reset in between), the percent reached since the reset.
- */
-export function usageDelta(previous: number, next: number): number {
-  return next >= previous ? next - previous : next;
-}
-
-/**
  * One value per bucket for an account's limit; null where nothing is known.
- * In "limit" mode a bucket shows the highest percent reached in it; in "usage"
- * mode the percent used during it (sum of the deltas of readings in it).
+ * A bucket takes the busiest moment in it: "used" shows the highest percent used,
+ * "available" the lowest percent left (100 minus that).
  * `points` may include readings before `from`, which seed the first buckets.
  */
 export function bucketSeries(
@@ -92,31 +84,24 @@ export function bucketSeries(
     const end = start + bucketMs;
     const carried = last && start - last.t <= CARRY_MS ? last : undefined;
     let max = carried ? carried.w[kind] : null;
-    let used = 0;
-    let seen = Boolean(carried);
     while (i < readings.length && readings[i].t < end) {
       const r = readings[i++];
       const v = r.w[kind];
-      if (last && r.t - last.t <= CARRY_MS) {
-        used += usageDelta(last.w[kind], v);
-      }
       max = max === null ? v : Math.max(max, v);
-      seen = true;
       last = r;
     }
-    if (seen) {
-      values[b] = mode === "limit" ? max : Math.round(used * 10) / 10;
+    if (max !== null) {
+      values[b] = mode === "used" ? max : 100 - max;
     }
   }
   return values;
 }
 
-/** One number per account for pie charts: average percent ("limit") or total used ("usage"). */
-export function seriesTotal(values: (number | null)[], mode: SeriesMode): number | null {
+/** One number per account for pie charts: the average over the buckets that have data. */
+export function seriesTotal(values: (number | null)[]): number | null {
   const known = values.filter((v): v is number => v !== null);
   if (known.length === 0) {
     return null;
   }
-  const sum = known.reduce((a, b) => a + b, 0);
-  return Math.round((mode === "limit" ? sum / known.length : sum) * 10) / 10;
+  return Math.round((known.reduce((a, b) => a + b, 0) / known.length) * 10) / 10;
 }

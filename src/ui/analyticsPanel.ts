@@ -174,8 +174,8 @@ export class AnalyticsPanel {
     <div class="control">
       <span class="label">Show</span>
       <div class="seg" id="mode" role="radiogroup" aria-label="Measure">
-        <button data-mode="limit" title="Percent of each limit in use at the time">Limit %</button>
-        <button data-mode="usage" title="How much of the limit was used in each interval (change from the previous reading)">Usage</button>
+        <button data-mode="used" title="How much of each limit was used, in percent">Used %</button>
+        <button data-mode="available" title="How much of each limit was still available, in percent">Available %</button>
       </div>
     </div>
     <div class="control">

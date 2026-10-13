@@ -38,7 +38,7 @@ First release of the Tursoft fork of
   hour, red beyond a day (gray while some limit is left). Relative times now update every 30 seconds.
 - Optional usage history (collected every minute by default, kept 90 days, stored locally) and a
   **Usage analytics** page with per-limit charts over selectable ranges, accounts, chart types,
-  and limit % or usage.
+  and used % or available % of each limit.
 - **Availability calendar**: a week or day timeline per account with an overall lane and a lane per
   limit (5h, weekly, Fable), past from history and future projected from reset times, plus a
   "right now" card per account. It has the accounts panel's filters and sort orders, starting from
