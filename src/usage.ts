@@ -22,6 +22,8 @@ interface RawLimit {
 interface RawUsage {
   five_hour?: RawWindow | null;
   seven_day?: RawWindow | null;
+  /** Scoped weekly windows, e.g. seven_day_opus, seven_day_fable. */
+  [scoped: `seven_day_${string}`]: RawWindow | null | undefined;
   limits?: RawLimit[];
 }
 
@@ -81,6 +83,25 @@ export function parseUsage(raw: RawUsage): UsageSnapshot {
         percent: Math.round(raw.seven_day.utilization ?? 0),
         severity: "normal",
         resetsAt: raw.seven_day.resets_at ?? null,
+      });
+    }
+    // Each scoped weekly window (a model such as Fable or Opus) gets its own limit.
+    for (const [key, value] of Object.entries(raw)) {
+      const scope = /^seven_day_(.+)$/.exec(key)?.[1];
+      if (!scope || !value || typeof value !== "object" || Array.isArray(value)) {
+        continue;
+      }
+      const w = value as RawWindow;
+      if (typeof w.utilization !== "number") {
+        continue;
+      }
+      const kind = `weekly_${scope}`;
+      windows.push({
+        kind,
+        label: labelFor(kind, "weekly"),
+        percent: Math.max(0, Math.min(100, Math.round(w.utilization))),
+        severity: "normal",
+        resetsAt: w.resets_at ?? null,
       });
     }
   }

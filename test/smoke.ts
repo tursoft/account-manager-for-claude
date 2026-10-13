@@ -746,6 +746,17 @@ function runLimitResetTests(): void {
   check("no reset when limit was not used up", findResetWindows(snap([["session", 99]]), snap([["session", 0]])).length === 0);
   const fable = parseUsage({ limits: [{ kind: "weekly_fable", group: "weekly", percent: 4 }] });
   check("labels model-specific weekly limits", fable.windows[0].label === "Weekly (Fable)");
+  const legacy = parseUsage({
+    five_hour: { utilization: 10, resets_at: null },
+    seven_day: { utilization: 20, resets_at: null },
+    seven_day_fable: { utilization: 30, resets_at: null },
+    seven_day_opus: null,
+  });
+  check(
+    "parses scoped weekly windows from the legacy shape",
+    legacy.windows.map((w) => `${w.kind}:${w.label}:${w.percent}`).join() ===
+      "session:Session (5h):10,weekly_all:Weekly (all):20,weekly_fable:Weekly (Fable):30"
+  );
 }
 
 runProfileActivityTests();
