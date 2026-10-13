@@ -1,6 +1,17 @@
 // Account availability calendar: a week (or one day) timeline per account, with
 // an overall "usable?" lane and one lane per limit (5h, weekly, Fable, ...).
 import { buildTimeline } from "../src/availability";
+import {
+  DEFAULT_LISTING,
+  filtersActive,
+  matchesListing,
+  normalizeListing,
+  planName,
+  planOf,
+  scopesOf,
+  SORTS,
+  sortAccounts,
+} from "../src/listing";
 
 const vscode = acquireVsCodeApi();
 const $ = (id) => document.getElementById(id);
@@ -12,6 +23,9 @@ const STATE_TEXT = { free: "Available", high: "80%+ used", limited: "Limited", n
 const saved = vscode.getState() || {};
 // `off`: limit kinds whose lane is hidden (every other lane is shown).
 const ui = { view: saved.view || "week", off: Array.isArray(saved.off) ? saved.off : [] };
+// Sort and filters: the same rules as the accounts panel (src/listing.ts). The extension
+// sends the panel's current choices when the page opens; from then on the page keeps its own.
+let listing = { ...DEFAULT_LISTING };
 let anchor = startOfDay(Date.now());
 let data = null;
 
@@ -100,6 +114,90 @@ function syncControls() {
     b.classList.toggle("on", on);
     b.setAttribute("aria-checked", String(on));
   }
+}
+
+// ---- sort and filters --------------------------------------------------------
+
+const searchInput = $("searchInput");
+const clearBtn = $("clearFilters");
+
+for (const s of SORTS) {
+  const o = document.createElement("option");
+  o.value = s.key;
+  o.textContent = s.label;
+  $("sortSelect").appendChild(o);
+}
+
+function setListing(next) {
+  listing = { ...listing, ...next };
+  render();
+}
+
+function clearFilters() {
+  searchInput.value = "";
+  setListing({ text: "", limit: "all", plan: "all", scope: "any" });
+}
+
+searchInput.addEventListener("input", () => setListing({ text: searchInput.value }));
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && searchInput.value) clearFilters();
+});
+$("limitFilter").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-limit]");
+  if (b) setListing({ limit: b.dataset.limit });
+});
+$("planSelect").addEventListener("change", (e) => setListing({ plan: e.target.value }));
+$("scopeSelect").addEventListener("change", (e) => setListing({ scope: e.target.value }));
+$("sortSelect").addEventListener("change", (e) => setListing({ sort: e.target.value }));
+clearBtn.addEventListener("click", clearFilters);
+
+/** Replaces a select's options, but only when they changed, so an open select is not disturbed. */
+function setOptions(select, options, value) {
+  const key = options.map(([v]) => v).join("|");
+  if (select.dataset.key !== key) {
+    select.dataset.key = key;
+    select.innerHTML = "";
+    for (const [v, text] of options) {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = text;
+      select.appendChild(o);
+    }
+  }
+  select.value = value;
+}
+
+/** Brings the controls in line with `listing`; plan and model-limit choices come from the accounts. */
+function syncListingControls(accounts) {
+  if (searchInput.value !== listing.text) searchInput.value = listing.text;
+  for (const b of $("limitFilter").querySelectorAll("[data-limit]")) {
+    const on = b.dataset.limit === listing.limit;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-checked", String(on));
+  }
+
+  const plans = [...new Set(accounts.map(planOf))];
+  if (listing.plan !== "all" && !plans.includes(listing.plan)) plans.push(listing.plan);
+  setOptions(
+    $("planSelect"),
+    [["all", "Any plan"], ...plans.sort().map((p) => [p, planName(p)])],
+    listing.plan
+  );
+
+  const scopes = {};
+  for (const acc of accounts) Object.assign(scopes, scopesOf(acc));
+  const scopeOptions = [["any", "Any model limit"]];
+  for (const [key, name] of Object.entries(scopes).sort()) {
+    scopeOptions.push([`has:${key}`, `With ${name} limit`], [`no:${key}`, `Without ${name} limit`]);
+  }
+  if (!scopeOptions.some(([v]) => v === listing.scope)) {
+    const [mode, key] = listing.scope.split(":");
+    scopeOptions.push([listing.scope, `${mode === "has" ? "With" : "Without"} ${key} limit`]);
+  }
+  setOptions($("scopeSelect"), scopeOptions, listing.scope);
+
+  $("sortSelect").value = listing.sort;
+  clearBtn.classList.toggle("hidden", !filtersActive(listing));
 }
 
 // ---- tooltip ---------------------------------------------------------------
@@ -194,11 +292,11 @@ function renderNow(accounts, timelines, now) {
     const name = el("div", "now-name", acc.label);
     name.title = acc.label;
     head.appendChild(name);
-    if (acc.plan) head.appendChild(el("span", "badge", acc.plan));
+    if (acc.subscriptionType) head.appendChild(el("span", "badge", acc.subscriptionType));
     card.appendChild(head);
 
     let status;
-    if (acc.expired) {
+    if (acc.needsReauthorization) {
       status = el("div", "now-status warn", "Login expired — reauthorize");
     } else if (tl.nextAvailableAt === null) {
       status = el("div", "now-status muted", acc.windows.length ? "Reset time unknown" : "No usage data yet");
@@ -220,7 +318,7 @@ function renderNow(accounts, timelines, now) {
     }
     card.appendChild(pills);
 
-    if (!acc.isActive && !acc.expired && tl.nextAvailableAt !== null && tl.nextAvailableAt <= now) {
+    if (!acc.isActive && !acc.needsReauthorization && tl.nextAvailableAt !== null && tl.nextAvailableAt <= now) {
       const sw = el("button", "switch", "Switch");
       sw.title = `Switch Claude Code to ${acc.label}`;
       sw.addEventListener("click", () => vscode.postMessage({ type: "switch", id: acc.id }));
@@ -329,9 +427,18 @@ function render() {
       ? new Date(from).toLocaleDateString([], o)
       : `${new Date(from).toLocaleDateString([], o)} – ${new Date(to - 1).toLocaleDateString([], { ...o, year: "numeric" })}`;
 
-  const timelines = accounts.map((acc) => buildTimeline(acc, points, from, to, now));
-  renderLimitChecks(limitOptions(timelines));
-  renderNow(accounts, timelines, now);
+  // Timelines for every account (the limit checkboxes and the filter options come from all
+  // of them); only the accounts passing the filters are shown, in the chosen order.
+  const timelines = new Map(accounts.map((acc) => [acc.id, buildTimeline(acc, points, from, to, now)]));
+  const order = new Map(accounts.map((acc, i) => [acc.id, i]));
+  const visible = sortAccounts(
+    accounts.filter((acc) => matchesListing(acc, listing)),
+    order,
+    listing.sort
+  );
+  renderLimitChecks(limitOptions([...timelines.values()]));
+  syncListingControls(accounts);
+  renderNow(visible, visible.map((acc) => timelines.get(acc.id)), now);
 
   const cal = $("calendar");
   cal.innerHTML = "";
@@ -340,15 +447,24 @@ function render() {
     cal.appendChild(el("div", "empty", "No saved accounts yet."));
     return;
   }
+  if (visible.length === 0) {
+    const empty = el("div", "empty");
+    empty.append("No accounts match the filters. ");
+    const clear = el("button", "link", "Clear filters");
+    clear.addEventListener("click", clearFilters);
+    empty.appendChild(clear);
+    cal.appendChild(empty);
+    return;
+  }
 
-  accounts.forEach((acc, i) => {
-    const tl = timelines[i];
-    const group = el("div", "group" + (acc.expired ? " expired" : ""));
+  visible.forEach((acc) => {
+    const tl = timelines.get(acc.id);
+    const group = el("div", "group" + (acc.needsReauthorization ? " expired" : ""));
     const row = el("div", "row overall-row");
     const label = el("div", "row-label");
     label.append(avatar());
     const name = el("span", "name", acc.label);
-    name.title = acc.plan ? `${acc.label} (${acc.plan})` : acc.label;
+    name.title = acc.subscriptionType ? `${acc.label} (${acc.subscriptionType})` : acc.label;
     label.appendChild(name);
     row.append(label, track(tl.overall, [], from, to, now, `${acc.label} (any limit)`, false));
     group.appendChild(row);
@@ -370,7 +486,11 @@ function render() {
 
 window.addEventListener("message", (event) => {
   const msg = event.data;
-  if (msg.type === "data") {
+  if (msg.type === "init") {
+    listing = normalizeListing(msg.listing);
+    syncListingControls(data ? data.accounts : []);
+    request();
+  } else if (msg.type === "data") {
     data = msg;
     render();
   } else if (msg.type === "changed") {
@@ -383,4 +503,6 @@ setInterval(request, 60_000);
 
 syncControls();
 renderLimitChecks(limitOptions([]));
-request();
+syncListingControls([]);
+// The extension answers with the accounts panel's sort and filters; the first data request follows.
+vscode.postMessage({ type: "ready" });

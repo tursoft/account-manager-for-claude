@@ -3,6 +3,7 @@ import { AccountStore } from "../accountStore";
 import { CurrentAccountState } from "../credentialSync";
 import { hasUsableOAuthCreds } from "../credentialValidation";
 import { identityLabel } from "../identity";
+import { ListingSettings, normalizeListing } from "../listing";
 import { requiresProfileReauthorization } from "../oauth";
 
 /** The Claude Code login of this window, when it is not one of the saved profiles. */
@@ -63,6 +64,13 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   private static readonly VIEW_SETTINGS_KEY = "tursoftClaudeSwitcher.viewSettings";
   /** Bumped when settings change outside the panel (a restore), so the panel adopts them. */
   private viewSettingsRev = 0;
+  /** The panel's search text; kept in memory only (it is not a saved setting). */
+  private searchText = "";
+
+  /** The panel's sort and filters, including the search text, to start another view from. */
+  getListingSeed(): ListingSettings {
+    return normalizeListing({ ...this.getViewSettings(), text: this.searchText });
+  }
 
   /** Panel choices (sort and filters), kept here so backups can include them. */
   getViewSettings(): Record<string, unknown> {
@@ -138,7 +146,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(
-      (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown }) => {
+      (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown; text?: unknown }) => {
       switch (msg.type) {
         case "loginCurrent":
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.login");
@@ -155,7 +163,15 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           }
           break;
         case "viewSettings":
-          if (msg.settings && typeof msg.settings === "object" && !Array.isArray(msg.settings)) {
+          if (typeof msg.text === "string") {
+            this.searchText = msg.text;
+          }
+          if (
+            msg.settings &&
+            typeof msg.settings === "object" &&
+            !Array.isArray(msg.settings) &&
+            JSON.stringify(msg.settings) !== JSON.stringify(this.getViewSettings())
+          ) {
             void this.memento.update(AccountsViewProvider.VIEW_SETTINGS_KEY, msg.settings);
           }
           break;

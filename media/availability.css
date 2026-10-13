@@ -332,6 +332,59 @@ button.ghost:hover {
   border-radius: 3px;
 }
 
+/* ---- sort and filters ------------------------------------------------ */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 12px;
+}
+
+.filters input[type="text"] {
+  width: 190px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid var(--vscode-input-border, var(--border));
+  border-radius: 6px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  outline: none;
+}
+
+.filters input[type="text"]::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--muted));
+}
+
+.filters input[type="text"]:focus,
+.filters select:focus {
+  border-color: var(--vscode-focusBorder, #3794ff);
+}
+
+.select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filters select {
+  padding: 4px 8px;
+  border: 1px solid var(--vscode-input-border, var(--border));
+  border-radius: 6px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  outline: none;
+}
+
+button.link {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+}
+
 /* ---- calendar ------------------------------------------------------- */
 
 .calendar {

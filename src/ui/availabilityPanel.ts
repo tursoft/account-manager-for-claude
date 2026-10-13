@@ -2,12 +2,15 @@ import * as vscode from "vscode";
 import { AccountStore } from "../accountStore";
 import { hasUsableOAuthCreds } from "../credentialValidation";
 import { CARRY_MS } from "../historySeries";
+import { ListingSettings } from "../listing";
 import { requiresProfileReauthorization } from "../oauth";
 import { UsageHistory } from "../usageHistory";
 
 export interface AvailabilityDeps {
   store: AccountStore;
   history: UsageHistory;
+  /** The accounts panel's sort and filters, which the calendar starts from. */
+  getInitialListing: () => ListingSettings;
 }
 
 /**
@@ -57,6 +60,10 @@ export class AvailabilityPanel {
 
   private async onMessage(msg: { type?: string; from?: unknown; to?: unknown; id?: unknown }): Promise<void> {
     switch (msg.type) {
+      case "ready":
+        // Start from the accounts panel's sort and filters; the page keeps its own from here on.
+        void this.panel.webview.postMessage({ type: "init", listing: this.deps.getInitialListing() });
+        break;
       case "range": {
         const from = Number(msg.from);
         const to = Number(msg.to);
@@ -92,11 +99,11 @@ export class AvailabilityPanel {
         return {
           id: p.id,
           label: p.label,
-          plan: p.subscriptionType,
+          subscriptionType: p.subscriptionType,
           isActive: p.id === activeId,
           windows: p.lastUsage?.windows ?? [],
           fetchedAt: p.lastUsage?.fetchedAt,
-          expired:
+          needsReauthorization:
             !hasUsableOAuthCreds(creds) ||
             this.deps.store.isRefreshTokenDead(p.id, creds?.refreshToken) ||
             requiresProfileReauthorization(p.lastUsage?.error),
@@ -156,6 +163,19 @@ export class AvailabilityPanel {
       <span><i class="sw nodata"></i>No data</span>
       <span><i class="sw free projected"></i>Projected</span>
     </div>
+  </section>
+
+  <section class="filters" aria-label="Filter and sort accounts">
+    <input id="searchInput" type="text" placeholder="Filter accounts" spellcheck="false" aria-label="Filter accounts" />
+    <div class="seg" id="limitFilter" role="radiogroup" aria-label="Limit filter">
+      <button data-limit="all" title="All accounts">All</button>
+      <button data-limit="available" title="Accounts with all limits below 100%">Available</button>
+      <button data-limit="limited" title="Accounts with at least one limit used up">Limited</button>
+    </div>
+    <select id="planSelect" aria-label="Plan" title="Filter by plan"></select>
+    <select id="scopeSelect" aria-label="Model limit" title="Filter by model-specific limit"></select>
+    <label class="select"><span class="label">Sort</span><select id="sortSelect"></select></label>
+    <button id="clearFilters" class="ghost hidden">Clear filters</button>
   </section>
 
   <section id="calendar" class="calendar" aria-label="Availability timeline"></section>

@@ -551,10 +551,15 @@ import {
     return rest;
   }
 
+  /** Reports the choices (and, in memory only, the search text) so other views can start from them. */
+  function reportFilter() {
+    vscode.postMessage({ type: "viewSettings", settings: persistedFilter(), text: filter.text });
+  }
+
   function setFilter(next) {
     filter = { ...filter, ...next };
     vscode.setState(filter);
-    vscode.postMessage({ type: "viewSettings", settings: persistedFilter() });
+    reportFilter();
     render();
   }
 
@@ -569,12 +574,13 @@ import {
     appliedSettingsRev = msg.viewSettingsRev;
     const incoming = msg.viewSettings || {};
     if (first && Object.keys(incoming).length === 0) {
-      vscode.postMessage({ type: "viewSettings", settings: persistedFilter() });
+      reportFilter();
       return;
     }
     const { limit, plan, scope, sort } = normalizeListing(incoming);
     filter = { ...filter, limit, plan, scope, sort };
     vscode.setState(filter);
+    reportFilter();
   }
 
   function clearFilters() {

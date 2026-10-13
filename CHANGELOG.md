@@ -32,7 +32,8 @@ First release of the Tursoft fork of
   and limit % or usage.
 - **Availability calendar**: a week or day timeline per account with an overall lane and a lane per
   limit (5h, weekly, Fable), past from history and future projected from reset times, plus a
-  "right now" card per account.
+  "right now" card per account. It has the accounts panel's filters and sort orders, starting from
+  the panel's current choices.
 - The view title shows only **Refresh**, which reloads the account list, the current login,
   and all limits; every other action is in its **⋯** menu.
 
