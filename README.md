@@ -36,6 +36,8 @@ and re-login.
 - **Isolated reauthorization** — if a saved profile's credentials break, re-login happens in
   that profile's own `CLAUDE_CONFIG_DIR` instead of copying the currently active account.
 - **Status bar** — the active account and its usage % always in view.
+- **Compact panel** — one row per account with usage bars, reset times, and a **⋯** menu for
+  all actions. Drag and drop to reorder; the order is remembered.
 - **Filters** — free-text filter plus **All / Available / Limited** to show only accounts with
   usage left (or used up); one click clears the filters.
 - **Current session hint** — if Claude Code is logged in with an account that is not saved yet,
@@ -223,6 +225,17 @@ directories would each try to spend the same single-use refresh token.
   Keychain is not supported yet.
 
 ## Backup and restore
+
+Use the archive icon in the panel (or the commands above) to back up the account list. The
+backup is a standard ZIP whose single entry `accounts.json` is AES-256 encrypted with your
+password, so it can also be opened with 7-Zip. It contains **login tokens**: anyone with the file
+and the password can use those accounts, so store it like a password.
+
+Restoring merges the backup into the current list. Missing accounts are added. For accounts that
+already exist, the backup's tokens are used only if they are newer. Refresh tokens rotate, so
+tokens in an old backup may already be spent. Use **Reauthorize** on such accounts. Do not run the
+same restored account on two machines at once; each rotation invalidates the other copy.
+
 ## Development
 
 ### Prerequisites

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.1
+
+First release of the Tursoft fork of
+[KrzysztofZander/claude-account-switcher](https://github.com/KrzysztofZander/claude-account-switcher).
+
+- Renamed the extension to **Tursoft Claude Multi-Account Switcher**; commands and settings now
+  use the `tursoftClaudeSwitcher.` prefix (profiles from the original extension are not shared).
+- Redesigned, compact accounts panel: one-line usage bars with reset times beside them, a status
+  dot for the active account, and a **⋯** menu per account instead of a row of buttons.
+- Drag and drop (or **Move up / Move down**) to reorder accounts; the order is remembered.
+- Text filter plus **All / Available / Limited** filter, with a button to clear filters.
+- Shows the current Claude Code session at the bottom when it is not saved yet (with **Save to
+  account list**), or states that no account is logged in.
+- New accounts are saved under their email automatically, with a **Rename** shortcut, instead
+  of asking for a name first.
+- Password-protected (AES-256 ZIP) backup and restore of the account list.
+- Notifications when a used-up session, weekly, or model-specific weekly limit becomes available
+  again; a re-check is scheduled at each limit's reset time.
+- `autoRefresh` setting to turn regular checks on or off; the polling interval can now go down to
+  60 seconds.
+- About sheet with author and fork information.
+
 ## 0.3.0
 
 Fixes saved accounts and Claude Code itself repeatedly needing reauthorization.
