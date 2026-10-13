@@ -73,6 +73,11 @@
         "icon": "$(arrow-swap)"
       },
       {
+        "command": "tursoftClaudeSwitcher.refreshAll",
+        "title": "Claude: Refresh accounts, current login and limits",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "tursoftClaudeSwitcher.refreshUsage",
         "title": "Claude: Refresh usage limits",
         "icon": "$(refresh)"
@@ -147,7 +152,7 @@
           "group": "navigation@1"
         },
         {
-          "command": "tursoftClaudeSwitcher.refreshUsage",
+          "command": "tursoftClaudeSwitcher.refreshAll",
           "when": "view == tursoftClaudeSwitcher.accountsView",
           "group": "navigation@2"
         },

@@ -140,7 +140,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           void vscode.commands.executeCommand("tursoftClaudeSwitcher.refreshUsage", msg.id);
           break;
         case "refreshAll":
-          void vscode.commands.executeCommand("tursoftClaudeSwitcher.refreshUsage");
+          void vscode.commands.executeCommand("tursoftClaudeSwitcher.refreshAll");
           break;
         case "sayHi":
           if (msg.id) void vscode.commands.executeCommand("tursoftClaudeSwitcher.sayHi", msg.id);

@@ -96,13 +96,14 @@ export function activate(context: vscode.ExtensionContext): void {
   let currentUsageAt = 0;
   let currentUsageBackoffUntil = 0;
   let currentUsageBusy = false;
-  const refreshCurrentUsage = async (unsaved: boolean) => {
+  const refreshCurrentUsage = async (unsaved: boolean, force = false) => {
     if (!unsaved) {
       currentUsageAt = 0;
       return;
     }
     const now = Date.now();
-    if (currentUsageBusy || now < currentUsageBackoffUntil || now - currentUsageAt < MIN_POLL_INTERVAL_SECONDS * 1000) {
+    const throttled = !force && now - currentUsageAt < MIN_POLL_INTERVAL_SECONDS * 1000;
+    if (currentUsageBusy || now < currentUsageBackoffUntil || throttled) {
       return;
     }
     const creds = credentials.readCurrent();
@@ -549,6 +550,27 @@ export function activate(context: vscode.ExtensionContext): void {
         await poller.pollAll(true);
       }
     })
+  );
+
+  // Reloads everything the panel shows: the detected login, the account list, and
+  // the limits of every account and of an unsaved current login.
+  let refreshingAll: Promise<void> | undefined;
+  const refreshAll = () => {
+    refreshingAll ??= Promise.resolve(
+      vscode.window.withProgress({ location: { viewId: AccountsViewProvider.viewType } }, async () => {
+        await synchronizeCurrentProfile();
+        await refreshCurrentUsage(currentUnsaved, true);
+        await poller.pollAll(true);
+        refreshUI();
+      })
+    ).finally(() => {
+      refreshingAll = undefined;
+    });
+    return refreshingAll;
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("tursoftClaudeSwitcher.refreshAll", refreshAll)
   );
 
   context.subscriptions.push(
