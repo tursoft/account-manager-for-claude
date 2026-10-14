@@ -2,7 +2,7 @@
   "name": "account-manager-for-claude",
   "displayName": "Claude Account Manager",
   "description": "Seamlessly switch between Claude accounts and subscriptions in Claude Code, with real-time usage limit tracking.",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "publisher": "tursoft",
   "author": {
     "name": "Muhammet Tursak",

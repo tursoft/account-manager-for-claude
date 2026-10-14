@@ -5,6 +5,8 @@
 [![Open VSX](https://img.shields.io/open-vsx/v/tursoft/account-manager-for-claude?label=Open%20VSX&logo=eclipseide&color=a60ee5)](https://open-vsx.org/extension/tursoft/account-manager-for-claude)
 [![GitHub](https://img.shields.io/badge/GitHub-account--manager--for--claude-181717?logo=github)](https://github.com/tursoft/account-manager-for-claude)
 
+![Account Manager for Claude animation](media/claude-account-manager-animation.gif)
+
 **Run several Claude subscriptions in Claude Code and switch between them in one click.** See how
 much of every account's limits is left, and let the extension tell you which account to use next.
 
