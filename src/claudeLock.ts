@@ -109,7 +109,7 @@ export async function withClaudeConfigLocks<T>(
   }
 }
 
-function tryAcquire(lock: string): boolean {
+function tryAcquire(lock: string, staleMs = STALE_MS): boolean {
   try {
     fs.mkdirSync(lock);
     return true;
@@ -121,7 +121,7 @@ function tryAcquire(lock: string): boolean {
 
   try {
     const stat = fs.statSync(lock);
-    if (Date.now() - stat.mtimeMs > STALE_MS) {
+    if (Date.now() - stat.mtimeMs > staleMs) {
       fs.rmSync(lock, { recursive: true, force: true });
       fs.mkdirSync(lock);
       return true;
@@ -130,6 +130,48 @@ function tryAcquire(lock: string): boolean {
     /* lost the race for a stale lock, or it vanished: retry later */
   }
   return false;
+}
+
+/**
+ * Claude Code serializes every read-modify-write of its secure storage (the keychain
+ * item on macOS, `.credentials.json` elsewhere) with a `proper-lockfile` lock on
+ * `<configDir>/.storage-write`, which turns stale after 15s. Holding it while
+ * rewriting the login keeps Claude Code's own updates (such as MCP server tokens
+ * stored next to the login) from being overwritten.
+ */
+const STORAGE_STALE_MS = 15_000;
+
+export function claudeStorageLockPath(configDir: string): string {
+  return path.join(configDir, ".storage-write.lock");
+}
+
+export async function withClaudeStorageLock<T>(
+  configDir: string,
+  timeoutMs: number,
+  action: () => Promise<T>
+): Promise<LockResult<T>> {
+  const lock = claudeStorageLockPath(configDir);
+  const deadline = Date.now() + timeoutMs;
+  try {
+    fs.mkdirSync(configDir, { recursive: true });
+  } catch {
+    /* acquiring below reports the real failure */
+  }
+  while (!tryAcquire(lock, STORAGE_STALE_MS)) {
+    if (Date.now() >= deadline) {
+      return { acquired: false };
+    }
+    await sleep(RETRY_MIN_MS + Math.random() * RETRY_JITTER_MS);
+  }
+  try {
+    return { acquired: true, value: await action() };
+  } finally {
+    try {
+      fs.rmSync(lock, { recursive: true, force: true });
+    } catch {
+      /* a stale-lock takeover may already have removed it */
+    }
+  }
 }
 
 function uniqueDirs(dirs: string[]): string[] {

@@ -12,7 +12,7 @@ export interface SwitchResult {
 }
 
 /**
- * Orchestration: capturing the current account, switching (swapping the file),
+ * Orchestration: capturing the current account, switching (swapping the stored login),
  * reloading the window, and undoing the last switch.
  */
 export class SwitchService {
@@ -24,17 +24,16 @@ export class SwitchService {
   ) {}
 
   /**
-   * Saves the currently logged-in account (from the file) as a new profile, named
+   * Saves the currently logged-in account (Claude Code's stored login) as a new profile, named
    * after its email (the user can rename it afterwards). `createdId` is set when a
    * new profile was added.
    */
   async captureCurrent(): Promise<{ ok: boolean; message: string; createdId?: string }> {
-    const creds = this.credentials.readCurrent();
+    const creds = await this.credentials.readCurrent();
     if (!creds) {
       return {
         ok: false,
-        message:
-          "No logged-in account found in .credentials.json. Log in to Claude Code and try again.",
+        message: "No Claude Code login was found. Log in to Claude Code and try again.",
       };
     }
     if (!hasUsableOAuthCreds(creds)) {
@@ -119,7 +118,7 @@ export class SwitchService {
         current.ownerId
       );
     } catch (e) {
-      return { ok: false, message: "Failed to write credentials file: " + (e as Error).message };
+      return { ok: false, message: "Failed to write Claude Code's login: " + (e as Error).message };
     }
     if (!installed.ok) {
       if (installed.needsReauthorization) {
@@ -141,7 +140,7 @@ export class SwitchService {
    * generation — the raw .bak copy may hold a refresh token that was rotated since.
    */
   async undoSwitch(): Promise<{ ok: boolean; message: string }> {
-    const backup = this.credentials.readBackup();
+    const backup = await this.credentials.readBackup();
     if (!backup) {
       return { ok: false, message: "No backup to restore." };
     }
@@ -157,7 +156,7 @@ export class SwitchService {
       return { ok: res.ok, message: res.ok ? "Restored the previous account." : res.message };
     }
 
-    if (!this.credentials.restoreBackup()) {
+    if (!(await this.credentials.restoreBackup())) {
       return { ok: false, message: "Failed to restore the backup." };
     }
     await this.store.setActiveId(undefined);

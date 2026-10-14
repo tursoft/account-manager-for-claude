@@ -39,6 +39,7 @@ import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from ".
 import { WarmupService } from "./warmup";
 
 const LOGIN_WATCH_TIMEOUT_MS = 15 * 60_000;
+const LOGIN_POLL_INTERVAL_MS = 3_000;
 const CREDENTIALS_WATCH_INTERVAL_MS = 2_000;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -130,7 +131,7 @@ export function activate(context: vscode.ExtensionContext): void {
     if (currentUsageBusy || now < currentUsageBackoffUntil || throttled) {
       return;
     }
-    const creds = credentials.readCurrent();
+    const creds = await credentials.readCurrent();
     if (!creds) {
       return;
     }
@@ -196,10 +197,11 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   };
 
-  // Claude Code rewrites its credentials file on every token rotation and on
-  // /login. Import each new generation right away instead of waiting for the next
-  // usage poll, so the saved profile never keeps an already spent refresh token.
-  let watchedCredentialsPath: string | undefined;
+  // Claude Code rewrites its stored login (the credentials file, or the keychain on
+  // macOS) on every token rotation and on /login. Import each new generation right
+  // away instead of waiting for the next usage poll, so the saved profile never keeps
+  // an already spent refresh token.
+  let watchedCredentialsPaths: string[] = [];
   let syncTimer: NodeJS.Timeout | undefined;
   const onCredentialsFileChanged = () => {
     if (syncTimer) {
@@ -211,15 +213,17 @@ export function activate(context: vscode.ExtensionContext): void {
     }, 750);
   };
   const watchCredentialsFile = () => {
-    const next = credentials.getCredentialsPath();
-    if (watchedCredentialsPath === next) {
+    const next = credentials.getWatchPaths();
+    if (next.join("\n") === watchedCredentialsPaths.join("\n")) {
       return;
     }
-    if (watchedCredentialsPath) {
-      fs.unwatchFile(watchedCredentialsPath, onCredentialsFileChanged);
+    for (const file of watchedCredentialsPaths) {
+      fs.unwatchFile(file, onCredentialsFileChanged);
     }
-    watchedCredentialsPath = next;
-    fs.watchFile(next, { interval: CREDENTIALS_WATCH_INTERVAL_MS }, onCredentialsFileChanged);
+    watchedCredentialsPaths = next;
+    for (const file of next) {
+      fs.watchFile(file, { interval: CREDENTIALS_WATCH_INTERVAL_MS }, onCredentialsFileChanged);
+    }
   };
 
   // --- Login helpers ---
@@ -234,7 +238,7 @@ export function activate(context: vscode.ExtensionContext): void {
       () => browserOAuth.authorize((url) => vscode.env.openExternal(vscode.Uri.parse(url)))
     );
     if (result.ok && result.creds) {
-      credentials.writeCreds(result.creds, configDir, {
+      await credentials.writeCreds(result.creds, configDir, {
         organizationUuid: result.identity?.orgId ?? null,
       });
       sync.rememberIdentity(result.creds, result.identity);
@@ -275,32 +279,59 @@ export function activate(context: vscode.ExtensionContext): void {
   const pendingLoginWatches = new Set<() => void>();
   const waitForLogin = (configDir: string, previous: OAuthCreds | null) =>
     new Promise<boolean>((resolve) => {
-      const file = credentials.getCredentialsPath(configDir);
+      const files = credentials.getWatchPaths(configDir);
       let settled = false;
+      let checking = false;
+      let recheck = false;
       const finish = (value: boolean) => {
         if (settled) {
           return;
         }
         settled = true;
-        fs.unwatchFile(file, check);
+        for (const file of files) {
+          fs.unwatchFile(file, check);
+        }
+        clearInterval(poll);
         clearTimeout(timeout);
         pendingLoginWatches.delete(cancel);
         resolve(value);
       };
       const cancel = () => finish(false);
+      // Reading the keychain is asynchronous: a change seen during a read is checked
+      // again afterwards instead of being dropped.
       const check = () => {
-        const creds = credentials.readCurrent(configDir);
-        if (
-          creds &&
-          hasUsableOAuthCreds(creds) &&
-          !(previous && sameNonEmptyToken(previous.refreshToken, creds.refreshToken))
-        ) {
-          finish(true);
+        if (settled) {
+          return;
         }
+        if (checking) {
+          recheck = true;
+          return;
+        }
+        checking = true;
+        void credentials
+          .readCurrent(configDir)
+          .catch(() => null)
+          .then((creds) => {
+            checking = false;
+            if (
+              creds &&
+              hasUsableOAuthCreds(creds) &&
+              !(previous && sameNonEmptyToken(previous.refreshToken, creds.refreshToken))
+            ) {
+              finish(true);
+            } else if (recheck) {
+              recheck = false;
+              check();
+            }
+          });
       };
       const timeout = setTimeout(cancel, LOGIN_WATCH_TIMEOUT_MS);
+      // Watching catches the login at once; polling covers stores without a watchable file.
+      const poll = setInterval(check, LOGIN_POLL_INTERVAL_MS);
       pendingLoginWatches.add(cancel);
-      fs.watchFile(file, { interval: 1_000 }, check);
+      for (const file of files) {
+        fs.watchFile(file, { interval: 1_000 }, check);
+      }
       check();
     });
 
@@ -316,7 +347,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
 
     const configDir = homeDir(id);
-    const creds = credentials.readCurrent(configDir);
+    const creds = await credentials.readCurrent(configDir);
     if (!creds || !hasUsableOAuthCreds(creds)) {
       return {
         ok: false,
@@ -372,7 +403,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const configDir = homeDir(id);
     try {
-      credentials.moveCredentialsAside(configDir, "reauth-backup");
+      await credentials.moveCredentialsAside(configDir, "reauth-backup");
     } catch (e) {
       vscode.window.showWarningMessage((e as Error).message);
       return;
@@ -410,8 +441,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // --- Adding another account without touching the current one ---
 
+  /** Deletes an isolated config dir that no profile uses, with its keychain items. */
+  const discardConfigDir = async (configDir: string) => {
+    await credentials.discard(configDir);
+    fs.rmSync(configDir, { recursive: true, force: true });
+  };
+
   const importIsolatedLogin = async (id: string, configDir: string) => {
-    const creds = credentials.readCurrent(configDir);
+    const creds = await credentials.readCurrent(configDir);
     if (!creds || !hasUsableOAuthCreds(creds)) {
       vscode.window.showWarningMessage("No completed Claude login was found.");
       return;
@@ -425,7 +462,7 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await store.clearUsageError(existing.id);
       await sync.captureOAuthAccount(existing.id, configDir);
-      fs.rmSync(configDir, { recursive: true, force: true });
+      await discardConfigDir(configDir);
       vscode.window.showInformationMessage(
         `This login belongs to the saved profile "${existing.label}"; it was refreshed with the new login.`
       );
@@ -463,7 +500,7 @@ export function activate(context: vscode.ExtensionContext): void {
     fs.mkdirSync(configDir, { recursive: true });
     const login = await openClaudeLogin({ configDir, terminalName: "Claude Login: new account" });
     if (!login.ok) {
-      fs.rmSync(configDir, { recursive: true, force: true });
+      await discardConfigDir(configDir);
       return;
     }
     if (!login.usedBrowser) {
@@ -471,7 +508,7 @@ export function activate(context: vscode.ExtensionContext): void {
         "Finish the login in the terminal/browser. The current Claude Code account stays untouched; the new account is saved automatically."
       );
       if (!(await waitForLogin(configDir, null))) {
-        fs.rmSync(configDir, { recursive: true, force: true });
+        await discardConfigDir(configDir);
         vscode.window.showWarningMessage("No completed Claude login was detected. Nothing was saved.");
         return;
       }
@@ -520,8 +557,8 @@ export function activate(context: vscode.ExtensionContext): void {
     limitNotifier,
     {
       dispose: () => {
-        if (watchedCredentialsPath) {
-          fs.unwatchFile(watchedCredentialsPath, onCredentialsFileChanged);
+        for (const file of watchedCredentialsPaths) {
+          fs.unwatchFile(file, onCredentialsFileChanged);
         }
         if (syncTimer) {
           clearTimeout(syncTimer);

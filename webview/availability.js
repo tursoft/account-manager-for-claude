@@ -31,7 +31,7 @@ let listing = { ...DEFAULT_LISTING };
 let anchor = startOfDay(Date.now());
 let data = null;
 
-/** Tone class and tooltip for an account's name: green while the 5h limit has room, red once the 5h or a weekly limit is used up. */
+/** Tone class and tooltip for an account's name: green while it can start sessions, red once the 5h or the general weekly limit is used up. */
 function nameStyle(acc, extraTitle) {
   const tone = nameTone(acc);
   return {

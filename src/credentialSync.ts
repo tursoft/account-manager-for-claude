@@ -48,8 +48,8 @@ export interface CurrentAccountState {
  * Keeps every copy of a profile's rotating OAuth tokens consistent.
  *
  * A login can live in several places at once: the extension's SecretStorage vault,
- * the Claude Code credentials file the user is running on (`~/.claude`), and the
- * profile's isolated `CLAUDE_CONFIG_DIR` used by independent windows and Say Hi.
+ * the Claude Code login the user is running on (`~/.claude`; the macOS keychain), and
+ * the profile's isolated `CLAUDE_CONFIG_DIR` used by independent windows and Say Hi.
  * Refresh tokens are single-use, so this class:
  *  - always picks the newest generation across all copies before using one;
  *  - refreshes only while holding Claude Code's own refresh locks for every
@@ -111,7 +111,7 @@ export class CredentialSync {
 
   /** Determines which saved profile a credentials file belongs to. */
   async resolveFileOwner(configDir: string, options: { retryFailed?: boolean } = {}): Promise<FileOwner> {
-    const creds = this.credentials.readCurrent(configDir);
+    const creds = await this.credentials.readCurrent(configDir);
     if (!creds || !hasUsableOAuthCreds(creds)) {
       return { verified: false };
     }
@@ -264,7 +264,7 @@ export class CredentialSync {
       await this.store.updateCreds(id, refreshed.creds);
       for (const dir of dirs) {
         try {
-          this.credentials.writeCredsIfCurrent(newest, refreshed.creds, dir);
+          await this.credentials.writeCredsIfCurrent(newest, refreshed.creds, dir);
         } catch {
           /* the vault keeps the new generation; Claude Code re-reads under the lock */
         }
@@ -299,9 +299,9 @@ export class CredentialSync {
       if (!newest) {
         return { ok: false, needsReauthorization: true } satisfies FreshCredsResult;
       }
-      const inHome = this.credentials.readCurrent(home);
+      const inHome = await this.credentials.readCurrent(home);
       if (!inHome || !sameGeneration(inHome, newest)) {
-        this.credentials.writeCreds(newest, home, {
+        await this.credentials.writeCreds(newest, home, {
           organizationUuid: this.store.get(id)?.authOrgId ?? null,
         });
       }
@@ -329,7 +329,7 @@ export class CredentialSync {
       [configDir, ...targetDirs],
       LOCK_TIMEOUT_MS,
       async () => {
-        const current = this.credentials.readCurrent(configDir);
+        const current = await this.credentials.readCurrent(configDir);
         if (outgoingId && outgoingId !== id && current && hasUsableOAuthCreds(current)) {
           await this.store.updateCredsIfNewer(outgoingId, current);
         }
@@ -338,8 +338,8 @@ export class CredentialSync {
         if (!target) {
           return { ok: false, needsReauthorization: true };
         }
-        this.credentials.backupCurrent();
-        this.credentials.writeCreds(target, configDir, {
+        await this.credentials.backupCurrent();
+        await this.credentials.writeCreds(target, configDir, {
           organizationUuid: this.store.get(id)?.authOrgId ?? null,
         });
         const account = this.store.get(id)?.oauthAccount;
@@ -362,7 +362,7 @@ export class CredentialSync {
 
   /** Imports whatever Claude Code left in the profile's isolated config dir. */
   async importHomeDir(id: string): Promise<void> {
-    const creds = this.credentials.readCurrent(this.homeDir(id));
+    const creds = await this.credentials.readCurrent(this.homeDir(id));
     if (creds && hasUsableOAuthCreds(creds) && !this.store.isRefreshTokenDead(id, creds.refreshToken)) {
       await this.store.updateCredsIfNewer(id, creds);
     }
@@ -380,7 +380,7 @@ export class CredentialSync {
       candidates.push(vault);
     }
     for (const dir of dirs) {
-      const fileCreds = this.credentials.readCurrent(dir);
+      const fileCreds = await this.credentials.readCurrent(dir);
       if (fileCreds) {
         candidates.push(fileCreds);
       }

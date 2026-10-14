@@ -37,7 +37,7 @@ much of every account's limits is left, and let the extension tell you which acc
   or run `ext install tursoft.account-manager-for-claude` in Quick Open (`Ctrl+P`).
 - **VSCodium, Cursor, and other Open VSX editors:** install from
   [open-vsx.org](https://open-vsx.org/extension/tursoft/account-manager-for-claude).
-- **Requires** VS Code 1.85 or newer on Windows or Linux. macOS (Keychain) isn't supported yet.
+- **Requires** VS Code 1.85 or newer on Windows, macOS, or Linux.
 
 ## Getting started
 
@@ -59,9 +59,11 @@ much of every account's limits is left, and let the extension tell you which acc
   button. **Add account** logs in to another account without touching the current one.
 - **Live usage limits** for the 5-hour, weekly, and model-specific windows, with reset times.
 - **Colors tell you the state.** The icon is green while an account has limit left, orange once a
-  limit is used up, and gray when usage is unknown. The name turns red when the 5h or a weekly
-  limit is used up. A used-up limit's reset time is yellow under 10 minutes, orange under an
-  hour, and red beyond a day.
+  limit is used up, and gray when usage is unknown. The name, and the active account in the status
+  bar, is green while the account can start sessions and red once the 5h or the general weekly
+  limit is used up. A used-up model limit such as Fable blocks only that model, so it stays green.
+  A used-up limit's reset time is yellow under 10 minutes, orange under an hour, and red beyond a
+  day.
 - **Filter and sort.** Filter by text, availability, plan (Pro, Max, Team, ...), or model limit.
   Sort by availability, usage left, next reset, plan, name, or your own drag-and-drop order.
 - **Stays simple when you need it to.** Filters, sorting, and statistics appear once you have two
@@ -168,14 +170,15 @@ All settings start with `accountManagerForClaude.`.
 | `usageHistory.enabled` | `false` | Collect usage history for analytics and the calendar |
 | `usageHistory.intervalSeconds` | `60` | Seconds between usage readings (minimum 60) |
 | `usageHistory.retentionDays` | `90` | Days of usage history to keep |
-| `credentialsPath` | `""` | Custom path to `.credentials.json` (empty means `~/.claude/.credentials.json`) |
+| `credentialsPath` | `""` | Custom path to `.credentials.json` (empty means `~/.claude/.credentials.json`). On macOS its folder selects Claude Code's Keychain item |
 | `claudeCommand` | `claude` | The Claude Code CLI command; use the full path if VS Code can't find it |
 
 ## How it works
 
-- **Switching** replaces `~/.claude/.credentials.json` and the cached account in `~/.claude.json`.
-  A `.bak` copy makes the switch undoable. Saved accounts are kept in VS Code's encrypted
-  SecretStorage.
+- **Switching** replaces Claude Code's stored login and the cached account in `~/.claude.json`.
+  The login is `~/.claude/.credentials.json` on Windows and Linux, and the `Claude Code-credentials`
+  item in the login Keychain on macOS. A backup copy makes the switch undoable. Saved accounts are
+  kept in VS Code's encrypted SecretStorage.
 - **Usage** comes from Anthropic's unofficial usage endpoint, the same source as `/usage`. Because
   it is rate-limited, checks run every 240 seconds by default, plus any manual refresh. Accounts
   are checked one at a time with a 2-second pause between requests (`requestDelaySeconds`), and an
@@ -191,7 +194,8 @@ prevent this, the extension:
   new token;
 - writes every new token back to all local copies and to the saved account;
 - always uses the newest token it can find, and refreshes only when the current one is expiring;
-- watches `.credentials.json` and picks up Claude Code's own refreshes immediately;
+- watches Claude Code's stored login (`.credentials.json`, or the Keychain on macOS) and picks up
+  its own refreshes immediately;
 - saves the account you switch away from first, so it keeps its latest token;
 - never retries a token the server has rejected.
 
@@ -222,11 +226,15 @@ AES-256 and your password, so 7-Zip can open it too. It also stores your panel c
 The Claude Code CLI is optional for switching, usage checks, and browser login. Only logging in
 from the terminal needs it. If the extension says `claude` is not recognized:
 
-1. Run `where claude` in PowerShell or CMD.
+1. Run `where claude` in PowerShell or CMD (`which claude` on macOS and Linux).
 2. If it's found, restart VS Code so it picks up the updated PATH.
-3. If it isn't found, install the CLI. On Windows: `irm https://claude.ai/install.ps1 | iex`
+3. If it isn't found, install the CLI. On Windows: `irm https://claude.ai/install.ps1 | iex`.
+   On macOS and Linux: `curl -fsSL https://claude.ai/install.sh | bash`
 4. If VS Code still can't find it, set `claudeCommand` to the full path, e.g.
-   `C:\Users\you\AppData\Roaming\npm\claude.cmd`.
+   `C:\Users\you\AppData\Roaming\npm\claude.cmd` or `/Users/you/.local/bin/claude`.
+
+On macOS, Claude Code keeps its login in the login Keychain. If switching reports that the
+Keychain could not be read or updated, unlock the login keychain (Keychain Access) and try again.
 
 ## Privacy and security
 

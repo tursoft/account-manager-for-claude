@@ -312,7 +312,8 @@ import {
     // Avatar on the left inside the card; everything else stacks in the body.
     const body = el("div", "card-body");
     const head = el("div", "card-head");
-    // Green while the 5h limit has room; red once the 5h or a weekly limit is used up.
+    // Green while the account can start sessions (a used-up model limit such as Fable blocks
+    // only that model); red once the 5h or the general weekly limit is used up.
     const tone = nameTone(acc);
     const name = el("span", "name" + (tone ? ` tone-${tone}` : ""), acc.label);
     name.title = [acc.label, nameToneDescription(acc), acc.isActive ? "Active in Claude Code" : "", "Double-click to copy"]

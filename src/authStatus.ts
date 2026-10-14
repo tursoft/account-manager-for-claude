@@ -5,6 +5,7 @@ import {
   missingClaudeCliMessage,
   resolveClaudeCommand,
 } from "./cli";
+import { claudeConfigEnv } from "./credentials";
 import { ClaudeAuthIdentity } from "./types";
 
 export interface ClaudeAuthStatus extends ClaudeAuthIdentity {
@@ -55,7 +56,7 @@ function runClaudeStatus(
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     const child = spawn(...buildSpawnArgs(command, ["auth", "status", "--json"]), {
-      env: configDir ? { ...process.env, CLAUDE_CONFIG_DIR: configDir } : process.env,
+      env: configDir ? { ...process.env, ...claudeConfigEnv(configDir) } : process.env,
       shell: false,
       windowsHide: true,
     });

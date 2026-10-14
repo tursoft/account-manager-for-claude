@@ -1,13 +1,15 @@
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { parseUsage, UsagePoller } from "../src/usage";
-import { CredentialsManager } from "../src/credentials";
+import { claudeConfigEnv, CredentialsManager, KEYCHAIN_SERVICE, keychainServiceFor } from "../src/credentials";
+import { parseKeychainJson, SecretStore } from "../src/keychain";
 import { requiresProfileReauthorization, TokenRefresher } from "../src/oauth";
 import { AccountStore } from "../src/accountStore";
 import { createBackupZip, readBackupZip } from "../src/backup";
 import { buildBrowserAuthorizationUrl, parseBrowserTokenResponse } from "../src/browserOAuth";
-import { claudeLockPaths, withClaudeConfigLocks } from "../src/claudeLock";
+import { claudeLockPaths, claudeStorageLockPath, withClaudeConfigLocks } from "../src/claudeLock";
 import { CredentialSync } from "../src/credentialSync";
 import { sameIdentity } from "../src/identity";
 import { ProfileActivityRegistry } from "../src/profileActivity";
@@ -77,58 +79,299 @@ check("fallback weeklyPercent = 90", fb.weeklyPercent === 90);
 const em = parseUsage({} as never);
 check("empty -> 0 windows, null percents", em.windows.length === 0 && em.sessionPercent === null);
 
-console.log("CredentialsManager (temp file):");
-const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cas-test-"));
-const credPath = path.join(tmpDir, ".credentials.json");
-process.env.TEST_CRED_PATH = credPath;
-const mgr = new CredentialsManager();
+async function runCredentialsFileTests(): Promise<void> {
+  console.log("CredentialsManager (temp file):");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cas-test-"));
+  const credPath = path.join(tmpDir, ".credentials.json");
+  process.env.TEST_CRED_PATH = credPath;
+  const mgr = new CredentialsManager({ keychain: null });
 
-const credsA = { accessToken: "AAA", refreshToken: "ra", expiresAt: 111, scopes: ["x"], subscriptionType: "pro" };
-const credsB = { accessToken: "BBB", refreshToken: "rb", expiresAt: 222, scopes: ["y"], subscriptionType: "max" };
+  const credsA = { accessToken: "AAA", refreshToken: "ra", expiresAt: 111, scopes: ["x"], subscriptionType: "pro" };
+  const credsB = { accessToken: "BBB", refreshToken: "rb", expiresAt: 222, scopes: ["y"], subscriptionType: "max" };
 
-check("path resolves to override", mgr.getCredentialsPath() === credPath);
-mgr.writeCreds(credsA as never);
-check("write + read account A", mgr.readCurrent()?.accessToken === "AAA");
+  check("path resolves to override", mgr.getCredentialsPath() === credPath);
+  await mgr.writeCreds(credsA as never);
+  check("write + read account A", (await mgr.readCurrent())?.accessToken === "AAA");
 
-mgr.backupCurrent();
-check("hasBackup after backup", mgr.hasBackup() === true);
+  await mgr.backupCurrent();
+  check("hasBackup after backup", (await mgr.hasBackup()) === true);
 
-mgr.writeCreds(credsB as never);
-check("switch to account B", mgr.readCurrent()?.accessToken === "BBB");
+  await mgr.writeCreds(credsB as never);
+  check("switch to account B", (await mgr.readCurrent())?.accessToken === "BBB");
 
-mgr.restoreBackup();
-check("undo restores account A", mgr.readCurrent()?.accessToken === "AAA");
+  await mgr.restoreBackup();
+  check("undo restores account A", (await mgr.readCurrent())?.accessToken === "AAA");
 
-fs.writeFileSync(credPath, JSON.stringify({ claudeAiOauth: credsA, otherField: 123 }));
-mgr.writeCreds(credsB as never);
-const rawAfter = JSON.parse(fs.readFileSync(credPath, "utf8"));
-check("preserves extra fields on write", rawAfter.otherField === 123 && rawAfter.claudeAiOauth.accessToken === "BBB");
+  fs.writeFileSync(credPath, JSON.stringify({ claudeAiOauth: credsA, otherField: 123 }));
+  await mgr.writeCreds(credsB as never);
+  const rawAfter = JSON.parse(fs.readFileSync(credPath, "utf8"));
+  check("preserves extra fields on write", rawAfter.otherField === 123 && rawAfter.claudeAiOauth.accessToken === "BBB");
 
-check(
-  "does not overwrite a credential file that Claude already rotated",
-  mgr.writeCredsIfCurrent(credsA as never, credsB as never) === false &&
-    mgr.readCurrent()?.refreshToken === "rb"
-);
-check(
-  "compare-and-swap persists a rotation from the current generation",
-  mgr.writeCredsIfCurrent(credsB as never, credsA as never) === true &&
-    mgr.readCurrent()?.refreshToken === "ra"
-);
+  check(
+    "does not overwrite a credential file that Claude already rotated",
+    (await mgr.writeCredsIfCurrent(credsA as never, credsB as never)) === false &&
+      (await mgr.readCurrent())?.refreshToken === "rb"
+  );
+  check(
+    "compare-and-swap persists a rotation from the current generation",
+    (await mgr.writeCredsIfCurrent(credsB as never, credsA as never)) === true &&
+      (await mgr.readCurrent())?.refreshToken === "ra"
+  );
 
-fs.writeFileSync(credPath, JSON.stringify({ claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } }));
-check("empty tokens are not a current login", mgr.readCurrent() === null);
+  fs.writeFileSync(credPath, JSON.stringify({ claudeAiOauth: { accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } }));
+  check("empty tokens are not a current login", (await mgr.readCurrent()) === null);
 
-mgr.writeCreds(credsA as never);
-let refusedIncompleteWrite = false;
-try {
-  mgr.writeCreds({ accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } as never);
-} catch {
-  refusedIncompleteWrite = true;
+  await mgr.writeCreds(credsA as never);
+  let refusedIncompleteWrite = false;
+  try {
+    await mgr.writeCreds({ accessToken: "", refreshToken: "", expiresAt: 0, scopes: [] } as never);
+  } catch {
+    refusedIncompleteWrite = true;
+  }
+  check("refuses to write incomplete credentials", refusedIncompleteWrite);
+  check("incomplete write does not overwrite existing credentials", (await mgr.readCurrent())?.accessToken === "AAA");
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
 }
-check("refuses to write incomplete credentials", refusedIncompleteWrite);
-check("incomplete write does not overwrite existing credentials", mgr.readCurrent()?.accessToken === "AAA");
 
-fs.rmSync(tmpDir, { recursive: true, force: true });
+/** In-memory stand-in for the macOS keychain, answering like `security` does. */
+class FakeKeychain implements SecretStore {
+  readonly items = new Map<string, string>();
+  readonly changeMarker = path.join(os.tmpdir(), "fake-login.keychain-db");
+  /** `security -w` prints data containing non-ASCII bytes hex-encoded. */
+  hexOutput = false;
+  unreadable = false;
+  refuseWrites = false;
+  onWrite?: (service: string) => void;
+
+  async read(service: string): Promise<string | null | undefined> {
+    if (this.unreadable) {
+      return undefined;
+    }
+    const value = this.items.get(service);
+    if (value === undefined) {
+      return null;
+    }
+    return this.hexOutput ? Buffer.from(value, "utf8").toString("hex") : value;
+  }
+
+  async write(service: string, value: string): Promise<boolean> {
+    if (this.refuseWrites) {
+      return false;
+    }
+    this.onWrite?.(service);
+    this.items.set(service, value);
+    return true;
+  }
+
+  async delete(service: string): Promise<boolean> {
+    this.items.delete(service);
+    return true;
+  }
+
+  // Parsed item, loosely typed for assertions.
+  json(service: string): any {
+    const value = this.items.get(service);
+    return value === undefined ? undefined : JSON.parse(value);
+  }
+}
+
+async function runKeychainTests(): Promise<void> {
+  console.log("CredentialsManager (macOS keychain):");
+  const savedConfigDir = process.env.CLAUDE_CONFIG_DIR;
+  delete process.env.CLAUDE_CONFIG_DIR;
+  const home = os.homedir();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cas-keychain-test-"));
+  try {
+    check(
+      "the default config dir uses Claude Code's base keychain item",
+      keychainServiceFor(path.join(home, ".claude")) === KEYCHAIN_SERVICE
+    );
+    // An item Claude Code 2.1 created for this CLAUDE_CONFIG_DIR during an isolated login.
+    check(
+      "an isolated config dir uses Claude Code's hashed keychain item",
+      keychainServiceFor(
+        "/Users/tursoft/Library/Application Support/Code/User/globalStorage/tursoft.account-manager-for-claude/account-configs/2f1b86bc-9384-47f8-86a4-103b67c67bf4"
+      ) === "Claude Code-credentials-9cec622e"
+    );
+    check(
+      "Claude Code for the default dir is started without CLAUDE_CONFIG_DIR",
+      Object.keys(claudeConfigEnv(path.join(home, ".claude"))).length === 0
+    );
+    check(
+      "Claude Code for an isolated dir is started with CLAUDE_CONFIG_DIR",
+      claudeConfigEnv(dir).CLAUDE_CONFIG_DIR === dir
+    );
+    process.env.CLAUDE_CONFIG_DIR = path.join(home, ".claude");
+    check(
+      "naming the default dir in CLAUDE_CONFIG_DIR selects a hashed item",
+      keychainServiceFor(path.join(home, ".claude")) !== KEYCHAIN_SERVICE
+    );
+    process.env.CLAUDE_CONFIG_DIR = dir + "/";
+    check(
+      "the hash covers the exact CLAUDE_CONFIG_DIR string",
+      keychainServiceFor(dir) ===
+        `${KEYCHAIN_SERVICE}-${crypto.createHash("sha256").update(dir + "/").digest("hex").slice(0, 8)}`
+    );
+    delete process.env.CLAUDE_CONFIG_DIR;
+    check(
+      "reads JSON that security printed hex-encoded",
+      (parseKeychainJson(Buffer.from('{"a":"é"}', "utf8").toString("hex")) as { a?: string })?.a === "é"
+    );
+
+    const file = path.join(dir, ".credentials.json");
+    process.env.TEST_CRED_PATH = file;
+    const kc = new FakeKeychain();
+    const mgr = new CredentialsManager({ keychain: kc });
+    const service = mgr.getKeychainService();
+    const a = { accessToken: "AAA", refreshToken: "ra", expiresAt: 111, scopes: ["x"] };
+    const b = { accessToken: "BBB", refreshToken: "rb", expiresAt: 222, scopes: ["y"] };
+    check("the keychain item follows the credentials dir", service === keychainServiceFor(dir));
+    check("keychain writes are watched", mgr.getWatchPaths().includes(kc.changeMarker));
+
+    fs.writeFileSync(file, JSON.stringify({ claudeAiOauth: a }));
+    check(
+      "falls back to the plaintext file while the keychain holds no login",
+      (await mgr.readCurrent())?.accessToken === "AAA"
+    );
+    kc.items.set(service, JSON.stringify({ claudeAiOauth: b, mcpOAuth: { srv: "keep" } }));
+    check("reads the keychain login first, like Claude Code", (await mgr.readCurrent())?.accessToken === "BBB");
+    kc.hexOutput = true;
+    kc.items.set(service, JSON.stringify({ claudeAiOauth: b, mcpOAuth: { srv: "café" } }));
+    check("reads a keychain login with non-ASCII data", (await mgr.readCurrent())?.accessToken === "BBB");
+    kc.hexOutput = false;
+
+    kc.items.set(service, JSON.stringify({ claudeAiOauth: b, mcpOAuth: { srv: "keep" } }));
+    let lockHeld = false;
+    kc.onWrite = () => {
+      lockHeld = fs.existsSync(claudeStorageLockPath(dir));
+    };
+    await mgr.writeCreds(a, undefined, { organizationUuid: "org-a" });
+    kc.onWrite = undefined;
+    check(
+      "writes the login into the keychain item",
+      kc.json(service)?.claudeAiOauth.accessToken === "AAA" && kc.json(service)?.organizationUuid === "org-a"
+    );
+    check("keeps Claude Code's other keychain data (MCP tokens)", kc.json(service)?.mcpOAuth?.srv === "keep");
+    check(
+      "holds Claude Code's storage lock while writing",
+      lockHeld && !fs.existsSync(claudeStorageLockPath(dir))
+    );
+
+    kc.items.clear();
+    fs.writeFileSync(file, JSON.stringify({ claudeAiOauth: a, extra: 1 }));
+    await mgr.writeCreds(b);
+    check(
+      "moves a plaintext login into the keychain, like Claude Code",
+      kc.json(service)?.claudeAiOauth.accessToken === "BBB" && kc.json(service)?.extra === 1 && !fs.existsSync(file)
+    );
+    check(
+      "compare-and-swap leaves a newer keychain login alone",
+      (await mgr.writeCredsIfCurrent(a, a)) === false && (await mgr.readCurrent())?.accessToken === "BBB"
+    );
+    check(
+      "compare-and-swap rotates the keychain login",
+      (await mgr.writeCredsIfCurrent(b, a)) === true && (await mgr.readCurrent())?.accessToken === "AAA"
+    );
+
+    await mgr.backupCurrent();
+    await mgr.writeCreds(b);
+    check(
+      "the undo backup stays in the keychain",
+      !fs.existsSync(file + ".bak") && (await mgr.readBackup())?.accessToken === "AAA"
+    );
+    check(
+      "undo restores the keychain login",
+      (await mgr.restoreBackup()) && (await mgr.readCurrent())?.accessToken === "AAA"
+    );
+
+    kc.unreadable = true;
+    let refused = false;
+    try {
+      await mgr.writeCreds(b);
+    } catch {
+      refused = true;
+    }
+    kc.unreadable = false;
+    check(
+      "does not write while the keychain cannot be read",
+      refused && (await mgr.readCurrent())?.accessToken === "AAA"
+    );
+    kc.refuseWrites = true;
+    refused = false;
+    try {
+      await mgr.writeCreds(b);
+    } catch {
+      refused = true;
+    }
+    check("reports a refused keychain write instead of writing an ignored file", refused && !fs.existsSync(file));
+    kc.items.delete(service);
+    await mgr.writeCreds(b);
+    kc.refuseWrites = false;
+    check(
+      "falls back to the plaintext file without a usable keychain",
+      JSON.parse(fs.readFileSync(file, "utf8")).claudeAiOauth.accessToken === "BBB"
+    );
+    fs.rmSync(file, { force: true });
+
+    const iso = path.join(dir, "iso");
+    await mgr.writeCreds(a, iso);
+    const isoService = mgr.getKeychainService(iso);
+    check(
+      "an isolated dir gets its own keychain item",
+      isoService !== service &&
+        kc.json(isoService)?.claudeAiOauth.accessToken === "AAA" &&
+        !fs.existsSync(path.join(iso, ".credentials.json"))
+    );
+    await mgr.moveCredentialsAside(iso, "reauth-backup");
+    check("moving a login aside clears it for a fresh login", (await mgr.readCurrent(iso)) === null);
+    await mgr.discard(iso);
+    check(
+      "discarding an isolated dir removes its keychain items",
+      [...kc.items.keys()].every((k) => !k.startsWith(isoService))
+    );
+
+    // Detecting, switching and isolated windows with the login only in the keychain.
+    const skc = new FakeKeychain();
+    const f = createSyncFixture({ "a2-access": { accountUuid: "acct-a", email: "a@example.com" } }, skc);
+    const pa = await f.store.addFromCreds("A", creds("a1", 3_600_000), {
+      identity: { accountUuid: "acct-a", email: "a@example.com" },
+    });
+    const pb = await f.store.addFromCreds("B", creds("b1", 3_600_000), {
+      identity: { accountUuid: "acct-b", email: "b@example.com", orgId: "org-b" },
+      activate: false,
+    });
+    const globalService = keychainServiceFor(f.globalDir);
+    skc.items.set(globalService, JSON.stringify({ claudeAiOauth: creds("a2", 7_200_000) }));
+    const state = await f.sync.syncCurrent();
+    check("detects the active Claude Code login in the keychain", state.ownerId === pa.id && state.loggedIn === true);
+    check(
+      "imports Claude Code's keychain rotation into the profile",
+      (await f.store.getCreds(pa.id))?.refreshToken === "a2-refresh"
+    );
+    const installed = await f.sync.installInConfigDir(pb.id, f.globalDir, state.ownerId);
+    check(
+      "switching writes the target login into the keychain",
+      installed.ok &&
+        skc.json(globalService)?.claudeAiOauth.refreshToken === "b1-refresh" &&
+        skc.json(globalService)?.organizationUuid === "org-b" &&
+        !fs.existsSync(path.join(f.globalDir, ".credentials.json"))
+    );
+    const prepared = await f.sync.prepareHomeDir(pa.id);
+    check(
+      "an independent window's login goes to its own keychain item",
+      prepared.ok && skc.json(keychainServiceFor(f.homeDir(pa.id)))?.claudeAiOauth.refreshToken === "a2-refresh"
+    );
+    fs.rmSync(f.root, { recursive: true, force: true });
+  } finally {
+    if (savedConfigDir === undefined) {
+      delete process.env.CLAUDE_CONFIG_DIR;
+    } else {
+      process.env.CLAUDE_CONFIG_DIR = savedConfigDir;
+    }
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 function createStore(): AccountStore {
   const globalState = new Map<string, unknown>();
@@ -337,14 +580,17 @@ interface SyncFixture {
   homeDir: (id: string) => string;
 }
 
-function createSyncFixture(identities: Record<string, ClaudeAuthIdentity> = {}): SyncFixture {
+function createSyncFixture(
+  identities: Record<string, ClaudeAuthIdentity> = {},
+  keychain: SecretStore | null = null
+): SyncFixture {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "cas-sync-test-"));
   const globalDir = path.join(root, "global");
   fs.mkdirSync(globalDir, { recursive: true });
   process.env.CLAUDE_CONFIG_DIR = globalDir;
   process.env.TEST_CRED_PATH = path.join(globalDir, ".credentials.json");
   const store = createStore();
-  const manager = new CredentialsManager();
+  const manager = new CredentialsManager({ keychain });
   const homeDir = (id: string) => path.join(root, "homes", id);
   const sync = new CredentialSync(store, manager, new TokenRefresher(), homeDir, async (creds) =>
     identities[creds.accessToken]
@@ -384,7 +630,7 @@ async function runCredentialSyncTests(): Promise<void> {
       const a = await f.store.addFromCreds("A", creds("gen1", 3_600_000), {
         identity: { accountUuid: "acct-a", email: "a@example.com" },
       });
-      f.manager.writeCreds(creds("gen2", 7_200_000));
+      await f.manager.writeCreds(creds("gen2", 7_200_000));
       const state = await f.sync.syncCurrent();
       check("identifies a fully rotated active file by account", state.ownerId === a.id);
       check(
@@ -402,7 +648,7 @@ async function runCredentialSyncTests(): Promise<void> {
       const a = await f.store.addFromCreds("A", creds("a1", 3_600_000), {
         identity: { accountUuid: "acct-a", email: "a@example.com" },
       });
-      f.manager.writeCreds(creds("other", 3_600_000));
+      await f.manager.writeCreds(creds("other", 3_600_000));
       const state = await f.sync.syncCurrent();
       check("reports an unsaved login", state.unsavedIdentity?.email === "other@example.com");
       check("clears the active marker for an unsaved login", f.store.getActiveId() === undefined);
@@ -423,7 +669,7 @@ async function runCredentialSyncTests(): Promise<void> {
       await f.store.addFromCreds("A", creds("a1", 3_600_000), {
         identity: { accountUuid: "acct-a", email: "a@example.com" },
       });
-      f.manager.writeCreds(creds("other", 3_600_000));
+      await f.manager.writeCreds(creds("other", 3_600_000));
       const state = await f.sync.syncCurrent();
       check(
         "shows a different login as unsaved despite unidentified profiles",
@@ -437,7 +683,7 @@ async function runCredentialSyncTests(): Promise<void> {
     {
       const f = createSyncFixture();
       const b = await f.store.addFromCreds("B", creds("b1", -60_000), { activate: false });
-      f.manager.writeCreds(creds("b2", 3_600_000), f.homeDir(b.id));
+      await f.manager.writeCreds(creds("b2", 3_600_000), f.homeDir(b.id));
       tokenCalls = 0;
       const fresh = await f.sync.getFreshCreds(b.id);
       check("adopts the newest generation from any copy", fresh.creds?.refreshToken === "b2-refresh");
@@ -449,7 +695,7 @@ async function runCredentialSyncTests(): Promise<void> {
     {
       const f = createSyncFixture();
       const a = await f.store.addFromCreds("A", creds("a1", -60_000));
-      f.manager.writeCreds(creds("a1", -60_000));
+      await f.manager.writeCreds(creds("a1", -60_000));
       tokenCalls = 0;
       let lockHeldDuringRefresh = false;
       tokenResponse = () => {
@@ -470,7 +716,7 @@ async function runCredentialSyncTests(): Promise<void> {
       check("holds Claude Code's lock while spending the refresh token", lockHeldDuringRefresh);
       check(
         "writes the rotation back to Claude Code's credentials file",
-        f.manager.readCurrent()?.refreshToken === "a2-refresh"
+        (await f.manager.readCurrent())?.refreshToken === "a2-refresh"
       );
       check(
         "stores the rotation in the vault",
@@ -494,7 +740,7 @@ async function runCredentialSyncTests(): Promise<void> {
       const second = await f.sync.getFreshCreds(b.id);
       check("invalid_grant requires reauthorization", first.needsReauthorization === true);
       check("a rejected refresh token is never sent again", second.needsReauthorization === true && tokenCalls === 1);
-      f.manager.writeCreds(creds("relogin", 3_600_000), f.homeDir(b.id));
+      await f.manager.writeCreds(creds("relogin", 3_600_000), f.homeDir(b.id));
       const recovered = await f.sync.getFreshCreds(b.id);
       check("recovers as soon as a new generation appears", recovered.creds?.refreshToken === "relogin-refresh");
       check("recovery clears the dead marker", f.store.get(b.id)?.deadRefreshTokenHash === undefined);
@@ -505,7 +751,7 @@ async function runCredentialSyncTests(): Promise<void> {
     {
       const f = createSyncFixture();
       const a = await f.store.addFromCreds("A", creds("a1", -60_000));
-      f.manager.writeCreds(creds("a1", -60_000));
+      await f.manager.writeCreds(creds("a1", -60_000));
       fs.mkdirSync(path.join(f.globalDir, ".oauth_refresh.lock"));
       tokenCalls = 0;
       const sync = f.sync as unknown as { getFreshCreds: CredentialSync["getFreshCreds"] };
@@ -537,7 +783,7 @@ async function runCredentialSyncTests(): Promise<void> {
         }
       );
       await f.store.setOAuthAccount(b.id, { accountUuid: "acct-b", emailAddress: "b@example.com" });
-      f.manager.writeCreds(creds("a2", 7_200_000), undefined, { organizationUuid: "org-a" });
+      await f.manager.writeCreds(creds("a2", 7_200_000), undefined, { organizationUuid: "org-a" });
       fs.writeFileSync(
         path.join(f.globalDir, ".claude.json"),
         JSON.stringify({ keep: 1, oauthAccount: { accountUuid: "acct-a" } })
@@ -643,7 +889,7 @@ async function runUsagePollerTests(): Promise<void> {
   const originalFetch = globalThis.fetch;
   const f = createSyncFixture();
   const a = await f.store.addFromCreds("A", creds("a1", 3_600_000));
-  f.manager.writeCreds(creds("a1", 3_600_000));
+  await f.manager.writeCreds(creds("a1", 3_600_000));
   let usageCalls = 0;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -669,7 +915,7 @@ async function runUsagePollerTests(): Promise<void> {
     check("usage is stored after the retry", f.store.get(a.id)?.lastUsage?.sessionPercent === 7);
     check(
       "the retry's rotation reaches Claude Code's file",
-      f.manager.readCurrent()?.refreshToken === "a2-refresh"
+      (await f.manager.readCurrent())?.refreshToken === "a2-refresh"
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -688,7 +934,7 @@ async function runSwitchServiceTests(): Promise<void> {
     expiresAt: 111,
     scopes: [],
   });
-  f.manager.writeCreds({
+  await f.manager.writeCreds({
     accessToken: "current-access",
     refreshToken: "current-refresh",
     expiresAt: 222,
@@ -1287,19 +1533,32 @@ function runToneTests(): void {
   check("the name is red once the 5h limit is used up", nameTone(acc([w("session", 100)])) === "danger");
   check("other limits below 100% do not change it", nameTone(acc([w("session", 7), w("weekly_fable", 99)])) === "ok");
   check(
-    "a used-up weekly limit makes the name red although 5h is free",
-    nameTone(acc([w("session", 0), w("weekly_fable", 100, "Weekly (Fable)")])) === "danger"
+    "a used-up model limit (Fable) keeps the name green while 5h has room",
+    nameTone(acc([w("session", 0), w("weekly_fable", 100, "Weekly (Fable)")])) === "ok" &&
+      nameTone(acc([w("session", 40), w("weekly_all", 20), w("weekly_opus", 100)])) === "ok"
   );
-  check("the general weekly limit counts too", nameTone(acc([w("session", 10), w("weekly_all", 100)])) === "danger");
+  check(
+    "a used-up general weekly limit makes the name red although 5h has room",
+    nameTone(acc([w("session", 10), w("weekly_all", 100)])) === "danger"
+  );
+  check(
+    "a used-up 5h limit is red whatever the model limits say",
+    nameTone(acc([w("session", 100), w("weekly_fable", 100)])) === "danger"
+  );
   check("without a 5h reading it is green until a limit is used up", nameTone(acc([w("weekly_all", 65)])) === "ok" && nameTone(acc([w("weekly_all", 100)])) === "danger");
+  check("a model-specific 5h limit does not block the account", nameTone(acc([w("session", 20), w("session_fable", 100)])) === "ok");
   check("no usage data: no color", nameTone(acc([])) === undefined);
   check("an expired login gets no color", nameTone(acc([w("session", 100)], true)) === undefined);
   check(
     "the tooltip line explains the color",
     nameToneDescription(acc([w("session", 7)])) === "5h limit: 7% used" &&
       nameToneDescription(acc([w("session", 100)])) === "5h limit used up" &&
-      nameToneDescription(acc([w("session", 0), w("weekly_fable", 100, "Weekly (Fable)")])) === "Weekly (Fable) used up: sessions are blocked too" &&
+      nameToneDescription(acc([w("session", 10), w("weekly_all", 100, "Weekly (all)")])) === "Weekly (all) used up: sessions are blocked too" &&
+      nameToneDescription(acc([w("session", 7), w("weekly_fable", 100, "Weekly (Fable)")])) ===
+        "5h limit: 7% used\nWeekly (Fable) used up: only that model is blocked" &&
       nameToneDescription(acc([w("weekly_all", 30)])) === "Most used limit: 30%" &&
+      nameToneDescription(acc([w("weekly_all", 30), w("weekly_fable", 100, "Weekly (Fable)")])) ===
+        "Most used limit: 30%\nWeekly (Fable) used up: only that model is blocked" &&
       nameToneDescription(acc([])) === undefined
   );
 }
@@ -1316,7 +1575,9 @@ runProposeTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();
-runAccountStoreTests()
+runCredentialsFileTests()
+  .then(runKeychainTests)
+  .then(runAccountStoreTests)
   .then(runBackupTests)
   .then(runUsageHistoryTests)
   .then(runClaudeLockTests)

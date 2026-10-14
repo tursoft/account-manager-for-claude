@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
 
@@ -16,11 +17,14 @@ export function resolveClaudeCommand(command: string): string | undefined {
     return pathMatch;
   }
 
-  if (process.platform === "win32") {
-    const common = findCommonWindowsClaudeCommand();
-    if (common) {
-      return common;
-    }
+  const common =
+    process.platform === "win32"
+      ? findCommonWindowsClaudeCommand()
+      : clean === DEFAULT_COMMAND
+        ? findCommonUnixClaudeCommand()
+        : undefined;
+  if (common) {
+    return common;
   }
 
   return clean === DEFAULT_COMMAND ? undefined : clean;
@@ -30,7 +34,9 @@ export function missingClaudeCliMessage(): string {
   return [
     "Claude Code CLI was not found.",
     "Install Claude Code, restart VS Code so PATH is refreshed, or set accountManagerForClaude.claudeCommand to the full path of claude/claude.cmd.",
-    "On Windows the command is often in %APPDATA%\\npm\\claude.cmd or %LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\claude.exe.",
+    process.platform === "win32"
+      ? "On Windows the command is often in %APPDATA%\\npm\\claude.cmd or %LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\claude.exe."
+      : "Run `which claude` in a terminal to find it; it is often ~/.local/bin/claude.",
   ].join(" ");
 }
 
@@ -105,6 +111,24 @@ function findCommonWindowsClaudeCommand(): string | undefined {
     env.ProgramFiles && path.join(env.ProgramFiles, "nodejs", "claude.cmd"),
   ].filter(Boolean) as string[];
 
+  return candidates.find((candidate) => fileExists(candidate));
+}
+
+/**
+ * Where installers put `claude` on macOS and Linux. VS Code started from the Dock or a
+ * desktop launcher may not have the login shell's PATH, so these are checked too.
+ */
+function findCommonUnixClaudeCommand(): string | undefined {
+  const home = os.homedir();
+  const candidates = [
+    path.join(home, ".local", "bin", "claude"),
+    path.join(home, ".claude", "local", "claude"),
+    "/opt/homebrew/bin/claude",
+    "/usr/local/bin/claude",
+    path.join(home, ".npm-global", "bin", "claude"),
+    path.join(home, ".bun", "bin", "claude"),
+    path.join(home, ".volta", "bin", "claude"),
+  ];
   return candidates.find((candidate) => fileExists(candidate));
 }
 

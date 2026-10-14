@@ -18,9 +18,9 @@ const SECRET_PREFIX = "accountManagerForClaude.account.";
  * account id is workspace-scoped so independent VS Code windows can use different
  * accounts without racing through one global marker.
  *
- * The "active" account is the one whose tokens are currently in .credentials.json.
- * Claude Code rotates those tokens, so CredentialSync keeps the vault copy in step
- * with every credentials file that holds the same login.
+ * The "active" account is the one whose tokens Claude Code currently uses (its
+ * .credentials.json, or the Keychain on macOS). Claude Code rotates those tokens, so
+ * CredentialSync keeps the vault copy in step with every copy of the same login.
  */
 export class AccountStore {
   constructor(private readonly context: vscode.ExtensionContext) {}

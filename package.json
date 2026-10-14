@@ -2,7 +2,7 @@
   "name": "account-manager-for-claude",
   "displayName": "Claude Account Manager",
   "description": "Seamlessly switch between Claude accounts and subscriptions in Claude Code, with real-time usage limit tracking.",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "publisher": "tursoft",
   "author": {
     "name": "Muhammet Tursak",
@@ -267,7 +267,7 @@
         "accountManagerForClaude.credentialsPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Path to the Claude Code `.credentials.json` file. Empty = default `~/.claude/.credentials.json`."
+          "markdownDescription": "Path to the Claude Code `.credentials.json` file. Empty = default `~/.claude/.credentials.json`. On macOS, Claude Code keeps the login in the Keychain instead; this path's folder selects which Keychain item is used."
         },
         "accountManagerForClaude.warnThresholdPercent": {
           "type": "number",

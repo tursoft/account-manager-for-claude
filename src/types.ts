@@ -1,5 +1,5 @@
 /**
- * Raw structure stored in ~/.claude/.credentials.json
+ * Raw structure stored in ~/.claude/.credentials.json (the Keychain item on macOS)
  * { "claudeAiOauth": { ... } }
  */
 export interface OAuthCreds {
