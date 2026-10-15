@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security Check Report</title>
+<meta name="description" content="Network and credential-handling audit of the Claude Account Manager VS Code extension: where credentials and data are sent.">
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface-2: #f1efea;
+    --text: #1d1c1a;
+    --muted: #5f5b54;
+    --border: #e2ded6;
+    --accent: #b5532f;
+    --ok: #2f7d4a;
+    --ok-bg: #e7f3eb;
+    --info: #2f5f9e;
+    --info-bg: #e8eef8;
+    --warn: #8a5a00;
+    --warn-bg: #fbf1dc;
+    --code-bg: #f1efea;
+    --link: #2f5f9e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161514;
+      --surface: #1f1e1c;
+      --surface-2: #272522;
+      --text: #ece9e3;
+      --muted: #a8a399;
+      --border: #34312d;
+      --accent: #e08a62;
+      --ok: #6cc28a;
+      --ok-bg: #1d2e23;
+      --info: #8fb4ea;
+      --info-bg: #1d2533;
+      --warn: #e2b456;
+      --warn-bg: #30281a;
+      --code-bg: #2a2825;
+      --link: #8fb4ea;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161514;
+    --surface: #1f1e1c;
+    --surface-2: #272522;
+    --text: #ece9e3;
+    --muted: #a8a399;
+    --border: #34312d;
+    --accent: #e08a62;
+    --ok: #6cc28a;
+    --ok-bg: #1d2e23;
+    --info: #8fb4ea;
+    --info-bg: #1d2533;
+    --warn: #e2b456;
+    --warn-bg: #30281a;
+    --code-bg: #2a2825;
+    --link: #8fb4ea;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 48px 16px 64px; }
+  a { color: var(--link); text-underline-offset: 2px; }
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+    font-size: 0.875em;
+  }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+
+  header .eyebrow {
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 12px; }
+  h2 {
+    font-size: 1.3rem;
+    margin: 48px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin: 24px 0 6px; }
+  p { margin: 0 0 12px; }
+  .lede { color: var(--muted); font-size: 1.05rem; margin-bottom: 20px; }
+
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0 0 28px;
+  }
+  .meta div { background: var(--surface); padding: 10px 14px; }
+  .meta dt { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .meta dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+
+  .verdict {
+    background: var(--ok-bg);
+    border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent);
+    border-left: 5px solid var(--ok);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .verdict .label {
+    display: inline-block;
+    background: var(--ok);
+    color: var(--surface);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .verdict p.big { font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
+  .verdict ul { margin: 0; padding-left: 20px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin: 20px 0 0;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat .n { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
+  .stat .d { color: var(--muted); font-size: 0.9rem; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    margin: 12px 0 8px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface-2); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.nowrap { white-space: nowrap; }
+
+  .pill {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.info { background: var(--info-bg); color: var(--info); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+
+  .obs {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 12px 0;
+  }
+  .obs h3 { margin: 0 0 6px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .obs p:last-child { margin-bottom: 0; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 8px 0 16px;
+  }
+  pre code { background: none; padding: 0; }
+
+  ol.method, ul.plain { padding-left: 22px; }
+  ol.method li, ul.plain li { margin-bottom: 6px; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 600px) {
+    .wrap { padding-top: 28px; }
+    h1 { font-size: 1.6rem; }
+    th, td { padding: 8px 10px; }
+  }
+  @media print {
+    body { background: #fff; }
+    .table-wrap, .stat, .obs { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Security check</p>
+  <h1>Does Claude Account Manager send credentials or data anywhere?</h1>
+  <p class="lede">
+    An audit of every network call, spawned process and storage location in the
+    <strong>account-manager-for-claude</strong> VS Code extension. It answers one question: do OAuth tokens,
+    account details or usage data leave the computer, and if so, where do they go?
+  </p>
+  <dl class="meta">
+    <div><dt>Extension</dt><dd>Claude Account Manager v1.0.8</dd></div>
+    <div><dt>Commit audited</dt><dd class="mono"><a href="https://github.com/tursoft/account-manager-for-claude/tree/7b4c36100fd226d108a3c2cb0abd7122920809c5">7b4c361</a></dd></div>
+    <div><dt>Date</dt><dd>15 October 2026</dd></div>
+    <div><dt>Scope</dt><dd>Source code (<code>src/</code>, <code>webview/</code>, build config, lockfile)</dd></div>
+  </dl>
+</header>
+
+<section class="verdict" aria-label="Verdict">
+  <span class="label">Result: no data leak found</span>
+  <p class="big">No credentials or user data go to any third party. OAuth tokens are sent only to Anthropic's own endpoints, which the extension needs in order to work.</p>
+  <ul>
+    <li>All outbound requests go to hardcoded Anthropic hosts (<code>platform.claude.com</code>, <code>api.anthropic.com</code>). No setting can redirect them.</li>
+    <li>The extension has no telemetry, analytics, crash reporting or tracking.</li>
+    <li>The webview panels are blocked from making network requests by their Content Security Policy.</li>
+    <li>Tokens are kept in VS Code's encrypted SecretStorage and are never logged or copied to the clipboard.</li>
+  </ul>
+</section>
+
+<div class="stats">
+  <div class="stat"><div class="n">0</div><div class="d">third-party servers that receive data</div></div>
+  <div class="stat"><div class="n">2</div><div class="d">API hosts contacted, both Anthropic</div></div>
+  <div class="stat"><div class="n">0</div><div class="d">telemetry or analytics calls</div></div>
+  <div class="stat"><div class="n">1</div><div class="d">runtime dependency (<code>@zip.js/zip.js</code>)</div></div>
+</div>
+
+<h2 id="method">How the check was done</h2>
+<ol class="method">
+  <li>Searched all source code for network primitives: <code>fetch</code>, Node <code>http</code>/<code>https</code>/<code>net</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>sendBeacon</code>, <code>axios</code>/<code>undici</code>, and <code>vscode.env.openExternal</code>.</li>
+  <li>Searched for process execution (<code>child_process</code>, <code>spawn</code>, <code>exec</code>) and for the VS Code telemetry API.</li>
+  <li>Read every match in full to see exactly which data each request or process receives.</li>
+  <li>Checked the Content Security Policy of each webview, along with every image, script and stylesheet source.</li>
+  <li>Traced where tokens are stored, and checked logging, clipboard use and backup export.</li>
+  <li>Listed runtime dependencies and install scripts from <code>package-lock.json</code>, and checked what <code>.vscodeignore</code> ships.</li>
+</ol>
+
+<h2 id="network">Every network destination</h2>
+<p>These are the only places the extension connects to. Each URL is a constant in the source code.</p>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Destination</th><th>What is sent</th><th>When</th><th>Source</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>https://platform.claude.com/v1/oauth/token</code></td>
+      <td>Refresh token and the public Claude Code client ID (token refresh). For browser login: authorization code, PKCE verifier and state.</td>
+      <td>When an access token expires; when you use “Authorize in browser”</td>
+      <td class="nowrap"><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/oauth.ts#L53-L69">oauth.ts:53</a><br><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/browserOAuth.ts#L105-L127">browserOAuth.ts:105</a></td>
+    </tr>
+    <tr>
+      <td><code>https://api.anthropic.com/api/oauth/usage</code></td>
+      <td>Access token in the <code>Authorization: Bearer</code> header. No request body.</td>
+      <td>Usage polling: at startup, on refresh, and every 240&nbsp;s by default</td>
+      <td class="nowrap"><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/usage.ts#L165-L176">usage.ts:165</a></td>
+    </tr>
+    <tr>
+      <td><code>https://api.anthropic.com/api/oauth/profile</code></td>
+      <td>Access token in the <code>Authorization: Bearer</code> header. No request body.</td>
+      <td>To find out which account (email, organization) a login belongs to</td>
+      <td class="nowrap"><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/oauth.ts#L153-L165">oauth.ts:153</a></td>
+    </tr>
+    <tr>
+      <td><code>https://claude.com/cai/oauth/authorize</code><br><span style="color:var(--muted)">(opened in your browser)</span></td>
+      <td>Client ID, scopes, redirect URI, PKCE challenge and a random state value. No secrets.</td>
+      <td>Only when you start “Authorize in browser”</td>
+      <td class="nowrap"><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/browserOAuth.ts#L59-L74">browserOAuth.ts:59</a></td>
+    </tr>
+    <tr>
+      <td><code>http://127.0.0.1:&lt;random port&gt;/callback</code><br><span style="color:var(--muted)">(local listener)</span></td>
+      <td>Receives the OAuth code from your browser. It is bound to loopback only, rejects a mismatched <code>state</code>, and closes once login finishes.</td>
+      <td>During browser login only (10-minute timeout)</td>
+      <td class="nowrap"><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/browserOAuth.ts#L147-L198">browserOAuth.ts:147</a></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<p>Responses from Anthropic (usage percentages, email, organization name) are stored locally and shown in the panel. They are never forwarded anywhere else.</p>
+
+<h2 id="checks">Other checks</h2>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Area</th><th>Result</th><th>Details</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Webview network access</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td>All three panels set <code>default-src 'none'</code> with no <code>connect-src</code>. Images, styles and fonts load only from the extension's own folder, and scripts need a per-load nonce. Chart.js is bundled locally by esbuild, not loaded from a CDN.
+        <br><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/ui/accountsView.ts#L327-L333">accountsView.ts:327</a> ·
+        <a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/ui/analyticsPanel.ts#L121-L126">analyticsPanel.ts:121</a> ·
+        <a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/ui/availabilityPanel.ts#L137-L142">availabilityPanel.ts:137</a></td>
+    </tr>
+    <tr>
+      <td>External links</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td>Links open in your browser only when you click them, and only if the URL is on a fixed allowlist: tursoft.net, two GitHub repos, a mailto address and the bestjobfinder.net banner. No account data goes into these URLs.
+        <br><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/ui/accountsView.ts#L19-L27">accountsView.ts:19</a> ·
+        <a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/ui/accountsView.ts#L182-L186">accountsView.ts:182</a></td>
+    </tr>
+    <tr>
+      <td>Spawned processes</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td><code>claude auth status --json</code> reads which account is logged in. <code>claude -p "Hi"</code> (Say Hi) runs through your own Claude CLI with all tools disabled and session saving turned off. On macOS, <code>/usr/bin/security</code> reads and writes Claude Code's Keychain item. None of them send data anywhere else.
+        <br><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/authStatus.ts#L53-L79">authStatus.ts:53</a> ·
+        <a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/warmup.ts#L98-L114">warmup.ts:98</a> ·
+        <a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/keychain.ts#L92-L122">keychain.ts:92</a></td>
+    </tr>
+    <tr>
+      <td>Token storage</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td>Tokens are kept in VS Code's encrypted SecretStorage. Profile metadata in <code>globalState</code> contains no secrets. Claude Code credential files are written with <code>0600</code> permissions, so only your user account can read them.
+        <br><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/accountStore.ts#L55-L70">accountStore.ts:55</a> ·
+        <a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/credentials.ts#L370">credentials.ts:370</a></td>
+    </tr>
+    <tr>
+      <td>Backups</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td>Backups are AES-256 password-protected ZIP files (password at least 8 characters), saved to a location you choose. They are never uploaded. Web workers are turned off, so zip.js loads no extra code.
+        <br><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/backup.ts#L24-L80">backup.ts:24</a></td>
+    </tr>
+    <tr>
+      <td>Logging &amp; clipboard</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td>Nothing is written to <code>console.*</code> or a VS Code output channel. Only account names are copied to the clipboard. Token-refresh errors list the field <em>names</em> that were sent, never their values.
+        <br><a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/oauth.ts#L83-L88">oauth.ts:83</a></td>
+    </tr>
+    <tr>
+      <td>Telemetry</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td>The extension does not use the VS Code telemetry API or any analytics SDK.</td>
+    </tr>
+    <tr>
+      <td>Dependencies</td>
+      <td><span class="pill ok">Pass</span></td>
+      <td>The only runtime dependency is <code>@zip.js/zip.js</code> 2.23.0. The packages with install scripts (<code>esbuild</code>, <code>keytar</code>, <code>@vscode/vsce-sign</code>) are build tools only and are left out of the packaged extension by <code>.vscodeignore</code>.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="observations">Things worth knowing</h2>
+<p>None of these is a data leak. They are behaviours a careful user may want to know about.</p>
+
+<div class="obs">
+  <h3><span class="pill info">Info</span> The extension identifies itself as Claude Code</h3>
+  <p>Usage requests send <code>User-Agent: claude-code/2.0.14</code>, and every OAuth call uses Claude Code's public client ID. The endpoints are not officially documented, so Anthropic could change or restrict them, which would stop usage tracking or token refresh from working.
+  (<a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/usage.ts#L7-L8">usage.ts:7</a>,
+  <a href="https://github.com/tursoft/account-manager-for-claude/blob/7b4c36100fd226d108a3c2cb0abd7122920809c5/src/oauth.ts#L13-L16">oauth.ts:13</a>)</p>
+</div>
+
+<div class="obs">
+  <h3><span class="pill info">Info</span> Usage polling runs in the background</h3>
+  <p>With the default settings, the extension checks every saved account's usage with Anthropic every 240 seconds, using that account's token. If usage history is turned on, it checks every 60 seconds. You can turn this off with <code>accountManagerForClaude.autoRefresh</code>, after which it checks only at startup, on manual refresh, and when a used-up limit is due to reset.</p>
+</div>
+
+<div class="obs">
+  <h3><span class="pill info">Info</span> Say Hi sends a real prompt</h3>
+  <p>“Say Hi” sends a short prompt (<code>Hi</code> by default, <code>haiku</code> model) to Anthropic through the Claude CLI, on the selected account. This uses a small part of that account's usage. It only runs when you start it.</p>
+</div>
+
+<div class="obs">
+  <h3><span class="pill warn">Limit</span> This covers the source code, not the published package</h3>
+  <p>This check covers the source code in the repository at commit <code>7b4c361</code>. It does not compare that code against the VSIX published on the Visual Studio Marketplace. To be sure that package matches this code, build it yourself with <code>npm run build:vsix</code>, or unpack the published VSIX and search its <code>dist/</code> files with the commands below.</p>
+</div>
+
+<h2 id="verify">Check it yourself</h2>
+<p>From the repository root, these commands list every network call and spawned process. The results should match the tables above.</p>
+<pre><code># Every network call and external-link opener
+grep -rnE "fetch\(|https?\.request|XMLHttpRequest|WebSocket|sendBeacon|openExternal" src webview
+
+# Every hardcoded URL
+grep -rnoE "https?://[^\"' )]+" src webview
+
+# Every spawned process
+grep -rnE "child_process|spawn\(|execFile|execSync" src
+
+# Webview Content Security Policies
+grep -rn -A6 "const csp" src/ui</code></pre>
+
+<footer>
+  <p>Audit of <a href="https://github.com/tursoft/account-manager-for-claude">tursoft/account-manager-for-claude</a> at commit
+  <span class="mono">7b4c36100fd226d108a3c2cb0abd7122920809c5</span>, 15 October 2026. Source links point to that commit.</p>
+</footer>
+
+</div>
+</body>
+</html>
