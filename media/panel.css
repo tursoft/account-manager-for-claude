@@ -352,6 +352,49 @@ button:focus-visible {
   height: 12px;
 }
 
+/* Countdown to an automatic switch: "Switching to X in 27s" and Cancel, over a draining bar. */
+.proposal-countdown {
+  margin: 6px 0 4px;
+  padding: 5px 8px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--notice-color) 14%, transparent);
+}
+
+.countdown-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.countdown-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.countdown-when {
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-bar {
+  height: 3px;
+  margin-top: 5px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--track);
+}
+
+.countdown-fill {
+  height: 100%;
+  background: var(--notice-color);
+  transition: width 0.25s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown-fill {
+    transition: none;
+  }
+}
+
 /* ---- toast ("Copied ...") ----------------------------------------------- */
 
 .toast {

@@ -5,6 +5,14 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { AccountStore } from "./accountStore";
 import { AccountWindowService } from "./accountWindow";
+import {
+  AutoProposals,
+  AutoSwitchSettings,
+  autoSwitchTargets,
+  PendingSwitch,
+  ProposalTrigger,
+  proposalTrigger,
+} from "./autoSwitch";
 import { BrowserOAuthLogin } from "./browserOAuth";
 import {
   getConfiguredClaudeCommand,
@@ -26,8 +34,9 @@ import { defaultProfileLabel, identityLabel, profileIdentity, sameIdentity } fro
 import { getAccountConfigDir } from "./isolatedConfig";
 import { LimitResetNotifier } from "./limitNotifier";
 import { UsageHistory } from "./usageHistory";
-import { TokenRefresher } from "./oauth";
+import { requiresProfileReauthorization, TokenRefresher } from "./oauth";
 import { ProfileActivityRegistry } from "./profileActivity";
+import { ProposeAccount, ProposeFor } from "./propose";
 import { SwitchService } from "./switchService";
 import { AccountsViewProvider } from "./ui/accountsView";
 import { AnalyticsPanel } from "./ui/analyticsPanel";
@@ -108,8 +117,16 @@ export function activate(context: vscode.ExtensionContext): void {
     (profileId) => void poller.pollOne(profileId, true).then(refreshUI)
   );
 
+  // The proposal the extension opens on its own when a limit of the active account runs
+  // low, with its countdown to an automatic switch (see "Proposing the next account").
+  const autoProposals = new AutoProposals(
+    (pending) => void runAutoSwitch(pending),
+    (proposal) => viewProvider.setAutoProposal(proposal)
+  );
+
   const refreshUI = () => {
     statusBar.refresh();
+    autoProposals.activeChanged(store.getActiveId());
     viewProvider.refresh();
     limitNotifier.schedule(store.list());
     AvailabilityPanel.notifyChanged();
@@ -516,6 +533,80 @@ export function activate(context: vscode.ExtensionContext): void {
     await importIsolatedLogin(id, configDir);
   };
 
+  // --- Proposing the next account ---
+
+  /** Automatic switching as configured; with a single saved account there is nothing to switch to. */
+  const autoSwitchSettings = (): AutoSwitchSettings => ({
+    enabled: config().get<boolean>("autoSwitch.enabled", true) && store.list().length > 1,
+    thresholdPercent: Math.min(100, Math.max(1, config().get<number>("autoSwitch.thresholdPercent", 95))),
+    countdownSeconds: Math.min(600, Math.max(5, config().get<number>("autoSwitch.countdownSeconds", 30))),
+  });
+
+  /** The saved accounts as proposals rank them, the same way the accounts panel sees them. */
+  const proposalAccounts = (): Promise<ProposeAccount[]> => {
+    const activeId = store.getActiveId();
+    return Promise.all(
+      store.list().map(async (p) => {
+        const creds = await store.getCreds(p.id);
+        return {
+          id: p.id,
+          label: p.label,
+          isActive: p.id === activeId,
+          needsReauthorization:
+            !hasUsableOAuthCreds(creds) ||
+            store.isRefreshTokenDead(p.id, creds?.refreshToken) ||
+            requiresProfileReauthorization(p.lastUsage?.error),
+          windows: p.lastUsage?.windows ?? [],
+        };
+      })
+    );
+  };
+
+  /** The accounts an automatic switch away from `fromId` can go to, best first. */
+  const switchTargets = async (fromId: string, kind: ProposeFor) =>
+    autoSwitchTargets(await proposalAccounts(), kind, fromId, autoSwitchSettings().thresholdPercent, (id) =>
+      profileActivity.isActive(id, { excludeSelf: true })
+    );
+
+  /**
+   * Proposes the next accounts for a limit of the active account. With a countdown, the
+   * best one that can take over is switched to when it ends.
+   */
+  const proposeNext = async (fromId: string, trigger: ProposalTrigger) => {
+    const [target] = trigger.countdown ? await switchTargets(fromId, trigger.kind) : [];
+    if (store.getActiveId() !== fromId) {
+      return; // switched while the accounts were read
+    }
+    if (autoProposals.get()?.countdown && autoProposals.get()?.fromId === fromId) {
+      return; // a countdown to a switch away from this account is running: let it finish
+    }
+    autoProposals.open(
+      fromId,
+      trigger.kind,
+      target && { targetId: target.id, seconds: autoSwitchSettings().countdownSeconds }
+    );
+    viewProvider.reveal();
+  };
+
+  /** The countdown ended (or Switch now): switch, unless the login changed or the target can no longer take over. */
+  const runAutoSwitch = async ({ fromId, kind, targetId }: PendingSwitch) => {
+    // Another window, the CLI or /login may have changed the login during the countdown.
+    await synchronizeCurrentProfile();
+    if (store.getActiveId() !== fromId) {
+      autoProposals.close();
+      return;
+    }
+    if (!(await switchTargets(fromId, kind)).some((a) => a.id === targetId)) {
+      vscode.window.showWarningMessage(
+        `Did not switch to "${store.get(targetId)?.label ?? "the proposed account"}": it can no longer take over. ` +
+          "Pick another account in the proposal."
+      );
+      return;
+    }
+    autoProposals.close();
+    await switchToProfile(targetId);
+  };
+
   const poller = new UsagePoller(
     store,
     sync,
@@ -523,15 +614,12 @@ export function activate(context: vscode.ExtensionContext): void {
     refreshUI,
     (id, previous, next) => {
       limitNotifier.onSnapshot(id, previous, next);
-      // The active account just ran out of a limit: propose the next account right away.
-      if (id === store.getActiveId() && previous) {
-        const ranOut = next.windows.find(
-          (w) => w.percent >= 100 && (previous.windows.find((p) => p.kind === w.kind)?.percent ?? 0) < 100
-        );
-        if (ranOut) {
-          const kind = ranOut.kind === "session" || ranOut.kind.startsWith("weekly_") ? ranOut.kind : "session";
-          viewProvider.showProposal(kind as "session" | `weekly_${string}`, true);
-          void vscode.commands.executeCommand("accountManagerForClaude.accountsView.focus");
+      // A limit of the active account ran out, or its 5h limit reached the automatic switch
+      // threshold: propose the next accounts right away.
+      if (id === store.getActiveId()) {
+        const trigger = proposalTrigger(previous, next, autoSwitchSettings());
+        if (trigger) {
+          void proposeNext(id, trigger);
         }
       }
       if (historyEnabled()) {
@@ -544,6 +632,8 @@ export function activate(context: vscode.ExtensionContext): void {
     applyCurrentState
   );
   poller.onBusyChange = (ids, all) => viewProvider.setBusy(ids, all);
+  // The panel's buttons on the extension's own proposal: Switch now, Cancel (the countdown), Dismiss.
+  viewProvider.onAutoProposal = (action) => autoProposals[action]();
 
   // Publish the remembered owner before asynchronous startup work, so another
   // window does not start a second session on this login during restart.
@@ -555,6 +645,7 @@ export function activate(context: vscode.ExtensionContext): void {
     profileActivity,
     { dispose: () => poller.stop() },
     limitNotifier,
+    autoProposals,
     {
       dispose: () => {
         for (const file of watchedCredentialsPaths) {
@@ -593,8 +684,38 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("accountManagerForClaude.addAccount", () => addAccount())
   );
 
+  /** Switches Claude Code to a saved account; a profile whose login broke is offered for reauthorization. */
+  const switchToProfile = async (targetId: string) => {
+    let res = await switchService.switchTo(targetId);
+    if (!res.ok && res.reauthProfileId) {
+      const completed = await completeProfileReauthorization(res.reauthProfileId, true);
+      if (completed.ok) {
+        res = await switchService.switchTo(targetId);
+      } else if (!completed.missing) {
+        vscode.window.showWarningMessage(completed.message);
+      }
+    }
+    if (!res.ok) {
+      if (res.reauthProfileId) {
+        const choice = await vscode.window.showWarningMessage(
+          `${res.message} Reauthorize this profile in an isolated Claude login so another saved account cannot overwrite it.`,
+          "Reauthorize profile"
+        );
+        if (choice === "Reauthorize profile") {
+          await startProfileReauthorization(res.reauthProfileId);
+        }
+      } else if (res.message !== "Cancelled.") {
+        vscode.window.showWarningMessage(res.message);
+      }
+    }
+    profileActivity.setActiveProfile(store.getActiveId());
+    refreshUI();
+  };
+
   context.subscriptions.push(
     vscode.commands.registerCommand("accountManagerForClaude.switchAccount", async (id?: string) => {
+      // Switching by hand takes over from a countdown to an automatic switch.
+      autoProposals.stopCountdown();
       const targetId = id ?? (await pickAccount(store, "Switch to account…"));
       if (!targetId) {
         return;
@@ -604,30 +725,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (id && !(await confirmSwitch(targetId))) {
         return;
       }
-      let res = await switchService.switchTo(targetId);
-      if (!res.ok && res.reauthProfileId) {
-        const completed = await completeProfileReauthorization(res.reauthProfileId, true);
-        if (completed.ok) {
-          res = await switchService.switchTo(targetId);
-        } else if (!completed.missing) {
-          vscode.window.showWarningMessage(completed.message);
-        }
-      }
-      if (!res.ok) {
-        if (res.reauthProfileId) {
-          const choice = await vscode.window.showWarningMessage(
-            `${res.message} Reauthorize this profile in an isolated Claude login so another saved account cannot overwrite it.`,
-            "Reauthorize profile"
-          );
-          if (choice === "Reauthorize profile") {
-            await startProfileReauthorization(res.reauthProfileId);
-          }
-        } else if (res.message !== "Cancelled.") {
-          vscode.window.showWarningMessage(res.message);
-        }
-      }
-      profileActivity.setActiveProfile(store.getActiveId());
-      refreshUI();
+      await switchToProfile(targetId);
     })
   );
 
@@ -844,6 +942,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("accountManagerForClaude.undoSwitch", async () => {
+      autoProposals.stopCountdown();
       const res = await switchService.undoSwitch();
       profileActivity.setActiveProfile(store.getActiveId());
       vscode.window[res.ok ? "showInformationMessage" : "showWarningMessage"](res.message);
@@ -1098,6 +1197,9 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       if (e.affectsConfiguration("accountManagerForClaude.warnThresholdPercent")) {
         refreshUI();
+      }
+      if (e.affectsConfiguration("accountManagerForClaude.autoSwitch.enabled") && !autoSwitchSettings().enabled) {
+        autoProposals.stopCountdown();
       }
       if (e.affectsConfiguration("accountManagerForClaude.credentialsPath")) {
         watchCredentialsFile();

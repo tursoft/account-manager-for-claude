@@ -169,18 +169,22 @@ export function propose(accounts: ProposeAccount[], kind: ProposeFor, now = Date
   return { account: best.account, available: best.available, resetsAt: best.resetsAt, reason: best.reason, candidates, ranked };
 }
 
-/** Why nothing can be proposed for `kind`, in one sentence. */
-export function noProposalReason(accounts: ProposeAccount[], kind: ProposeFor, now = Date.now()): string {
+/**
+ * Why nothing can be proposed for `kind`, in one sentence. With `others`, `accounts` are the
+ * accounts other than the active one (when leaving it before it runs out).
+ */
+export function noProposalReason(accounts: ProposeAccount[], kind: ProposeFor, now = Date.now(), others = false): string {
   const name = limitName(kind);
+  const every = others ? "Every other account" : "Every account";
   const withLimit = accounts.filter((a) => windowOf(a, kind));
-  if (withLimit.length === 0) return `No account reports a ${name} limit.`;
+  if (withLimit.length === 0) return `No ${others ? "other " : ""}account reports a ${name} limit.`;
   const working = withLimit.filter((a) => !a.needsReauthorization);
-  if (working.length === 0) return `Every account with a ${name} limit has an expired login; reauthorize one first.`;
+  if (working.length === 0) return `${every} with a ${name} limit has an expired login; reauthorize one first.`;
   // All blocked: say when the first frees up.
   const soonest = working
     .map((a) => Math.max(...(a.windows || []).filter((w) => w.percent >= 100).map((w) => resetMs(w) ?? Infinity)))
     .filter((t) => Number.isFinite(t))
     .sort((a, b) => a - b)[0];
-  if (soonest !== undefined) return `Every account is used up; the first is usable again in ${fmtWait(Math.max(0, soonest - now))}.`;
-  return `Every account is used up and no reset time is known.`;
+  if (soonest !== undefined) return `${every} is used up; the first is usable again in ${fmtWait(Math.max(0, soonest - now))}.`;
+  return `${every} is used up and no reset time is known.`;
 }

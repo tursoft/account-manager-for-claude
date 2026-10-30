@@ -2,7 +2,7 @@
   "name": "account-manager-for-claude",
   "displayName": "Claude Account Manager",
   "description": "Seamlessly switch between Claude accounts and subscriptions in Claude Code, with real-time usage limit tracking.",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "publisher": "tursoft",
   "author": {
     "name": "Muhammet Tursak",
@@ -263,6 +263,25 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Automatically reload the VS Code window after switching accounts (required for Claude Code to pick up the new account). When disabled, the extension asks first."
+        },
+        "accountManagerForClaude.autoSwitch.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "When the active account's 5-hour limit reaches `#accountManagerForClaude.autoSwitch.thresholdPercent#`% used, propose the next accounts and count down `#accountManagerForClaude.autoSwitch.countdownSeconds#` seconds, then switch to the best one still below that threshold. **Cancel** or dismiss the proposal to stay. The window reload after the switch follows `#accountManagerForClaude.autoReloadAfterSwitch#`. When disabled, the next accounts are proposed only once a limit is used up, and nothing switches on its own."
+        },
+        "accountManagerForClaude.autoSwitch.thresholdPercent": {
+          "type": "number",
+          "default": 95,
+          "minimum": 1,
+          "maximum": 100,
+          "markdownDescription": "Usage (%) of the active account's 5-hour limit from which the countdown to an automatic switch starts (when `#accountManagerForClaude.autoSwitch.enabled#` is on). At 100, it starts once the limit is used up."
+        },
+        "accountManagerForClaude.autoSwitch.countdownSeconds": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 600,
+          "markdownDescription": "How many seconds the countdown to an automatic switch runs, so you can cancel it or pick another account first."
         },
         "accountManagerForClaude.credentialsPath": {
           "type": "string",

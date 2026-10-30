@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { AccountStore } from "../accountStore";
+import { AutoProposal } from "../autoSwitch";
 import { CurrentAccountState } from "../credentialSync";
 import { hasUsableOAuthCreds } from "../credentialValidation";
 import { identityLabel } from "../identity";
@@ -56,6 +57,10 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   private currentWindows?: ViewWindow[];
   private busy = { ids: [] as string[], all: false, session: false };
   private aboutPending = false;
+  /** The proposal the extension opened on its own, while it is open. */
+  private autoProposal?: AutoProposal;
+  /** What the user did with that proposal in the panel. */
+  onAutoProposal?: (action: "switchNow" | "stopCountdown" | "close") => void;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -122,9 +127,23 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage({ type: "busy", ...this.busy });
   }
 
-  /** Shows a proposal for `kind` in the panel (e.g. after the active account's limit ran out). */
-  showProposal(kind: "session" | `weekly_${string}`, automatic: boolean): void {
-    void this.view?.webview.postMessage({ type: "propose", kind, automatic });
+  /**
+   * Shows the proposal the extension opened on its own (e.g. when the active account's limit
+   * runs low), with its countdown; undefined closes it. It is part of the panel's state, so a
+   * panel that was hidden shows it once it opens.
+   */
+  setAutoProposal(proposal: AutoProposal | undefined): void {
+    this.autoProposal = proposal;
+    this.refresh();
+  }
+
+  /** Brings the panel into view; once it has been shown, without taking the keyboard focus. */
+  reveal(): void {
+    if (this.view) {
+      this.view.show(true);
+    } else {
+      void vscode.commands.executeCommand(`${AccountsViewProvider.viewType}.focus`);
+    }
   }
 
   /** Usage limits of the unsaved current login, shown like an account's limits. */
@@ -154,8 +173,13 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(
-      (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown; text?: unknown; kind?: unknown }) => {
+      (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown; text?: unknown; kind?: unknown; action?: unknown }) => {
       switch (msg.type) {
+        case "autoProposal":
+          if (msg.action === "switchNow" || msg.action === "stopCountdown" || msg.action === "close") {
+            this.onAutoProposal?.(msg.action);
+          }
+          break;
         case "copyName": {
           // Double-click on a name: a saved account (by id), or the unsaved current login (no id).
           const name = msg.id ? this.store.get(msg.id)?.label : this.currentSession?.label;
@@ -306,6 +330,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           .getConfiguration("accountManagerForClaude")
           .get<boolean>("usageHistory.enabled", false),
         viewSettingsRev: this.viewSettingsRev,
+        autoProposal: this.autoProposal,
       });
     });
   }

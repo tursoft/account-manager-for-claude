@@ -32,6 +32,7 @@ import { buildTimeline, Segment, timelineStats } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
 import { noProposalReason, propose, rankAccounts, urgencyOf } from "../src/propose";
+import { AutoProposal, AutoProposals, autoSwitchTargets, proposalTrigger } from "../src/autoSwitch";
 import {
   DEFAULT_LISTING,
   extraFilterLabels,
@@ -1515,6 +1516,114 @@ function runProposeTests(): void {
   check("reason when every account is used up names the wait", noProposalReason([acc("z", [w("session", 100, 30 * 60_000)])], "session", now) === "Every account is used up; the first is usable again in 30 min.");
   check("reason when no account has the limit", noProposalReason([acc("z", [w("session", 10)])], "weekly_fable", now) === "No account reports a Fable limit.");
   check("reason when only expired logins have it", noProposalReason([acc("z", [w("weekly_fable", 10)], { needsReauthorization: true })], "weekly_fable", now) === "Every account with a Fable limit has an expired login; reauthorize one first.");
+  // Leaving the active account before it runs out: the reasons are about the other accounts.
+  check("leaving the active account: every other account is used up", noProposalReason([acc("z", [w("session", 100, 30 * 60_000)])], "session", now, true) === "Every other account is used up; the first is usable again in 30 min.");
+  check("leaving the active account: no other account has the limit", noProposalReason([], "session", now, true) === "No other account reports a 5h limit.");
+  check("leaving the active account: the others' logins expired", noProposalReason([acc("z", [w("session", 10)], { needsReauthorization: true })], "session", now, true) === "Every other account with a 5h limit has an expired login; reauthorize one first.");
+}
+
+async function runAutoSwitchTests(): Promise<void> {
+  console.log("automatic switch:");
+  const snap = (windows: [string, number][]): UsageSnapshot => ({
+    fetchedAt: 0,
+    sessionPercent: null,
+    weeklyPercent: null,
+    windows: windows.map(([kind, percent]) => ({ kind, label: kind, percent, severity: "normal", resetsAt: null })),
+  });
+  const on = { enabled: true, thresholdPercent: 95, countdownSeconds: 30 };
+  const off = { ...on, enabled: false };
+  const trigger = (before: [string, number][] | undefined, after: [string, number][], settings = on) => {
+    const t = proposalTrigger(before && snap(before), snap(after), settings);
+    return t ? t.kind + (t.countdown ? " with countdown" : "") : "none";
+  };
+
+  check("the 5h limit reaching the threshold proposes with a countdown", trigger([["session", 90]], [["session", 95]]) === "session with countdown");
+  check("jumping past the threshold counts too", trigger([["session", 80]], [["session", 99]]) === "session with countdown");
+  check("each crossing triggers once: nothing while it stays above the threshold", trigger([["session", 95]], [["session", 97]]) === "none");
+  check("running out after the threshold counts down again", trigger([["session", 97]], [["session", 100]]) === "session with countdown");
+  check("nothing without a previous reading (the first one after startup)", trigger(undefined, [["session", 99]]) === "none");
+  check("turned off: nothing at the threshold", trigger([["session", 90]], [["session", 96]], off) === "none");
+  check("turned off: running out still proposes, without a countdown", trigger([["session", 90]], [["session", 100]], off) === "session");
+  check(
+    "a threshold of 100 waits until the limit runs out",
+    trigger([["session", 90]], [["session", 99]], { ...on, thresholdPercent: 100 }) === "none" &&
+      trigger([["session", 99]], [["session", 100]], { ...on, thresholdPercent: 100 }) === "session with countdown"
+  );
+  check(
+    "a weekly or model limit running out proposes for that limit, without a countdown",
+    trigger([["session", 10], ["weekly_fable", 99]], [["session", 12], ["weekly_fable", 100]]) === "weekly_fable" &&
+      trigger([["weekly_all", 99]], [["weekly_all", 100]]) === "weekly_all"
+  );
+  check("other limits trigger only when they run out", trigger([["weekly_all", 90]], [["weekly_all", 99]]) === "none");
+  check("the 5h limit comes first when both change in one reading", trigger([["session", 90], ["weekly_fable", 99]], [["session", 96], ["weekly_fable", 100]]) === "session with countdown");
+  check("a limit missing from the previous reading counts as 0%", trigger([["weekly_all", 5]], [["session", 96], ["weekly_all", 5]]) === "session with countdown");
+
+  // The switch goes to the best other account below the threshold that is not in use in another window.
+  const h = 3_600_000;
+  const now = Date.UTC(2026, 9, 30, 12, 0);
+  const w = (percent: number, resetIn: number) => ({ kind: "session", label: "session", percent, resetsAt: new Date(now + resetIn).toISOString() });
+  const accounts = [
+    { id: "active", label: "active", isActive: true, windows: [w(96, 3 * 60_000)] }, // resets within minutes: ranked first
+    { id: "almost", label: "almost", windows: [w(97, 2 * 60_000)] }, // ranked next, but 97% used
+    { id: "busy", label: "busy", windows: [w(50, 1 * h)] }, // 50% per hour
+    { id: "next", label: "next", windows: [w(30, 3 * h)] }, // 23% per hour
+    { id: "fresh", label: "fresh", windows: [w(0, 5 * h)] }, // 20% per hour
+    { id: "expired", label: "expired", needsReauthorization: true, windows: [w(0, 30 * 60_000)] },
+  ];
+  const targets = (threshold: number, inUseElsewhere: (id: string) => boolean = () => false) =>
+    autoSwitchTargets(accounts, "session", "active", threshold, inUseElsewhere, now).map((a) => a.id).join();
+  check("targets are the other accounts below the threshold, best first", targets(95) === "busy,next,fresh", targets(95));
+  check("an account in use in another window is skipped", targets(95, (id) => id === "busy") === "next,fresh", targets(95, (id) => id === "busy"));
+  check("with a threshold of 100 any usable account can take over", targets(100) === "almost,busy,next,fresh", targets(100));
+  check("no target when no other account can be used", autoSwitchTargets([accounts[0], accounts[5]], "session", "active", 95, () => false, now).length === 0);
+
+  // The countdown.
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const switched: string[] = [];
+  const shown: (AutoProposal | undefined)[] = [];
+  const auto = new AutoProposals(
+    (p) => switched.push(`${p.fromId}->${p.targetId} (${p.kind})`),
+    (p) => shown.push(p)
+  );
+  auto.open("a", "session", { targetId: "b", seconds: 0.05 });
+  const opened = auto.get();
+  check(
+    "opening shows the proposal with its countdown",
+    shown.length === 1 && shown[0] === opened && opened?.fromId === "a" && opened.kind === "session" &&
+      opened.countdown?.targetId === "b" && Math.abs(opened.countdown.deadline - (Date.now() + 50)) < 25
+  );
+  await sleep(120);
+  check("when the countdown ends it switches once, to the target", switched.join() === "a->b (session)", switched.join());
+  check("the proposal stays open, without the countdown", auto.get()?.id === opened?.id && auto.get()?.countdown === undefined);
+
+  auto.open("a", "session", { targetId: "c", seconds: 0.05 });
+  auto.stopCountdown();
+  await sleep(120);
+  check("a stopped countdown does not switch; its proposal stays open", switched.length === 1 && auto.get()?.kind === "session" && auto.get()?.countdown === undefined);
+
+  auto.open("a", "session", { targetId: "d", seconds: 0.05 });
+  const replaced = auto.get()?.id;
+  auto.open("a", "weekly_fable");
+  await sleep(120);
+  check("a new proposal replaces the old one, countdown included", switched.length === 1 && auto.get()?.id !== replaced && auto.get()?.kind === "weekly_fable");
+
+  auto.open("a", "session", { targetId: "e", seconds: 60 });
+  auto.switchNow();
+  check("Switch now switches right away", switched.join() === "a->b (session),a->e (session)" && auto.get()?.countdown === undefined, switched.join());
+  auto.switchNow();
+  check("... and only once", switched.length === 2);
+
+  auto.open("a", "session", { targetId: "f", seconds: 60 });
+  auto.activeChanged("a");
+  check("the proposal stays while its account is active", auto.get()?.countdown?.targetId === "f");
+  auto.activeChanged("b");
+  check("it closes once another account is active, countdown included", auto.get() === undefined && shown[shown.length - 1] === undefined);
+
+  auto.open("a", "session", { targetId: "g", seconds: 0.05 });
+  auto.close();
+  await sleep(120);
+  check("closing (dismissing) drops the proposal and its countdown", auto.get() === undefined && switched.length === 2);
+  auto.dispose();
 }
 
 function runToneTests(): void {
@@ -1586,6 +1695,7 @@ runCredentialsFileTests()
   .then(runUsagePollerTests)
   .then(runSwitchServiceTests)
   .then(runTokenRefresherTests)
+  .then(runAutoSwitchTests)
   .then(() => {
     console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
     process.exit(failures === 0 ? 0 : 1);
