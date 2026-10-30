@@ -153,6 +153,7 @@ account can be used, across a week or hour by hour for a single day.
 | `Claude: Show accounts panel` | Open the accounts panel |
 | `Claude: Show usage analytics` | Open the analytics page |
 | `Claude: Show account availability calendar` | Open the availability calendar |
+| `Claude: Show Account Manager settings` | Open the settings page |
 | `Claude: Open independent account window` | Open this project in a new window for one account |
 | `Claude: Log in from terminal (replaces the current account)` | Run `claude auth login` (or browser login without the CLI) |
 | `Claude: Authorize in browser (without CLI)` | Log in through the browser |
@@ -166,6 +167,11 @@ account can be used, across a week or hour by hour for a single day.
 | `Claude: About Account Manager for Claude` | Version, author, and project information |
 
 ## Settings
+
+The gear in the Accounts panel's title bar (or `Claude: Show Account Manager settings`) opens a
+settings page with every setting grouped by topic. Each change is saved to your user settings right
+away. **Reset to default** undoes a change, and a note shows when the current workspace overrides a
+setting. The same settings are also in VS Code's Settings under **Account Manager for Claude**.
 
 All settings start with `accountManagerForClaude.`.
 

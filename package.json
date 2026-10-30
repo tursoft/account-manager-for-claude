@@ -159,6 +159,11 @@
         "command": "accountManagerForClaude.openAvailability",
         "title": "Claude: Show account availability calendar",
         "icon": "$(calendar)"
+      },
+      {
+        "command": "accountManagerForClaude.openSettings",
+        "title": "Claude: Show Account Manager settings",
+        "icon": "$(gear)"
       }
     ],
     "menus": {
@@ -177,6 +182,11 @@
           "command": "accountManagerForClaude.refreshAll",
           "when": "view == accountManagerForClaude.accountsView",
           "group": "navigation@3"
+        },
+        {
+          "command": "accountManagerForClaude.openSettings",
+          "when": "view == accountManagerForClaude.accountsView",
+          "group": "navigation@4"
         },
         {
           "command": "accountManagerForClaude.addCurrentAccount",

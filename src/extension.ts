@@ -41,6 +41,7 @@ import { SwitchService } from "./switchService";
 import { AccountsViewProvider } from "./ui/accountsView";
 import { AnalyticsPanel } from "./ui/analyticsPanel";
 import { AvailabilityPanel } from "./ui/availabilityPanel";
+import { SettingsPanel } from "./ui/settingsPanel";
 import { StatusBarController } from "./ui/statusBar";
 import { fetchUsage, MIN_POLL_INTERVAL_SECONDS, UsagePoller } from "./usage";
 import { anthropicQueue, DEFAULT_REQUEST_DELAY_SECONDS } from "./requestQueue";
@@ -994,6 +995,16 @@ export function activate(context: vscode.ExtensionContext): void {
           await store.reorder(ids);
           refreshUI();
         },
+      })
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("accountManagerForClaude.openSettings", () =>
+      SettingsPanel.show(context.extensionUri, {
+        properties: context.extension.packageJSON.contributes?.configuration?.properties ?? {},
+        getConfig: config,
+        extensionId: context.extension.id,
       })
     )
   );

@@ -34,6 +34,17 @@ import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/
 import { noProposalReason, propose, rankAccounts, urgencyOf } from "../src/propose";
 import { AutoProposal, AutoProposals, autoSwitchTargets, proposalTrigger } from "../src/autoSwitch";
 import {
+  checkSettingValue,
+  controlOf,
+  descriptionParts,
+  formatSettingValue,
+  rangeText,
+  SETTINGS_LAYOUT,
+  SETTINGS_PREFIX,
+  settingsSections,
+  storedValue,
+} from "../src/settingsModel";
+import {
   DEFAULT_LISTING,
   extraFilterLabels,
   filtersActive,
@@ -1672,6 +1683,171 @@ function runToneTests(): void {
   );
 }
 
+function runSettingsPageTests(): void {
+  console.log("settings page:");
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
+  const properties = pkg.contributes.configuration.properties;
+  const sections = settingsSections(properties);
+  const fields = sections.flatMap((s) => s.fields);
+  const keys = fields.map((f) => f.key);
+  const contributed = Object.keys(properties).map((k) => k.slice(SETTINGS_PREFIX.length));
+  check(
+    "every contributed setting is on the page exactly once",
+    keys.length === contributed.length && contributed.every((k) => keys.filter((x) => x === k).length === 1)
+  );
+  check("each one has its place in a named section (none under Other)", sections.every((s) => s.title !== "Other"));
+  check(
+    "sections follow the page order, the automatic switch first",
+    sections.map((s) => s.title).join("|") === SETTINGS_LAYOUT.map((s) => s.title).join("|") &&
+      fields[0]?.key === "autoSwitch.enabled"
+  );
+  const threshold = fields.find((f) => f.key === "autoSwitch.thresholdPercent");
+  check(
+    "a field carries its label, unit, dependency and schema",
+    threshold?.label === "Start the countdown at" &&
+      threshold.unit === "% used" &&
+      threshold.dependsOn === "autoSwitch.enabled" &&
+      threshold.schema.minimum === 1 &&
+      threshold.schema.maximum === 100 &&
+      threshold.schema.default === 95
+  );
+  check(
+    "every dependency is an on/off setting",
+    fields.some((f) => f.dependsOn) &&
+      fields.every((f) => !f.dependsOn || properties[SETTINGS_PREFIX + f.dependsOn]?.type === "boolean")
+  );
+  const extra = settingsSections({
+    ...properties,
+    "accountManagerForClaude.usageHistory.compressOld": { type: "boolean", default: false },
+  });
+  const other = extra[extra.length - 1];
+  check(
+    "a setting no section lists still shows, under Other, named after its key",
+    other?.title === "Other" &&
+      other.fields.length === 1 &&
+      other.fields[0].key === "usageHistory.compressOld" &&
+      other.fields[0].label === "Usage history: compress old"
+  );
+  const fewer = settingsSections({ "accountManagerForClaude.autoRefresh": properties["accountManagerForClaude.autoRefresh"] });
+  check(
+    "settings that are not contributed are left out, and so are sections left empty",
+    fewer.length === 1 && fewer[0].fields.map((f) => f.key).join() === "autoRefresh"
+  );
+  check("settings of other extensions are ignored", settingsSections({ "editor.fontSize": { type: "number" } }).length === 0);
+  check(
+    "on/off gets a switch, a number a number field, text a text field",
+    controlOf({ type: "boolean" }) === "switch" && controlOf({ type: "number" }) === "number" && controlOf({ type: "string" }) === "text"
+  );
+  check(
+    "anything else is left to VS Code's settings",
+    controlOf({ type: "string", enum: ["haiku", "sonnet"] }) === undefined &&
+      controlOf({ type: "array" }) === undefined &&
+      controlOf({}) === undefined
+  );
+  check("every setting of the extension can be changed on the page", fields.every((f) => controlOf(f.schema) !== undefined));
+
+  const errorOf = (c: ReturnType<typeof checkSettingValue>) => (c.ok ? undefined : c.error);
+  const range = { type: "number", minimum: 5, maximum: 600 };
+  check("a number inside the range passes", JSON.stringify(checkSettingValue(range, 30)) === JSON.stringify({ ok: true, value: 30 }));
+  check("the ends of the range are allowed", checkSettingValue(range, 5).ok && checkSettingValue(range, 600).ok);
+  check(
+    "a number outside the range is refused, naming the range",
+    errorOf(checkSettingValue(range, 4)) === "Enter a number from 5 to 600." &&
+      errorOf(checkSettingValue(range, 601)) === "Enter a number from 5 to 600."
+  );
+  check(
+    "a range with only a minimum or only a maximum",
+    errorOf(checkSettingValue({ type: "number", minimum: 60 }, 59)) === "Enter 60 or more." &&
+      errorOf(checkSettingValue({ type: "number", maximum: 60 }, 61)) === "Enter 60 or less." &&
+      checkSettingValue({ type: "number", minimum: 60 }, 100000).ok
+  );
+  check(
+    "something that is not a number is refused",
+    [NaN, Infinity, "30", null, undefined].every((v) => errorOf(checkSettingValue(range, v)) === "Enter a number.")
+  );
+  check(
+    "on/off takes only true or false",
+    checkSettingValue({ type: "boolean" }, false).ok && !checkSettingValue({ type: "boolean" }, "true").ok
+  );
+  check(
+    "text is trimmed",
+    JSON.stringify(checkSettingValue({ type: "string" }, "  claude.cmd ")) === JSON.stringify({ ok: true, value: "claude.cmd" })
+  );
+  check("text takes only strings", !checkSettingValue({ type: "string" }, 5).ok);
+  check(
+    "other types, and text with a fixed list of choices, can't be changed on the page",
+    !checkSettingValue({ type: "array" }, []).ok &&
+      !checkSettingValue({}, 1).ok &&
+      !checkSettingValue({ type: "string", enum: ["haiku", "sonnet"] }, "haiku").ok
+  );
+
+  check(
+    "the default is stored as no value, so the user settings keep only real changes",
+    storedValue({ type: "number", default: 95 }, 95) === undefined &&
+      storedValue({ type: "number", default: 95 }, 90) === 90 &&
+      storedValue({ type: "boolean", default: true }, true) === undefined &&
+      storedValue({ type: "boolean", default: true }, false) === false
+  );
+  check(
+    "empty text means the default",
+    storedValue({ type: "string", default: "claude" }, "") === undefined &&
+      storedValue({ type: "string", default: "" }, "") === undefined &&
+      storedValue({ type: "string", default: "claude" }, "claude.cmd") === "claude.cmd"
+  );
+
+  check(
+    "the allowed range in words",
+    rangeText({ minimum: 1, maximum: 100 }) === "1 to 100" &&
+      rangeText({ minimum: 60 }) === "60 or more" &&
+      rangeText({ maximum: 60 }) === "60 or less" &&
+      rangeText({}) === ""
+  );
+  check(
+    "values in words, with the unit",
+    formatSettingValue({ schema: { type: "boolean" } }, true) === "on" &&
+      formatSettingValue({ schema: { type: "boolean" } }, false) === "off" &&
+      formatSettingValue({ schema: { type: "number" }, unit: "seconds" }, 30) === "30 seconds" &&
+      formatSettingValue({ schema: { type: "number" }, unit: "% used" }, 95) === "95% used" &&
+      formatSettingValue({ schema: { type: "number" } }, 2) === "2" &&
+      formatSettingValue({ schema: { type: "string" } }, "haiku") === "“haiku”" &&
+      formatSettingValue({ schema: { type: "string" } }, "") === "empty"
+  );
+
+  check(
+    "a description splits into text, setting references, bold and code",
+    JSON.stringify(
+      descriptionParts(
+        "Reaches `#accountManagerForClaude.autoSwitch.thresholdPercent#`% used. **Cancel** to stay; see `claude -p` and `#editor.fontSize#`."
+      )
+    ) ===
+      JSON.stringify([
+        { kind: "text", text: "Reaches " },
+        { kind: "setting", key: "autoSwitch.thresholdPercent" },
+        { kind: "text", text: "% used. " },
+        { kind: "bold", text: "Cancel" },
+        { kind: "text", text: " to stay; see " },
+        { kind: "code", text: "claude -p" },
+        { kind: "text", text: " and " },
+        { kind: "code", text: "editor.fontSize" },
+        { kind: "text", text: "." },
+      ])
+  );
+  check(
+    "plain text stays one part, and unclosed markup stays text",
+    JSON.stringify(descriptionParts("Prompt used by Say Hi warmups.")) ===
+      JSON.stringify([{ kind: "text", text: "Prompt used by Say Hi warmups." }]) &&
+      JSON.stringify(descriptionParts("a `b and **c")) === JSON.stringify([{ kind: "text", text: "a `b and **c" }])
+  );
+  check("an empty description has no parts", descriptionParts("").length === 0);
+  check(
+    "every reference in the real descriptions points to a setting on the page",
+    fields.some((f) => descriptionParts(f.schema.markdownDescription ?? "").some((p) => p.kind === "setting")) &&
+      fields.every((f) =>
+        descriptionParts(f.schema.markdownDescription ?? "").every((p) => p.kind !== "setting" || keys.includes(p.key))
+      )
+  );
+}
+
 runProfileActivityTests();
 runHistorySeriesTests();
 runUtilizationTests();
@@ -1681,6 +1857,7 @@ runAvatarTests();
 runToneTests();
 runResetToneTests();
 runProposeTests();
+runSettingsPageTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();
