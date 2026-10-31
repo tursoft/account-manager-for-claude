@@ -32,6 +32,18 @@ import { buildTimeline, Segment, timelineStats } from "../src/availability";
 import { AVATAR_COLORS, avatarDescription, avatarState, starburstGlyph } from "../src/avatar";
 import { nameTone, nameToneDescription, resetTone, toneOfPercent } from "../src/tone";
 import { noProposalReason, propose, rankAccounts, urgencyOf } from "../src/propose";
+import { AutoProposal, AutoProposals, autoSwitchTargets, proposalTrigger } from "../src/autoSwitch";
+import {
+  checkSettingValue,
+  controlOf,
+  descriptionParts,
+  formatSettingValue,
+  rangeText,
+  SETTINGS_LAYOUT,
+  SETTINGS_PREFIX,
+  settingsSections,
+  storedValue,
+} from "../src/settingsModel";
 import {
   DEFAULT_LISTING,
   extraFilterLabels,
@@ -1515,6 +1527,114 @@ function runProposeTests(): void {
   check("reason when every account is used up names the wait", noProposalReason([acc("z", [w("session", 100, 30 * 60_000)])], "session", now) === "Every account is used up; the first is usable again in 30 min.");
   check("reason when no account has the limit", noProposalReason([acc("z", [w("session", 10)])], "weekly_fable", now) === "No account reports a Fable limit.");
   check("reason when only expired logins have it", noProposalReason([acc("z", [w("weekly_fable", 10)], { needsReauthorization: true })], "weekly_fable", now) === "Every account with a Fable limit has an expired login; reauthorize one first.");
+  // Leaving the active account before it runs out: the reasons are about the other accounts.
+  check("leaving the active account: every other account is used up", noProposalReason([acc("z", [w("session", 100, 30 * 60_000)])], "session", now, true) === "Every other account is used up; the first is usable again in 30 min.");
+  check("leaving the active account: no other account has the limit", noProposalReason([], "session", now, true) === "No other account reports a 5h limit.");
+  check("leaving the active account: the others' logins expired", noProposalReason([acc("z", [w("session", 10)], { needsReauthorization: true })], "session", now, true) === "Every other account with a 5h limit has an expired login; reauthorize one first.");
+}
+
+async function runAutoSwitchTests(): Promise<void> {
+  console.log("automatic switch:");
+  const snap = (windows: [string, number][]): UsageSnapshot => ({
+    fetchedAt: 0,
+    sessionPercent: null,
+    weeklyPercent: null,
+    windows: windows.map(([kind, percent]) => ({ kind, label: kind, percent, severity: "normal", resetsAt: null })),
+  });
+  const on = { enabled: true, thresholdPercent: 95, countdownSeconds: 30 };
+  const off = { ...on, enabled: false };
+  const trigger = (before: [string, number][] | undefined, after: [string, number][], settings = on) => {
+    const t = proposalTrigger(before && snap(before), snap(after), settings);
+    return t ? t.kind + (t.countdown ? " with countdown" : "") : "none";
+  };
+
+  check("the 5h limit reaching the threshold proposes with a countdown", trigger([["session", 90]], [["session", 95]]) === "session with countdown");
+  check("jumping past the threshold counts too", trigger([["session", 80]], [["session", 99]]) === "session with countdown");
+  check("each crossing triggers once: nothing while it stays above the threshold", trigger([["session", 95]], [["session", 97]]) === "none");
+  check("running out after the threshold counts down again", trigger([["session", 97]], [["session", 100]]) === "session with countdown");
+  check("nothing without a previous reading (the first one after startup)", trigger(undefined, [["session", 99]]) === "none");
+  check("turned off: nothing at the threshold", trigger([["session", 90]], [["session", 96]], off) === "none");
+  check("turned off: running out still proposes, without a countdown", trigger([["session", 90]], [["session", 100]], off) === "session");
+  check(
+    "a threshold of 100 waits until the limit runs out",
+    trigger([["session", 90]], [["session", 99]], { ...on, thresholdPercent: 100 }) === "none" &&
+      trigger([["session", 99]], [["session", 100]], { ...on, thresholdPercent: 100 }) === "session with countdown"
+  );
+  check(
+    "a weekly or model limit running out proposes for that limit, without a countdown",
+    trigger([["session", 10], ["weekly_fable", 99]], [["session", 12], ["weekly_fable", 100]]) === "weekly_fable" &&
+      trigger([["weekly_all", 99]], [["weekly_all", 100]]) === "weekly_all"
+  );
+  check("other limits trigger only when they run out", trigger([["weekly_all", 90]], [["weekly_all", 99]]) === "none");
+  check("the 5h limit comes first when both change in one reading", trigger([["session", 90], ["weekly_fable", 99]], [["session", 96], ["weekly_fable", 100]]) === "session with countdown");
+  check("a limit missing from the previous reading counts as 0%", trigger([["weekly_all", 5]], [["session", 96], ["weekly_all", 5]]) === "session with countdown");
+
+  // The switch goes to the best other account below the threshold that is not in use in another window.
+  const h = 3_600_000;
+  const now = Date.UTC(2026, 9, 30, 12, 0);
+  const w = (percent: number, resetIn: number) => ({ kind: "session", label: "session", percent, resetsAt: new Date(now + resetIn).toISOString() });
+  const accounts = [
+    { id: "active", label: "active", isActive: true, windows: [w(96, 3 * 60_000)] }, // resets within minutes: ranked first
+    { id: "almost", label: "almost", windows: [w(97, 2 * 60_000)] }, // ranked next, but 97% used
+    { id: "busy", label: "busy", windows: [w(50, 1 * h)] }, // 50% per hour
+    { id: "next", label: "next", windows: [w(30, 3 * h)] }, // 23% per hour
+    { id: "fresh", label: "fresh", windows: [w(0, 5 * h)] }, // 20% per hour
+    { id: "expired", label: "expired", needsReauthorization: true, windows: [w(0, 30 * 60_000)] },
+  ];
+  const targets = (threshold: number, inUseElsewhere: (id: string) => boolean = () => false) =>
+    autoSwitchTargets(accounts, "session", "active", threshold, inUseElsewhere, now).map((a) => a.id).join();
+  check("targets are the other accounts below the threshold, best first", targets(95) === "busy,next,fresh", targets(95));
+  check("an account in use in another window is skipped", targets(95, (id) => id === "busy") === "next,fresh", targets(95, (id) => id === "busy"));
+  check("with a threshold of 100 any usable account can take over", targets(100) === "almost,busy,next,fresh", targets(100));
+  check("no target when no other account can be used", autoSwitchTargets([accounts[0], accounts[5]], "session", "active", 95, () => false, now).length === 0);
+
+  // The countdown.
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const switched: string[] = [];
+  const shown: (AutoProposal | undefined)[] = [];
+  const auto = new AutoProposals(
+    (p) => switched.push(`${p.fromId}->${p.targetId} (${p.kind})`),
+    (p) => shown.push(p)
+  );
+  auto.open("a", "session", { targetId: "b", seconds: 0.05 });
+  const opened = auto.get();
+  check(
+    "opening shows the proposal with its countdown",
+    shown.length === 1 && shown[0] === opened && opened?.fromId === "a" && opened.kind === "session" &&
+      opened.countdown?.targetId === "b" && Math.abs(opened.countdown.deadline - (Date.now() + 50)) < 25
+  );
+  await sleep(120);
+  check("when the countdown ends it switches once, to the target", switched.join() === "a->b (session)", switched.join());
+  check("the proposal stays open, without the countdown", auto.get()?.id === opened?.id && auto.get()?.countdown === undefined);
+
+  auto.open("a", "session", { targetId: "c", seconds: 0.05 });
+  auto.stopCountdown();
+  await sleep(120);
+  check("a stopped countdown does not switch; its proposal stays open", switched.length === 1 && auto.get()?.kind === "session" && auto.get()?.countdown === undefined);
+
+  auto.open("a", "session", { targetId: "d", seconds: 0.05 });
+  const replaced = auto.get()?.id;
+  auto.open("a", "weekly_fable");
+  await sleep(120);
+  check("a new proposal replaces the old one, countdown included", switched.length === 1 && auto.get()?.id !== replaced && auto.get()?.kind === "weekly_fable");
+
+  auto.open("a", "session", { targetId: "e", seconds: 60 });
+  auto.switchNow();
+  check("Switch now switches right away", switched.join() === "a->b (session),a->e (session)" && auto.get()?.countdown === undefined, switched.join());
+  auto.switchNow();
+  check("... and only once", switched.length === 2);
+
+  auto.open("a", "session", { targetId: "f", seconds: 60 });
+  auto.activeChanged("a");
+  check("the proposal stays while its account is active", auto.get()?.countdown?.targetId === "f");
+  auto.activeChanged("b");
+  check("it closes once another account is active, countdown included", auto.get() === undefined && shown[shown.length - 1] === undefined);
+
+  auto.open("a", "session", { targetId: "g", seconds: 0.05 });
+  auto.close();
+  await sleep(120);
+  check("closing (dismissing) drops the proposal and its countdown", auto.get() === undefined && switched.length === 2);
+  auto.dispose();
 }
 
 function runToneTests(): void {
@@ -1563,6 +1683,171 @@ function runToneTests(): void {
   );
 }
 
+function runSettingsPageTests(): void {
+  console.log("settings page:");
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
+  const properties = pkg.contributes.configuration.properties;
+  const sections = settingsSections(properties);
+  const fields = sections.flatMap((s) => s.fields);
+  const keys = fields.map((f) => f.key);
+  const contributed = Object.keys(properties).map((k) => k.slice(SETTINGS_PREFIX.length));
+  check(
+    "every contributed setting is on the page exactly once",
+    keys.length === contributed.length && contributed.every((k) => keys.filter((x) => x === k).length === 1)
+  );
+  check("each one has its place in a named section (none under Other)", sections.every((s) => s.title !== "Other"));
+  check(
+    "sections follow the page order, the automatic switch first",
+    sections.map((s) => s.title).join("|") === SETTINGS_LAYOUT.map((s) => s.title).join("|") &&
+      fields[0]?.key === "autoSwitch.enabled"
+  );
+  const threshold = fields.find((f) => f.key === "autoSwitch.thresholdPercent");
+  check(
+    "a field carries its label, unit, dependency and schema",
+    threshold?.label === "Start the countdown at" &&
+      threshold.unit === "% used" &&
+      threshold.dependsOn === "autoSwitch.enabled" &&
+      threshold.schema.minimum === 1 &&
+      threshold.schema.maximum === 100 &&
+      threshold.schema.default === 95
+  );
+  check(
+    "every dependency is an on/off setting",
+    fields.some((f) => f.dependsOn) &&
+      fields.every((f) => !f.dependsOn || properties[SETTINGS_PREFIX + f.dependsOn]?.type === "boolean")
+  );
+  const extra = settingsSections({
+    ...properties,
+    "accountManagerForClaude.usageHistory.compressOld": { type: "boolean", default: false },
+  });
+  const other = extra[extra.length - 1];
+  check(
+    "a setting no section lists still shows, under Other, named after its key",
+    other?.title === "Other" &&
+      other.fields.length === 1 &&
+      other.fields[0].key === "usageHistory.compressOld" &&
+      other.fields[0].label === "Usage history: compress old"
+  );
+  const fewer = settingsSections({ "accountManagerForClaude.autoRefresh": properties["accountManagerForClaude.autoRefresh"] });
+  check(
+    "settings that are not contributed are left out, and so are sections left empty",
+    fewer.length === 1 && fewer[0].fields.map((f) => f.key).join() === "autoRefresh"
+  );
+  check("settings of other extensions are ignored", settingsSections({ "editor.fontSize": { type: "number" } }).length === 0);
+  check(
+    "on/off gets a switch, a number a number field, text a text field",
+    controlOf({ type: "boolean" }) === "switch" && controlOf({ type: "number" }) === "number" && controlOf({ type: "string" }) === "text"
+  );
+  check(
+    "anything else is left to VS Code's settings",
+    controlOf({ type: "string", enum: ["haiku", "sonnet"] }) === undefined &&
+      controlOf({ type: "array" }) === undefined &&
+      controlOf({}) === undefined
+  );
+  check("every setting of the extension can be changed on the page", fields.every((f) => controlOf(f.schema) !== undefined));
+
+  const errorOf = (c: ReturnType<typeof checkSettingValue>) => (c.ok ? undefined : c.error);
+  const range = { type: "number", minimum: 5, maximum: 600 };
+  check("a number inside the range passes", JSON.stringify(checkSettingValue(range, 30)) === JSON.stringify({ ok: true, value: 30 }));
+  check("the ends of the range are allowed", checkSettingValue(range, 5).ok && checkSettingValue(range, 600).ok);
+  check(
+    "a number outside the range is refused, naming the range",
+    errorOf(checkSettingValue(range, 4)) === "Enter a number from 5 to 600." &&
+      errorOf(checkSettingValue(range, 601)) === "Enter a number from 5 to 600."
+  );
+  check(
+    "a range with only a minimum or only a maximum",
+    errorOf(checkSettingValue({ type: "number", minimum: 60 }, 59)) === "Enter 60 or more." &&
+      errorOf(checkSettingValue({ type: "number", maximum: 60 }, 61)) === "Enter 60 or less." &&
+      checkSettingValue({ type: "number", minimum: 60 }, 100000).ok
+  );
+  check(
+    "something that is not a number is refused",
+    [NaN, Infinity, "30", null, undefined].every((v) => errorOf(checkSettingValue(range, v)) === "Enter a number.")
+  );
+  check(
+    "on/off takes only true or false",
+    checkSettingValue({ type: "boolean" }, false).ok && !checkSettingValue({ type: "boolean" }, "true").ok
+  );
+  check(
+    "text is trimmed",
+    JSON.stringify(checkSettingValue({ type: "string" }, "  claude.cmd ")) === JSON.stringify({ ok: true, value: "claude.cmd" })
+  );
+  check("text takes only strings", !checkSettingValue({ type: "string" }, 5).ok);
+  check(
+    "other types, and text with a fixed list of choices, can't be changed on the page",
+    !checkSettingValue({ type: "array" }, []).ok &&
+      !checkSettingValue({}, 1).ok &&
+      !checkSettingValue({ type: "string", enum: ["haiku", "sonnet"] }, "haiku").ok
+  );
+
+  check(
+    "the default is stored as no value, so the user settings keep only real changes",
+    storedValue({ type: "number", default: 95 }, 95) === undefined &&
+      storedValue({ type: "number", default: 95 }, 90) === 90 &&
+      storedValue({ type: "boolean", default: true }, true) === undefined &&
+      storedValue({ type: "boolean", default: true }, false) === false
+  );
+  check(
+    "empty text means the default",
+    storedValue({ type: "string", default: "claude" }, "") === undefined &&
+      storedValue({ type: "string", default: "" }, "") === undefined &&
+      storedValue({ type: "string", default: "claude" }, "claude.cmd") === "claude.cmd"
+  );
+
+  check(
+    "the allowed range in words",
+    rangeText({ minimum: 1, maximum: 100 }) === "1 to 100" &&
+      rangeText({ minimum: 60 }) === "60 or more" &&
+      rangeText({ maximum: 60 }) === "60 or less" &&
+      rangeText({}) === ""
+  );
+  check(
+    "values in words, with the unit",
+    formatSettingValue({ schema: { type: "boolean" } }, true) === "on" &&
+      formatSettingValue({ schema: { type: "boolean" } }, false) === "off" &&
+      formatSettingValue({ schema: { type: "number" }, unit: "seconds" }, 30) === "30 seconds" &&
+      formatSettingValue({ schema: { type: "number" }, unit: "% used" }, 95) === "95% used" &&
+      formatSettingValue({ schema: { type: "number" } }, 2) === "2" &&
+      formatSettingValue({ schema: { type: "string" } }, "haiku") === "“haiku”" &&
+      formatSettingValue({ schema: { type: "string" } }, "") === "empty"
+  );
+
+  check(
+    "a description splits into text, setting references, bold and code",
+    JSON.stringify(
+      descriptionParts(
+        "Reaches `#accountManagerForClaude.autoSwitch.thresholdPercent#`% used. **Cancel** to stay; see `claude -p` and `#editor.fontSize#`."
+      )
+    ) ===
+      JSON.stringify([
+        { kind: "text", text: "Reaches " },
+        { kind: "setting", key: "autoSwitch.thresholdPercent" },
+        { kind: "text", text: "% used. " },
+        { kind: "bold", text: "Cancel" },
+        { kind: "text", text: " to stay; see " },
+        { kind: "code", text: "claude -p" },
+        { kind: "text", text: " and " },
+        { kind: "code", text: "editor.fontSize" },
+        { kind: "text", text: "." },
+      ])
+  );
+  check(
+    "plain text stays one part, and unclosed markup stays text",
+    JSON.stringify(descriptionParts("Prompt used by Say Hi warmups.")) ===
+      JSON.stringify([{ kind: "text", text: "Prompt used by Say Hi warmups." }]) &&
+      JSON.stringify(descriptionParts("a `b and **c")) === JSON.stringify([{ kind: "text", text: "a `b and **c" }])
+  );
+  check("an empty description has no parts", descriptionParts("").length === 0);
+  check(
+    "every reference in the real descriptions points to a setting on the page",
+    fields.some((f) => descriptionParts(f.schema.markdownDescription ?? "").some((p) => p.kind === "setting")) &&
+      fields.every((f) =>
+        descriptionParts(f.schema.markdownDescription ?? "").every((p) => p.kind !== "setting" || keys.includes(p.key))
+      )
+  );
+}
+
 runProfileActivityTests();
 runHistorySeriesTests();
 runUtilizationTests();
@@ -1572,6 +1857,7 @@ runAvatarTests();
 runToneTests();
 runResetToneTests();
 runProposeTests();
+runSettingsPageTests();
 runBrowserOAuthTests();
 runLimitResetTests();
 runIdentityTests();
@@ -1586,6 +1872,7 @@ runCredentialsFileTests()
   .then(runUsagePollerTests)
   .then(runSwitchServiceTests)
   .then(runTokenRefresherTests)
+  .then(runAutoSwitchTests)
   .then(() => {
     console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
     process.exit(failures === 0 ? 0 : 1);

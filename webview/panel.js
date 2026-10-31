@@ -151,8 +151,6 @@ import {
     const msg = event.data;
     if (msg.type === "showAbout") {
       showAbout();
-    } else if (msg.type === "propose") {
-      showProposal(msg.kind, Boolean(msg.automatic));
     } else if (msg.type === "copied") {
       showToast(msg.ok ? `Copied “${msg.name}”` : "Could not copy to the clipboard");
     } else if (msg.type === "busy") {
@@ -162,10 +160,12 @@ import {
       state = msg;
       if (msg.busy) busy = msg.busy;
       syncViewSettings(msg);
+      const opened = syncAutoProposal(msg.autoProposal);
       closeMenu();
       // Re-rendering mid-drag would destroy the dragged card; catch up on dragend.
       if (dragId) pendingRender = true;
       else render();
+      if (opened) proposalEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   });
 
@@ -955,9 +955,16 @@ import {
   const proposeBar = document.getElementById("proposeBar");
   const proposalEl = document.getElementById("proposal");
   let shownProposal = null; // { kind, automatic }
+  // The extension opens a proposal on its own when a limit of the active account runs low
+  // (state.autoProposal, see src/autoSwitch.ts); each one opens once, by its id.
+  let seenAutoProposal = null;
+  let countdownTimer = null;
 
   for (const b of proposeBar.querySelectorAll("[data-propose]")) {
-    b.addEventListener("click", () => showProposal(b.dataset.propose, false));
+    b.addEventListener("click", () => {
+      closeAutoProposal();
+      showProposal(b.dataset.propose, false);
+    });
   }
 
   /** Shows the best account for `kind` with a one-sentence reason and a Switch button. */
@@ -968,8 +975,62 @@ import {
   }
 
   function hideProposal() {
+    closeAutoProposal();
     shownProposal = null;
     renderProposal();
+  }
+
+  /** Follows the extension's own proposal: opens a new one, and drops it once the extension closed it. True when one opened. */
+  function syncAutoProposal(auto) {
+    if (auto && auto.id !== seenAutoProposal) {
+      seenAutoProposal = auto.id;
+      shownProposal = { kind: auto.kind, automatic: true };
+      return true;
+    }
+    if (!auto && shownProposal && shownProposal.automatic) shownProposal = null;
+    return false;
+  }
+
+  /** The user is done with the extension's own proposal on screen: close it there too, which stops its countdown. */
+  function closeAutoProposal() {
+    if (shownProposal && shownProposal.automatic) vscode.postMessage({ type: "autoProposal", action: "close" });
+  }
+
+  /** "Switching to X in 27s" over a draining bar, with Cancel; ticks until the extension switches. */
+  function countdownBox(countdown) {
+    const target = (state.accounts || []).find((a) => a.id === countdown.targetId);
+    const box = el("div", "proposal-countdown");
+    box.dataset.deadline = String(countdown.deadline);
+    box.dataset.seconds = String(countdown.seconds);
+    const row = el("div", "countdown-row");
+    const text = el("span", "countdown-text");
+    // The seconds are left out of the live region; it would announce every tick.
+    const when = el("span", "countdown-when");
+    when.setAttribute("aria-hidden", "true");
+    text.append("Switching to ", el("b", "", target ? target.label : "the next account"), when);
+    const cancel = el("button", "link-btn", "Cancel");
+    cancel.title = "Stay on the current account; the proposal stays open";
+    cancel.addEventListener("click", () => vscode.postMessage({ type: "autoProposal", action: "stopCountdown" }));
+    row.append(text, cancel);
+    const bar = el("div", "countdown-bar");
+    bar.setAttribute("aria-hidden", "true");
+    bar.appendChild(el("div", "countdown-fill"));
+    box.append(row, bar);
+    return box;
+  }
+
+  /** Updates the countdown on screen; stops ticking once there is none. */
+  function tickCountdown() {
+    const box = proposalEl.querySelector(".proposal-countdown");
+    if (!box) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+      return;
+    }
+    const left = Math.max(0, Number(box.dataset.deadline) - Date.now());
+    const total = Number(box.dataset.seconds) * 1000;
+    box.querySelector(".countdown-when").textContent = left > 0 ? ` in ${Math.ceil(left / 1000)}s` : "…";
+    box.querySelector(".countdown-fill").style.width = (total > 0 ? Math.min(100, (left / total) * 100) : 0) + "%";
   }
 
   function renderProposal() {
@@ -992,20 +1053,34 @@ import {
     }
     const { kind, automatic } = shownProposal;
     const name = limitName(kind);
-    const result = propose(accounts, kind);
+    const active = accounts.find((a) => a.isActive);
+    const activeWindow = active && (active.windows || []).find((w) => w.kind === kind);
+    const usedUp = !activeWindow || activeWindow.percent >= 100;
+    // The extension's own proposal is about leaving the active account: only the others are candidates.
+    const others = accounts.filter((a) => !a.isActive);
+    const result = propose(automatic ? others : accounts, kind);
+    const auto = automatic && state.autoProposal && state.autoProposal.kind === kind ? state.autoProposal : null;
+    const countdown = auto && auto.countdown;
     proposalEl.classList.remove("hidden");
     proposalEl.className = "proposal " + (result ? "notice info" : "notice warn");
 
     const body = el("div", "proposal-body");
     const head = el("div", "proposal-head");
-    head.appendChild(
-      el("span", "proposal-kicker", automatic ? `Your ${name} limit is used up — next accounts` : `Proposed accounts for ${name}`)
-    );
+    const kicker = !automatic
+      ? `Proposed accounts for ${name}`
+      : usedUp
+        ? `Your ${name} limit is used up — next accounts`
+        : `Your ${name} limit is at ${activeWindow.percent}% — next accounts`;
+    head.appendChild(el("span", "proposal-kicker", kicker));
     head.appendChild(iconButton("close", "Dismiss", hideProposal, "proposal-close"));
     body.appendChild(head);
+    if (countdown) body.appendChild(countdownBox(countdown));
 
     if (!result) {
-      body.appendChild(el("div", "proposal-reason", noProposalReason(accounts, kind)));
+      // Before the active account runs out, what matters is whether another account can take over.
+      body.appendChild(
+        el("div", "proposal-reason", automatic && !usedUp ? noProposalReason(others, kind, Date.now(), true) : noProposalReason(accounts, kind))
+      );
     } else {
       const list = el("ol", "proposal-list");
       result.candidates.forEach((cand, i) => {
@@ -1015,11 +1090,15 @@ import {
         who.append(el("span", "proposal-rank", String(i + 1)), avatar(cand.account), el("span", "", cand.account.label));
         row.appendChild(who);
         if (!cand.account.isActive) {
-          const sw = el("button", "tb-btn proposal-switch" + (i === 0 ? " primary" : ""));
-          sw.append(icon("swap"), el("span", "", "Switch"));
-          sw.title = `Switch Claude Code to ${cand.account.label}`;
+          // The countdown's target switches at once: the countdown was the confirmation. It need not
+          // be the first: an automatic switch only goes to an account below the threshold.
+          const target = countdown && cand.account.id === countdown.targetId;
+          const sw = el("button", "tb-btn proposal-switch" + ((countdown ? target : i === 0) ? " primary" : ""));
+          sw.append(icon("swap"), el("span", "", target ? "Switch now" : "Switch"));
+          sw.title = target ? `Switch Claude Code to ${cand.account.label} without waiting` : `Switch Claude Code to ${cand.account.label}`;
           sw.addEventListener("click", () => {
-            post("switch", cand.account.id);
+            if (target) vscode.postMessage({ type: "autoProposal", action: "switchNow" });
+            else post("switch", cand.account.id);
             hideProposal();
           });
           row.appendChild(sw);
@@ -1040,6 +1119,10 @@ import {
       body.appendChild(list);
     }
     proposalEl.append(icon(result ? "info" : "warning"), body);
+    if (countdown) {
+      tickCountdown();
+      countdownTimer = countdownTimer || setInterval(tickCountdown, 250);
+    }
   }
 
   /** Top progress bar while anything loads; shimmer and a spinning refresh icon on updating cards. */

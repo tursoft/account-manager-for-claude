@@ -21,7 +21,8 @@ much of every account's limits is left, and let the extension tell you which acc
 - **Every account's limits, live.** The 5-hour, weekly, and model-specific (e.g. Fable) limits of
   all your accounts, each with the time until it resets. Same data as Claude Code's `/usage`.
 - **It picks your next account.** Proposals rank your other accounts by the capacity you would
-  lose soonest, and pop up on their own when the active account runs out.
+  lose soonest, and pop up on their own when the active account runs low. After a short countdown
+  you can cancel, the best one takes over.
 - **No more daily logins.** Tokens are refreshed exactly the way Claude Code refreshes them, under
   its own lock, so neither side is ever left holding a spent token.
 - **See what you actually use.** Usage analytics show how much of each limit's capacity you used
@@ -82,6 +83,13 @@ much of every account's limits is left, and let the extension tell you which acc
 - When the active account's limit runs out, the next accounts are proposed automatically:
 
   ![When the active account's limit runs out, the next accounts are proposed](docs/propose-auto.gif)
+
+- **Automatic switch.** Once the active account's 5-hour limit is 95% used, the next accounts are
+  proposed with a 30-second countdown, and then Claude Code switches to the best one that is still
+  below 95% and not in use in another window. **Switch now** skips the wait, **Cancel** stops the
+  countdown and keeps the proposal open, and dismissing the proposal keeps the current account.
+  Change the threshold and the countdown, or turn the automatic switch off, with the
+  `autoSwitch.*` settings.
 
 ### Logins that stay valid
 
@@ -145,6 +153,7 @@ account can be used, across a week or hour by hour for a single day.
 | `Claude: Show accounts panel` | Open the accounts panel |
 | `Claude: Show usage analytics` | Open the analytics page |
 | `Claude: Show account availability calendar` | Open the availability calendar |
+| `Claude: Show Account Manager settings` | Open the settings page |
 | `Claude: Open independent account window` | Open this project in a new window for one account |
 | `Claude: Log in from terminal (replaces the current account)` | Run `claude auth login` (or browser login without the CLI) |
 | `Claude: Authorize in browser (without CLI)` | Log in through the browser |
@@ -159,6 +168,11 @@ account can be used, across a week or hour by hour for a single day.
 
 ## Settings
 
+The gear in the Accounts panel's title bar (or `Claude: Show Account Manager settings`) opens a
+settings page with every setting grouped by topic. Each change is saved to your user settings right
+away. **Reset to default** undoes a change, and a note shows when the current workspace overrides a
+setting. The same settings are also in VS Code's Settings under **Account Manager for Claude**.
+
 All settings start with `accountManagerForClaude.`.
 
 | Setting | Default | Description |
@@ -168,6 +182,9 @@ All settings start with `accountManagerForClaude.`.
 | `requestDelaySeconds` | `2` | Pause between requests to Anthropic; accounts are checked one at a time, never in parallel |
 | `notifyOnLimitReset` | `true` | Notify when a used-up limit is available again |
 | `autoReloadAfterSwitch` | `false` | Reload the window automatically after switching |
+| `autoSwitch.enabled` | `true` | When the active account's 5h limit runs low, count down and switch to the best proposed account |
+| `autoSwitch.thresholdPercent` | `95` | 5h usage (%) of the active account that starts the countdown (100 = once it is used up) |
+| `autoSwitch.countdownSeconds` | `30` | Seconds the countdown runs before switching (5 to 600) |
 | `warnThresholdPercent` | `80` | Usage bars and the status bar turn red from this percent, and orange from 75% of it |
 | `usageHistory.enabled` | `false` | Collect usage history for analytics and the calendar |
 | `usageHistory.intervalSeconds` | `60` | Seconds between usage readings (minimum 60) |
