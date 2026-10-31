@@ -17,6 +17,7 @@ export interface SettingsDeps {
 export class SettingsPanel {
   private static current: SettingsPanel | undefined;
   private readonly disposables: vscode.Disposable[] = [];
+  private reloadOffered = false;
 
   static show(extensionUri: vscode.Uri, deps: SettingsDeps): void {
     if (SettingsPanel.current) {
@@ -86,7 +87,17 @@ export class SettingsPanel {
           // The configuration listener sends the new values to the page.
           void this.panel.webview.postMessage({ type: "saved", key, reset: value === undefined });
         } catch (e) {
-          void this.panel.webview.postMessage({ type: "error", key, message: `Not saved: ${(e as Error).message}` });
+          // After the extension is updated without a window reload, VS Code can drop its settings
+          // from the window ("... is not a registered configuration"); only a reload brings them back.
+          // Every contributed setting has a default, so a missing one means VS Code does not know the key.
+          const unknown = this.deps.getConfig().inspect(key)?.defaultValue === undefined;
+          const message = unknown
+            ? "Not saved: VS Code has not loaded this setting since the extension was updated. Reload the window, then try again."
+            : `Not saved: ${(e as Error).message}`;
+          void this.panel.webview.postMessage({ type: "error", key, message });
+          if (unknown) {
+            this.offerReload();
+          }
           this.postState(); // put the control back to the stored value
         }
         break;
@@ -98,6 +109,20 @@ export class SettingsPanel {
         );
         break;
     }
+  }
+
+  /** Asks once per page to reload the window, which registers the extension's settings again. */
+  private offerReload(): void {
+    if (this.reloadOffered) {
+      return;
+    }
+    this.reloadOffered = true;
+    void vscode.window
+      .showWarningMessage(
+        "VS Code has not loaded some Account Manager settings since the extension was updated. Reload the window to change them.",
+        "Reload Window"
+      )
+      .then((choice) => choice && vscode.commands.executeCommand("workbench.action.reloadWindow"));
   }
 
   private schemaOf(key: string): SettingSchema | undefined {
