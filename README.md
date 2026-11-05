@@ -90,6 +90,11 @@ much of every account's limits is left, and let the extension tell you which acc
   countdown and keeps the proposal open, and dismissing the proposal keeps the current account.
   Change the threshold and the countdown, or turn the automatic switch off, with the
   `autoSwitch.*` settings.
+- **Exclude from proposals.** An account you use on another computer, for another job, can keep
+  its limits: choose **Exclude from proposals** in its **⋯** menu, and proposals, automatic
+  switches, and "limit available again" notifications skip it. A small mark on the card's top-right corner shows it is excluded; **Include in
+  proposals** in the same menu brings it back. You can still switch to it by hand. The choice is
+  kept on this computer only.
 
 ### Logins that stay valid
 

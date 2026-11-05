@@ -49,6 +49,11 @@ export interface AccountProfile {
    * The extension never sends that token again; a newer generation clears it.
    */
   deadRefreshTokenHash?: string;
+  /**
+   * Left out of proposals and automatic switches (e.g. the account is used on another
+   * computer and should keep its limits). Kept per machine, like the rest of the profile.
+   */
+  excludedFromProposals?: boolean;
   addedAt: number;
   order: number;
   /** last read usage snapshot (cached for fast rendering) */

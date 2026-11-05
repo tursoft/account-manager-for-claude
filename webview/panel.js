@@ -51,6 +51,8 @@ import {
     info: '<circle cx="8" cy="8" r="6"/><path d="M8 7.3V11M8 4.9v.2"/>',
     warning: '<path d="M8 2.3 14.2 13H1.8z"/><path d="M8 6.4v3.2M8 11.2v.2"/>',
     signIn: '<path d="M9.5 2.5h3v11h-3M2.5 8h7M7 5.5 9.5 8 7 10.5"/>',
+    exclude: '<circle cx="8" cy="8" r="5.5"/><path d="M4.1 11.9 11.9 4.1"/>',
+    include: '<circle cx="8" cy="8" r="5.5"/><path d="M5.4 8.2 7.2 10 10.6 6.2"/>',
   };
 
   function icon(name) {
@@ -298,9 +300,19 @@ import {
       "card" +
         (acc.isActive ? " active" : "") +
         (acc.error ? " has-error" : "") +
-        (acc.needsReauthorization ? " expired" : "")
+        (acc.needsReauthorization ? " expired" : "") +
+        (acc.excludedFromProposals ? " excluded" : "")
     );
     root.dataset.id = acc.id;
+    if (acc.excludedFromProposals) {
+      // A small mark on the card's top-right corner; the "..." menu includes the account again.
+      const mark = el("span", "excluded-mark");
+      mark.appendChild(icon("exclude"));
+      mark.title = "Excluded from proposals: Propose and automatic switching skip this account.\nInclude it again from the ⋯ menu.";
+      mark.setAttribute("role", "img");
+      mark.setAttribute("aria-label", "Excluded from proposals");
+      root.appendChild(mark);
+    }
     // Dragging only makes sense in the user's own order.
     root.draggable = filter.sort === "custom";
     if (root.draggable) {
@@ -436,6 +448,12 @@ import {
       }
       if (accounts.length > 1) items.push(null);
     }
+    // E.g. an account used on another computer: keep this window from spending its limits.
+    items.push(
+      acc.excludedFromProposals
+        ? { icon: "include", label: "Include in proposals", run: () => setExcluded(acc, false) }
+        : { icon: "exclude", label: "Exclude from proposals", run: () => setExcluded(acc, true) }
+    );
     items.push({
       icon: "key",
       label: "Reauthorize…",
@@ -445,6 +463,12 @@ import {
     items.push({ icon: "edit", label: "Rename…", run: act("rename") });
     items.push({ icon: "trash", label: "Remove profile…", run: act("remove"), danger: true });
     return items;
+  }
+
+  /** Leaves the account out of proposals and automatic switches, or includes it again. */
+  function setExcluded(acc, excluded) {
+    vscode.postMessage({ type: "excludeFromProposals", id: acc.id, excluded });
+    showToast(excluded ? `“${acc.label}” is excluded from proposals` : `“${acc.label}” is included in proposals`);
   }
 
   /** Opens a dropdown under `anchor`; `items` are {icon, label, run, danger?, accent?} or null separators. */

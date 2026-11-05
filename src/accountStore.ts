@@ -119,6 +119,20 @@ export class AccountStore {
     }
   }
 
+  /** Includes the account in proposals and automatic switches, or leaves it out. */
+  async setExcludedFromProposals(id: string, excluded: boolean): Promise<void> {
+    const profiles = this.profiles;
+    const p = profiles.find((x) => x.id === id);
+    if (p && Boolean(p.excludedFromProposals) !== excluded) {
+      if (excluded) {
+        p.excludedFromProposals = true;
+      } else {
+        delete p.excludedFromProposals;
+      }
+      await this.saveProfiles(profiles);
+    }
+  }
+
   /** All profiles (in display order) with their stored tokens, for backups. */
   async exportAll(): Promise<{ profile: AccountProfile; creds: OAuthCreds | null }[]> {
     return Promise.all(

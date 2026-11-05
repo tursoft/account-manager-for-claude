@@ -614,6 +614,29 @@ button:focus-visible {
   box-shadow: 0 0 0 1.5px var(--vscode-sideBar-background, #1e1e1e);
 }
 
+/* Excluded from proposals: a small mark on the card's top-right corner. */
+.excluded-mark {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  color: var(--orange);
+  border: 1px solid color-mix(in srgb, var(--orange) 60%, var(--card-border));
+  background: var(--vscode-sideBar-background, #1e1e1e);
+  cursor: default;
+}
+
+.excluded-mark .ico {
+  width: 11px;
+  height: 11px;
+  stroke-width: 1.6;
+}
+
 .stat.warn b {
   color: var(--warn);
 }

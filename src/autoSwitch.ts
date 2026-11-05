@@ -144,6 +144,15 @@ export class AutoProposals {
     this.onSwitch({ fromId: proposal.fromId, kind: proposal.kind, targetId: proposal.countdown.targetId });
   }
 
+  /** Points the running countdown at another account (the target can no longer be used), keeping its deadline. */
+  retarget(targetId: string): void {
+    if (!this.current?.countdown) {
+      return;
+    }
+    this.current = { ...this.current, countdown: { ...this.current.countdown, targetId } };
+    this.onChange(this.current);
+  }
+
   /** Stops the countdown; the proposal stays open for a choice by hand. */
   stopCountdown(): void {
     if (!this.current?.countdown) {

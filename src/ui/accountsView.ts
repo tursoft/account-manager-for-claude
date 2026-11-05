@@ -45,6 +45,8 @@ interface ViewAccount {
   fetchedAt?: number;
   retryAfter?: number;
   needsReauthorization: boolean;
+  /** Left out of proposals and automatic switches by the user. */
+  excludedFromProposals: boolean;
   /** Which service the account belongs to; only Claude for now. */
   provider: "claude";
 }
@@ -61,6 +63,8 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
   private autoProposal?: AutoProposal;
   /** What the user did with that proposal in the panel. */
   onAutoProposal?: (action: "switchNow" | "stopCountdown" | "close") => void;
+  /** The user included an account in proposals or left it out (after it was saved). */
+  onProposalExclusion?: (id: string, excluded: boolean) => void;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -173,7 +177,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(
-      (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown; text?: unknown; kind?: unknown; action?: unknown }) => {
+      (msg: { type: string; id?: string; ids?: string[]; url?: string; settings?: unknown; text?: unknown; kind?: unknown; action?: unknown; excluded?: unknown }) => {
       switch (msg.type) {
         case "autoProposal":
           if (msg.action === "switchNow" || msg.action === "stopCountdown" || msg.action === "close") {
@@ -221,6 +225,16 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
             void this.memento.update(AccountsViewProvider.VIEW_SETTINGS_KEY, msg.settings);
           }
           break;
+        case "excludeFromProposals": {
+          const { id, excluded } = msg;
+          if (id && typeof excluded === "boolean" && this.store.get(id)) {
+            void this.store.setExcludedFromProposals(id, excluded).then(() => {
+              this.refresh();
+              this.onProposalExclusion?.(id, excluded);
+            });
+          }
+          break;
+        }
         case "reorder":
           if (Array.isArray(msg.ids)) {
             void this.store
@@ -311,6 +325,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           fetchedAt: p.lastUsage?.fetchedAt,
           retryAfter: p.lastUsage?.retryAfter,
           needsReauthorization,
+          excludedFromProposals: Boolean(p.excludedFromProposals),
           provider: "claude",
         };
       })

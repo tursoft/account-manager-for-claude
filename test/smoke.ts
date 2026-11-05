@@ -1492,7 +1492,7 @@ function runProposeTests(): void {
   const now = Date.UTC(2026, 9, 13, 12, 0);
   const at = (ms: number) => new Date(now + ms).toISOString();
   const w = (kind: string, percent: number, resetIn: number | null = 2 * h) => ({ kind, label: kind, percent, resetsAt: resetIn === null ? null : at(resetIn) });
-  const acc = (id: string, windows: ReturnType<typeof w>[], extra: { isActive?: boolean; needsReauthorization?: boolean } = {}) => ({ id, label: id, windows, ...extra });
+  const acc = (id: string, windows: ReturnType<typeof w>[], extra: { isActive?: boolean; needsReauthorization?: boolean; excludedFromProposals?: boolean } = {}) => ({ id, label: id, windows, ...extra });
   const ids = (list: { id: string }[]) => list.map((x) => x.id).join();
 
   // Urgency = available % per hour until reset.
@@ -1531,6 +1531,22 @@ function runProposeTests(): void {
   check("leaving the active account: every other account is used up", noProposalReason([acc("z", [w("session", 100, 30 * 60_000)])], "session", now, true) === "Every other account is used up; the first is usable again in 30 min.");
   check("leaving the active account: no other account has the limit", noProposalReason([], "session", now, true) === "No other account reports a 5h limit.");
   check("leaving the active account: the others' logins expired", noProposalReason([acc("z", [w("session", 10)], { needsReauthorization: true })], "session", now, true) === "Every other account with a 5h limit has an expired login; reauthorize one first.");
+
+  // Accounts excluded from proposals (e.g. kept for another computer) are never proposed.
+  const excluding = (id: string) => accounts.map((a) => (a.id === id ? { ...a, excludedFromProposals: true } : a));
+  check("an excluded account is left out of the ranking", ids(rankAccounts(excluding("soon"), "session", now)) === "mid,fresh,active", ids(rankAccounts(excluding("soon"), "session", now)));
+  check("an excluded active account is not proposed either", ids(rankAccounts(excluding("active"), "session", now)) === "soon,mid,fresh");
+  check("the proposal moves on to the next account", propose(excluding("soon"), "session", now)!.account.id === "mid");
+  check("the first reason counts only the accounts that can be proposed", propose(excluding("soon"), "session", now)!.candidates[0].reason.endsWith("the most urgent of the 3 usable accounts."), propose(excluding("soon"), "session", now)!.candidates[0].reason);
+  const onlyExcluded = [acc("z", [w("session", 10)], { excludedFromProposals: true })];
+  check("nothing but excluded accounts: no proposal", propose(onlyExcluded, "session", now) === null);
+  check("reason when every account with the limit is excluded", noProposalReason(onlyExcluded, "session", now) === "Every account with a 5h limit is excluded from proposals.", noProposalReason(onlyExcluded, "session", now));
+  check("leaving the active account: every other account is excluded", noProposalReason(onlyExcluded, "session", now, true) === "Every other account with a 5h limit is excluded from proposals.");
+  check(
+    "a used-up reason mentions the excluded accounts it skipped",
+    noProposalReason([acc("y", [w("session", 100, 30 * 60_000)]), ...onlyExcluded], "session", now) === "Every account is used up; the first is usable again in 30 min. 1 account is excluded from proposals.",
+    noProposalReason([acc("y", [w("session", 100, 30 * 60_000)]), ...onlyExcluded], "session", now)
+  );
 }
 
 async function runAutoSwitchTests(): Promise<void> {
@@ -1587,6 +1603,10 @@ async function runAutoSwitchTests(): Promise<void> {
   check("an account in use in another window is skipped", targets(95, (id) => id === "busy") === "next,fresh", targets(95, (id) => id === "busy"));
   check("with a threshold of 100 any usable account can take over", targets(100) === "almost,busy,next,fresh", targets(100));
   check("no target when no other account can be used", autoSwitchTargets([accounts[0], accounts[5]], "session", "active", 95, () => false, now).length === 0);
+  check(
+    "an account excluded from proposals is never a target",
+    autoSwitchTargets(accounts.map((a) => (a.id === "busy" ? { ...a, excludedFromProposals: true } : a)), "session", "active", 95, () => false, now).map((a) => a.id).join() === "next,fresh"
+  );
 
   // The countdown.
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -1634,6 +1654,21 @@ async function runAutoSwitchTests(): Promise<void> {
   auto.close();
   await sleep(120);
   check("closing (dismissing) drops the proposal and its countdown", auto.get() === undefined && switched.length === 2);
+
+  // The target was excluded from proposals during the countdown: it goes to the next one, on time.
+  auto.open("a", "session", { targetId: "h", seconds: 0.05 });
+  const before = auto.get();
+  const changes = shown.length;
+  auto.retarget("i");
+  check(
+    "retargeting keeps the proposal and its deadline and shows the new target",
+    auto.get()?.id === before?.id && auto.get()?.countdown?.targetId === "i" &&
+      auto.get()?.countdown?.deadline === before?.countdown?.deadline && shown.length === changes + 1
+  );
+  await sleep(120);
+  check("the countdown then switches to the new target", switched.join() === "a->b (session),a->e (session),a->i (session)", switched.join());
+  auto.retarget("j");
+  check("without a countdown there is nothing to retarget", auto.get()?.countdown === undefined && shown.length === changes + 2);
   auto.dispose();
 }
 

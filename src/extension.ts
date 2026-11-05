@@ -103,6 +103,9 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       const isActive = store.getActiveId() === profileId;
+      if (!isActive && profile.excludedFromProposals) {
+        return; // kept out of proposals: do not invite a switch to it either
+      }
       const actions = isActive ? [] : ["Switch"];
       void vscode.window
         .showInformationMessage(
@@ -557,6 +560,7 @@ export function activate(context: vscode.ExtensionContext): void {
             !hasUsableOAuthCreds(creds) ||
             store.isRefreshTokenDead(p.id, creds?.refreshToken) ||
             requiresProfileReauthorization(p.lastUsage?.error),
+          excludedFromProposals: Boolean(p.excludedFromProposals),
           windows: p.lastUsage?.windows ?? [],
         };
       })
@@ -635,6 +639,23 @@ export function activate(context: vscode.ExtensionContext): void {
   poller.onBusyChange = (ids, all) => viewProvider.setBusy(ids, all);
   // The panel's buttons on the extension's own proposal: Switch now, Cancel (the countdown), Dismiss.
   viewProvider.onAutoProposal = (action) => autoProposals[action]();
+  // The countdown's target was just excluded from proposals: count down to the next best
+  // account instead, or stop the countdown when none can take over.
+  viewProvider.onProposalExclusion = async (id, excluded) => {
+    const proposal = autoProposals.get();
+    if (!excluded || proposal?.countdown?.targetId !== id) {
+      return;
+    }
+    const [next] = await switchTargets(proposal.fromId, proposal.kind);
+    if (autoProposals.get()?.id !== proposal.id) {
+      return; // replaced or closed while the accounts were read
+    }
+    if (next) {
+      autoProposals.retarget(next.id);
+    } else {
+      autoProposals.stopCountdown();
+    }
+  };
 
   // Publish the remembered owner before asynchronous startup work, so another
   // window does not start a second session on this login during restart.

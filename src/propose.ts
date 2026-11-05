@@ -4,6 +4,7 @@
  * hour until it resets (an account with 40% left and an hour to go beats one with 90%
  * left and a fresh 5-hour budget). Only accounts that can be used right now count: a
  * used-up weekly limit blocks sessions too, and an expired login cannot be used at all.
+ * Accounts the user excluded from proposals (e.g. kept for another computer) never count.
  * Plain functions, so the accounts panel, the extension, and the tests share one ranking.
  */
 
@@ -19,6 +20,8 @@ export interface ProposeAccount {
   label: string;
   isActive?: boolean;
   needsReauthorization?: boolean;
+  /** Set by the user (e.g. for an account used on another computer): never proposed or switched to automatically. */
+  excludedFromProposals?: boolean;
   windows: ProposeWindow[];
 }
 
@@ -106,11 +109,12 @@ export function fmtWait(ms: number): string {
 }
 
 /**
- * Ranks the accounts for `kind`: usable accounts that have the limit, most urgent first
- * (available per hour until reset), then the most available, then the list order.
+ * Ranks the accounts for `kind`: usable accounts that have the limit and are not excluded
+ * from proposals, most urgent first (available per hour until reset), then the most
+ * available, then the list order.
  */
 export function rankAccounts(accounts: ProposeAccount[], kind: ProposeFor, now = Date.now()): ProposeAccount[] {
-  const candidates = accounts.filter((a) => usable(a) && windowOf(a, kind));
+  const candidates = accounts.filter((a) => !a.excludedFromProposals && usable(a) && windowOf(a, kind));
   const order = new Map(accounts.map((a, i) => [a.id, i]));
   return candidates.slice().sort((a, b) => {
     const wa = windowOf(a, kind)!;
@@ -178,13 +182,17 @@ export function noProposalReason(accounts: ProposeAccount[], kind: ProposeFor, n
   const every = others ? "Every other account" : "Every account";
   const withLimit = accounts.filter((a) => windowOf(a, kind));
   if (withLimit.length === 0) return `No ${others ? "other " : ""}account reports a ${name} limit.`;
-  const working = withLimit.filter((a) => !a.needsReauthorization);
-  if (working.length === 0) return `${every} with a ${name} limit has an expired login; reauthorize one first.`;
+  const included = withLimit.filter((a) => !a.excludedFromProposals);
+  if (included.length === 0) return `${every} with a ${name} limit is excluded from proposals.`;
+  const skipped = withLimit.length - included.length;
+  const note = skipped === 0 ? "" : ` ${skipped} ${skipped === 1 ? "account is" : "accounts are"} excluded from proposals.`;
+  const working = included.filter((a) => !a.needsReauthorization);
+  if (working.length === 0) return `${every} with a ${name} limit has an expired login; reauthorize one first.${note}`;
   // All blocked: say when the first frees up.
   const soonest = working
     .map((a) => Math.max(...(a.windows || []).filter((w) => w.percent >= 100).map((w) => resetMs(w) ?? Infinity)))
     .filter((t) => Number.isFinite(t))
     .sort((a, b) => a - b)[0];
-  if (soonest !== undefined) return `${every} is used up; the first is usable again in ${fmtWait(Math.max(0, soonest - now))}.`;
-  return `${every} is used up and no reset time is known.`;
+  if (soonest !== undefined) return `${every} is used up; the first is usable again in ${fmtWait(Math.max(0, soonest - now))}.${note}`;
+  return `${every} is used up and no reset time is known.${note}`;
 }
