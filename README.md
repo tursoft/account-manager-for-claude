@@ -296,7 +296,7 @@ Requires [Node.js](https://nodejs.org/) 18+ and VS Code 1.85+. Run `npm install`
 | `npm run build:vsix` | Build the installable `.vsix` |
 | `npm run install:vsix` | Install the built `.vsix` into VS Code |
 | `npm run deploy` | Build and install in one step |
-| `npm run publish` / `release` | Check, then publish to the Marketplace (`release` also bumps the patch version) |
+| `npm run prepublish:check` | Type-check and run the tests, as the publish workflow does |
 
 - **Run and debug:** open the folder and press **F5** to start an Extension Development Host. Run
   **Developer: Reload Window** there after changes, and **Developer: Open Webview Developer Tools**
@@ -309,14 +309,26 @@ Requires [Node.js](https://nodejs.org/) 18+ and VS Code 1.85+. Run `npm install`
 
 ### Publishing
 
+Releases are published by GitHub Actions ([`.github/workflows/publish.yml`](.github/workflows/publish.yml))
+with Marketplace **Trusted Publishing** (OIDC), so no Personal Access Token is stored anywhere.
+Azure DevOps is retiring the global PATs that `vsce login` relied on.
+
+One-time setup:
+
 1. Create a publisher at <https://marketplace.visualstudio.com/manage>. Its ID must match
    `publisher` in `package.json`.
-2. In Azure DevOps (<https://dev.azure.com>), create a Personal Access Token with
-   **Organization: All accessible organizations** and the scope **Marketplace → Manage**.
-3. Run `npx vsce login <publisher-id>`, or set the token in the `VSCE_PAT` environment variable.
-   Never commit it.
-4. Update `CHANGELOG.md`, then run `npm run publish` or `npm run release`. Both stop if the type
-   check or tests fail.
+2. Open the publisher, select **Trusted Publishing**, and create a policy with **Repository
+   owner** `tursoft`, **Repository** `account-manager-for-claude`, **Workflow** `publish.yml`, and
+   **Environment** left empty.
+
+Each release:
+
+1. Bump the version (`npm version patch --no-git-tag-version`), update `CHANGELOG.md`, and commit.
+2. Push the commit, then a tag with the same version: `git tag v1.2.3 && git push origin v1.2.3`.
+3. The workflow checks that the tag matches `package.json`, type-checks, runs the tests, builds
+   the `.vsix` (kept as a run artifact), and publishes exactly that file. Follow it with
+   `gh run watch`. **Run workflow** on the Actions tab publishes the current version of a branch
+   without a tag.
 
 To publish to [Open VSX](https://open-vsx.org/) as well, run `npx ovsx publish -p <token>`.
 

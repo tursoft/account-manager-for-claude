@@ -1,24 +1,26 @@
 ---
 name: publish
-description: Release a new version of the Account Manager for Claude extension to the VS Code Marketplace - bump the version in package.json, run the checks, build the .vsix, publish it with vsce, and confirm the listing. Use when the user runs /publish or asks to release, ship, or publish a new version of this extension.
+description: Release a new version of the Account Manager for Claude extension to the VS Code Marketplace - bump the version in package.json, run the checks, commit, push a version tag that triggers the GitHub Actions publish workflow (Marketplace Trusted Publishing, no PAT), watch it, and confirm the listing. Use when the user runs /publish or asks to release, ship, or publish a new version of this extension.
 argument-hint: "[patch|minor|major|x.y.z]"
 disable-model-invocation: true
 ---
 
 # Publish a new version
 
-Releases `tursoft.account-manager-for-claude` to the VS Code Marketplace. Publishing is public and
-a version number can never be reused, so stop at the first failed step and report it; don't
-work around it.
+Releases `tursoft.account-manager-for-claude` to the VS Code Marketplace. Publishing runs in
+GitHub Actions (`.github/workflows/publish.yml`) with Marketplace **Trusted Publishing** (OIDC):
+no Personal Access Token is stored or needed, and `vsce login` / `vsce publish` from this machine
+are no longer used. Publishing is public and a version number can never be reused, so stop at the
+first failed step and report it; don't work around it.
 
 The argument chooses the new version: `patch` (the default), `minor`, `major`, or an exact
 `x.y.z`. Run everything from the repository root in the Bash tool (Git Bash).
 
 ## 1. Look before releasing
 
-- `git status --short` and `git log --oneline -3`: note uncommitted changes in the report.
-  They will be part of the release, which is expected when the user publishes right after a
-  change. Don't commit, tag, or push unless the user asks.
+- `git status --short`, `git branch --show-current`, and `git log --oneline -3`. Uncommitted
+  changes will be part of the release commit, which is expected right after a change; list them
+  in the report.
 - `node -p "require('./package.json').version"`: the current version.
 
 ## 2. Bump the version
@@ -27,58 +29,57 @@ The argument chooses the new version: `patch` (the default), `minor`, `major`, o
 npm version <patch|minor|major|x.y.z> --no-git-tag-version
 ```
 
-This updates `package.json` and `package-lock.json` only. `--no-git-tag-version` matters:
-without it npm refuses a dirty working tree, and otherwise it commits and tags on its own.
-Don't use `npm run release` (`vsce publish patch`) for the same reason.
+This updates `package.json` and `package-lock.json` only; `--no-git-tag-version` keeps npm from
+committing and tagging on its own (the tag is pushed in step 5, after the checks).
 
-## 3. Check
+## 3. Check locally
 
 ```bash
 npm run prepublish:check > "$TEMP/precheck.txt" 2>&1; echo "exit $?"
 grep -E "error TS|FAIL|ALL PASS" "$TEMP/precheck.txt"
 ```
 
-This runs the typecheck and `test/smoke.ts`; it must end with `ALL PASS`. The request-queue check
-"the gap can be changed (0 = no pause)" fails intermittently: when it is the only failure, rerun
-once. Any other failure stops the release; report it, and leave the bumped version in place so
-the user can decide.
+It must end with `ALL PASS`. The request-queue check "the gap can be changed (0 = no pause)"
+fails intermittently: when it is the only failure, rerun once. Any other failure stops the
+release; report it and leave the bumped version in place. The workflow runs the same checks again.
 
-## 4. Build the package
+Optionally build and install the package to try it first: `npm run deploy`.
 
-```bash
-npm run build:vsix
-```
+## 4. Commit
 
-This does a production esbuild build plus `vsce package`, and writes
-`account-manager-for-claude-<version>.vsix` in the repository root (`*.vsix` is git-ignored).
-Confirm the file exists and carries the new version:
+Commit the pending changes (in focused commits if they span several topics) and the version bump
+as `chore(release): <version>`.
 
-```bash
-unzip -p account-manager-for-claude-<version>.vsix extension/package.json | grep '"version"'
-```
+## 5. Push the commit and the tag
 
-When the release is for a specific change, also grep the packaged `extension/dist/extension.js`
-or `extension/dist/webview/panel.js` for a name from that change.
-
-## 5. Publish
-
-Publish the exact file that was built and checked, with stdin closed so a missing token fails
-fast instead of waiting at a prompt:
+Pushing is what publishes, so confirm with the user first unless they already asked to publish.
 
 ```bash
-timeout 170 npx vsce publish --packagePath account-manager-for-claude-<version>.vsix < /dev/null
+git push origin HEAD
+git tag v<version> && git push origin v<version>
 ```
 
-Success ends with `DONE  Published tursoft.account-manager-for-claude v<version>.` The
-publisher token is stored in the Windows credential store from an earlier `vsce login tursoft`.
-Don't run `vsce ls-publishers` to check for it: it hangs here.
+The tag must equal `v` + the `package.json` version, or the workflow stops.
 
-If publishing fails because no token is stored or the token expired, stop. Tell the user to run
-`npx vsce login tursoft` in their own terminal with a new Azure DevOps personal access token
-(scope: Marketplace > Manage), then run `/publish` again, or to upload the .vsix by hand at
-https://marketplace.visualstudio.com/manage/publishers/tursoft. Never ask for the token in chat.
+## 6. Watch the workflow
 
-## 6. Confirm and report
+```bash
+sleep 5; gh run list --workflow publish.yml --limit 1
+gh run watch <run-id> --exit-status
+```
+
+On failure, read `gh run view <run-id> --log-failed`:
+
+- **OIDC / token exchange / 401 / 403 at the publish step**: the publisher's Trusted Publishing
+  policy is missing or doesn't match. Ask the user to check it at
+  https://marketplace.visualstudio.com/manage/publishers/tursoft → **Trusted Publishing**: owner
+  `tursoft`, repository `account-manager-for-claude`, workflow `publish.yml`, environment empty.
+  Then rerun: `gh run rerun <run-id>` (`--skip-duplicate` makes reruns safe).
+- **Tag does not match**: delete the tag (`git push origin :refs/tags/v<x>` and `git tag -d v<x>`),
+  fix, and tag again.
+- **Tests**: same rule as step 3.
+
+## 7. Confirm and report
 
 The Marketplace validates a new version for a few minutes before listing it:
 
@@ -91,9 +92,7 @@ that validation is pending, and check once more later in the session if there is
 point to do so.
 
 Report:
-- the version change (old → new) and the .vsix path;
-- the check result (any flaky rerun included);
-- the publish result and whether the listing shows it yet:
-  https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude ;
-- uncommitted changes that went into the release, with an offer to commit them and the version
-  bump (for example `chore(release): <version>`).
+- the version change (old → new), the tag, and the workflow run URL;
+- the check results (any flaky rerun included);
+- whether the listing shows it yet:
+  https://marketplace.visualstudio.com/items?itemName=tursoft.account-manager-for-claude .
