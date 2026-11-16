@@ -61,10 +61,18 @@ git tag v<version> && git push origin v<version>
 
 The tag must equal `v` + the `package.json` version, or the workflow stops.
 
-## 6. Watch the workflow
+## 6. Approval, then watch the workflow
 
 ```bash
 sleep 5; gh run list --workflow publish.yml --limit 1
+```
+
+The job runs in the `marketplace` environment, which waits for the repository owner's approval
+(the run shows "Waiting"). Approving is the user's release decision: never approve it yourself,
+even if `gh` could. Give the user the run URL and ask them to choose **Review deployments →
+marketplace → Approve and deploy**. Once they have, follow it:
+
+```bash
 gh run watch <run-id> --exit-status
 ```
 
@@ -73,10 +81,15 @@ On failure, read `gh run view <run-id> --log-failed`:
 - **OIDC / token exchange / 401 / 403 at the publish step**: the publisher's Trusted Publishing
   policy is missing or doesn't match. Ask the user to check it at
   https://marketplace.visualstudio.com/manage/publishers/tursoft → **Trusted Publishing**: owner
-  `tursoft`, repository `account-manager-for-claude`, workflow `publish.yml`, environment empty.
+  `tursoft`, repository `account-manager-for-claude`, workflow `publish.yml`, environment
+  `marketplace`.
   Then rerun: `gh run rerun <run-id>` (`--skip-duplicate` makes reruns safe).
 - **Tag does not match**: delete the tag (`git push origin :refs/tags/v<x>` and `git tag -d v<x>`),
-  fix, and tag again.
+  fix, and tag again. Only admins can create or delete `v*` tags (tag ruleset).
+- **"Branch is not allowed to deploy to marketplace"**: the run was started on a branch; only
+  `v*` tags may deploy.
+- **"must be pinned to a full-length commit SHA" / action not allowed**: the repository allows
+  only GitHub-owned actions pinned to a commit SHA; pin the new action the same way.
 - **Tests**: same rule as step 3.
 
 ## 7. Confirm and report

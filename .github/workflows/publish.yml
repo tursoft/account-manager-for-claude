@@ -5,7 +5,11 @@
 #
 # Release: bump the version in package.json, commit, then push a matching tag:
 #   git tag v1.2.3 && git push origin v1.2.3
-# "Run workflow" (manual) builds and publishes the version in package.json on the chosen branch.
+# Every run waits for approval in the "marketplace" environment (Settings > Environments),
+# which only accepts v* tags; the Trusted Publishing policy accepts only that environment.
+# "Run workflow" (manual) must therefore be started on a v* tag, e.g. to retry a release.
+#
+# Actions are pinned to full commit SHAs (the repository requires it); the comment names the release.
 name: Publish
 
 on:
@@ -26,13 +30,16 @@ jobs:
   publish:
     # The smoke tests are developed and run on Windows.
     runs-on: windows-latest
+    environment: marketplace
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -60,7 +67,7 @@ jobs:
       - name: Build package
         run: npm run build:vsix
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vsix-${{ steps.version.outputs.version }}
           path: account-manager-for-claude-${{ steps.version.outputs.version }}.vsix

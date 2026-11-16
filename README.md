@@ -319,16 +319,21 @@ One-time setup:
    `publisher` in `package.json`.
 2. Open the publisher, select **Trusted Publishing**, and create a policy with **Repository
    owner** `tursoft`, **Repository** `account-manager-for-claude`, **Workflow** `publish.yml`, and
-   **Environment** left empty.
+   **Environment** `marketplace`.
+3. In the GitHub repository, the `marketplace` environment (Settings → Environments) requires the
+   owner's approval and accepts only `v*` tags, and a tag ruleset lets only admins create, move, or
+   delete `v*` tags. Workflows may use only GitHub-owned actions pinned to a commit SHA.
 
 Each release:
 
 1. Bump the version (`npm version patch --no-git-tag-version`), update `CHANGELOG.md`, and commit.
 2. Push the commit, then a tag with the same version: `git tag v1.2.3 && git push origin v1.2.3`.
-3. The workflow checks that the tag matches `package.json`, type-checks, runs the tests, builds
+3. Approve the run: open it on the Actions tab and choose **Review deployments → marketplace →
+   Approve and deploy** (or `gh run view <id> --web`). Nothing is published before that.
+4. The workflow checks that the tag matches `package.json`, type-checks, runs the tests, builds
    the `.vsix` (kept as a run artifact), and publishes exactly that file. Follow it with
-   `gh run watch`. **Run workflow** on the Actions tab publishes the current version of a branch
-   without a tag.
+   `gh run watch`. To retry a release, use **Run workflow** on the Actions tab and pick the
+   release tag; runs on a branch are refused by the environment.
 
 To publish to [Open VSX](https://open-vsx.org/) as well, run `npx ovsx publish -p <token>`.
 
