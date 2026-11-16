@@ -21,11 +21,13 @@ export interface ListAccount {
   label: string;
   subscriptionType?: string;
   isActive?: boolean;
+  /** User-defined tags (already normalized). */
+  tags?: string[];
   windows: ListWindow[];
 }
 
 export interface ListingSettings {
-  /** Free text matched against the name, the plan, and "active". */
+  /** Free text matched against the name, the plan, the tags, and "active"; "#tag" matches that tag exactly. */
   text: string;
   limit: LimitFilter;
   /** "all", or a lower-case plan such as "team". */
@@ -149,7 +151,9 @@ export function matchesListing(acc: ListAccount, s: ListingSettings): boolean {
   }
   const q = s.text.trim().toLowerCase();
   if (!q) return true;
-  return [acc.label, acc.subscriptionType, acc.isActive ? "active" : ""]
+  const tags = (acc.tags || []).map((t) => t.toLowerCase());
+  if (q.length > 1 && q.startsWith("#")) return tags.includes(q.slice(1).trim());
+  return [acc.label, acc.subscriptionType, acc.isActive ? "active" : "", ...tags]
     .filter(Boolean)
     .some((t) => (t as string).toLowerCase().includes(q));
 }

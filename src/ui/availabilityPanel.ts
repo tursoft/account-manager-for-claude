@@ -4,6 +4,7 @@ import { hasUsableOAuthCreds } from "../credentialValidation";
 import { CARRY_MS } from "../historySeries";
 import { ListingSettings } from "../listing";
 import { requiresProfileReauthorization } from "../oauth";
+import { normalizeTags } from "../tags";
 import { UsageHistory } from "../usageHistory";
 import { copyToClipboard } from "./clipboard";
 
@@ -117,6 +118,7 @@ export class AvailabilityPanel {
           id: p.id,
           label: p.label,
           subscriptionType: p.subscriptionType,
+          tags: normalizeTags(p.tags),
           isActive: p.id === activeId,
           windows: p.lastUsage?.windows ?? [],
           fetchedAt: p.lastUsage?.fetchedAt,

@@ -708,6 +708,51 @@ button:focus-visible {
   border: 1px solid var(--border);
 }
 
+/*
+ * User-defined tags: pills stacked one per line under the avatar, each tinted by a hue
+ * derived from its text. The left column is capped so long tags ellipsize (the tooltip has
+ * the full tag) instead of squeezing the usage bars.
+ */
+.tags {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+}
+
+.tag {
+  --tag-color: hsl(var(--tag-hue, 210) 65% 55%);
+  display: block;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  padding: 0 6px;
+  border-radius: 7px;
+  color: var(--vscode-foreground);
+  background: color-mix(in srgb, var(--tag-color) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag-color) 55%, transparent);
+}
+
+button.tag {
+  cursor: pointer;
+}
+
+button.tag:hover {
+  background: color-mix(in srgb, var(--tag-color) 30%, transparent);
+}
+
+.tag.on {
+  background: color-mix(in srgb, var(--tag-color) 45%, transparent);
+  border-color: var(--tag-color);
+}
+
 .ago {
   flex: 0 0 auto;
   font-size: 10px;
@@ -857,6 +902,12 @@ button:focus-visible {
   align-items: center;
   gap: 7px;
   min-width: 28px;
+  max-width: 72px;
+}
+
+/* Some card has tags: one width for every card's left column, so the usage bars line up. */
+.has-tags .card-lead {
+  width: 72px;
 }
 
 /* Quick actions and the "..." menu, together at the right of the header. */

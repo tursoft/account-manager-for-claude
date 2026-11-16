@@ -38,6 +38,7 @@ import { requiresProfileReauthorization, TokenRefresher } from "./oauth";
 import { ProfileActivityRegistry } from "./profileActivity";
 import { ProposeAccount, ProposeFor } from "./propose";
 import { SwitchService } from "./switchService";
+import { allTags, formatTags, normalizeTags, parseTags } from "./tags";
 import { AccountsViewProvider } from "./ui/accountsView";
 import { AnalyticsPanel } from "./ui/analyticsPanel";
 import { AvailabilityPanel } from "./ui/availabilityPanel";
@@ -959,6 +960,31 @@ export function activate(context: vscode.ExtensionContext): void {
         await store.rename(targetId, label.trim());
         refreshUI();
       }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("accountManagerForClaude.editTags", async (id?: string) => {
+      const targetId = id ?? (await pickAccount(store, "Edit tags of profile…"));
+      const profile = targetId ? store.get(targetId) : undefined;
+      if (!targetId || !profile) {
+        return;
+      }
+      const own = normalizeTags(profile.tags);
+      const others = allTags(store.list()).filter((t) => !own.some((o) => o.toLowerCase() === t.toLowerCase()));
+      const text = await vscode.window.showInputBox({
+        title: `Tags of ${profile.label}`,
+        prompt:
+          "Comma-separated, e.g. work, client-a. Delete a tag to remove it; leave empty to remove all." +
+          (others.length ? ` Used on other accounts: ${formatTags(others)}` : ""),
+        value: formatTags(own),
+        placeHolder: "work, personal",
+      });
+      if (text === undefined) {
+        return; // cancelled
+      }
+      await store.setTags(targetId, parseTags(text));
+      refreshUI();
     })
   );
 

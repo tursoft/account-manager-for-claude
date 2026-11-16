@@ -124,6 +124,11 @@
         "title": "Claude: Rename account profile"
       },
       {
+        "command": "accountManagerForClaude.editTags",
+        "title": "Claude: Edit account profile tags",
+        "icon": "$(tag)"
+      },
+      {
         "command": "accountManagerForClaude.undoSwitch",
         "title": "Claude: Undo last switch"
       },
@@ -240,6 +245,9 @@
         },
         {
           "command": "accountManagerForClaude.renameAccount"
+        },
+        {
+          "command": "accountManagerForClaude.editTags"
         }
       ]
     },

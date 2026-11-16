@@ -6,6 +6,7 @@ import {
 } from "./credentialValidation";
 import { hasIdentity, profileIdentity, profileMatchesIdentity } from "./identity";
 import { tokenFingerprint } from "./oauth";
+import { normalizeTags } from "./tags";
 import { AccountProfile, ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "./types";
 
 const PROFILES_KEY = "accountManagerForClaude.profiles";
@@ -131,6 +132,25 @@ export class AccountStore {
       }
       await this.saveProfiles(profiles);
     }
+  }
+
+  /** Replaces the account's tags (cleaned up by normalizeTags); no tags removes the field. */
+  async setTags(id: string, tags: string[]): Promise<void> {
+    const profiles = this.profiles;
+    const p = profiles.find((x) => x.id === id);
+    if (!p) {
+      return;
+    }
+    const clean = normalizeTags(tags);
+    if (clean.join("\n") === normalizeTags(p.tags).join("\n")) {
+      return;
+    }
+    if (clean.length) {
+      p.tags = clean;
+    } else {
+      delete p.tags;
+    }
+    await this.saveProfiles(profiles);
   }
 
   /** All profiles (in display order) with their stored tokens, for backups. */

@@ -54,6 +54,8 @@ export interface AccountProfile {
    * computer and should keep its limits). Kept per machine, like the rest of the profile.
    */
   excludedFromProposals?: boolean;
+  /** User-defined labels shown as badges ("work", "client-a"); see normalizeTags. */
+  tags?: string[];
   addedAt: number;
   order: number;
   /** last read usage snapshot (cached for fast rendering) */

@@ -5,6 +5,7 @@ import { CurrentAccountState } from "../credentialSync";
 import { hasUsableOAuthCreds } from "../credentialValidation";
 import { identityLabel } from "../identity";
 import { ListingSettings, normalizeListing } from "../listing";
+import { normalizeTags } from "../tags";
 import { requiresProfileReauthorization } from "../oauth";
 import { copyToClipboard } from "./clipboard";
 
@@ -47,6 +48,8 @@ interface ViewAccount {
   needsReauthorization: boolean;
   /** Left out of proposals and automatic switches by the user. */
   excludedFromProposals: boolean;
+  /** User-defined tags, shown as badges. */
+  tags: string[];
   /** Which service the account belongs to; only Claude for now. */
   provider: "claude";
 }
@@ -286,6 +289,9 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
         case "rename":
           if (msg.id) void vscode.commands.executeCommand("accountManagerForClaude.renameAccount", msg.id);
           break;
+        case "editTags":
+          if (msg.id) void vscode.commands.executeCommand("accountManagerForClaude.editTags", msg.id);
+          break;
         case "undo":
           void vscode.commands.executeCommand("accountManagerForClaude.undoSwitch");
           break;
@@ -326,6 +332,7 @@ export class AccountsViewProvider implements vscode.WebviewViewProvider {
           retryAfter: p.lastUsage?.retryAfter,
           needsReauthorization,
           excludedFromProposals: Boolean(p.excludedFromProposals),
+          tags: normalizeTags(p.tags),
           provider: "claude",
         };
       })

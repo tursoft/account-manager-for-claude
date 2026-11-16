@@ -13,6 +13,7 @@ import {
   SORTS,
   sortAccounts,
 } from "../src/listing";
+import { tagHue } from "../src/tags";
 
 (function () {
   const vscode = acquireVsCodeApi();
@@ -53,6 +54,7 @@ import {
     signIn: '<path d="M9.5 2.5h3v11h-3M2.5 8h7M7 5.5 9.5 8 7 10.5"/>',
     exclude: '<circle cx="8" cy="8" r="5.5"/><path d="M4.1 11.9 11.9 4.1"/>',
     include: '<circle cx="8" cy="8" r="5.5"/><path d="M5.4 8.2 7.2 10 10.6 6.2"/>',
+    tag: '<path d="M2.5 2.5h5.2l5.8 5.8-5.2 5.2-5.8-5.8z"/><circle cx="5.3" cy="5.3" r=".9"/>',
   };
 
   function icon(name) {
@@ -386,8 +388,40 @@ import {
       agoEl.title = `Usage last updated ${ago} ago (${new Date(acc.fetchedAt).toLocaleTimeString()})\nRefreshed on the polling interval, after a switch, and with the Refresh button.`;
       lead.appendChild(agoEl);
     }
+    if (acc.tags && acc.tags.length) lead.appendChild(tagList(acc));
     root.append(lead, body);
     return root;
+  }
+
+  /**
+   * The account's tags as colored badges under its avatar, one per line. With more than one
+   * account, a badge filters the list to that tag ("#tag" in the search box); clicking it
+   * again clears it.
+   */
+  function tagList(acc) {
+    const row = el("div", "tags");
+    const filterable = (state.accounts || []).length >= MANY;
+    for (const tag of acc.tags) {
+      const query = "#" + tag;
+      const on = filter.text.trim().toLowerCase() === query.toLowerCase();
+      const badge = el(filterable ? "button" : "span", "tag" + (on ? " on" : ""), tag);
+      badge.style.setProperty("--tag-hue", String(tagHue(tag)));
+      if (filterable) {
+        badge.type = "button";
+        badge.title = `Tag: ${tag}
+` + (on ? "Showing only accounts with this tag; click to show all" : "Click to show only accounts with this tag");
+        badge.setAttribute("aria-pressed", String(on));
+        badge.addEventListener("click", () => {
+          const text = on ? "" : query;
+          searchInput.value = text;
+          setFilter({ text });
+        });
+      } else {
+        badge.title = `Tag: ${tag}`;
+      }
+      row.appendChild(badge);
+    }
+    return row;
   }
 
   /** Account providers; each account shows its provider's mark. More can be added here. */
@@ -461,6 +495,7 @@ import {
       accent: acc.needsReauthorization,
     });
     items.push({ icon: "edit", label: "Rename…", run: act("rename") });
+    items.push({ icon: "tag", label: acc.tags && acc.tags.length ? "Edit tags…" : "Add tags…", run: act("editTags") });
     items.push({ icon: "trash", label: "Remove profile…", run: act("remove"), danger: true });
     return items;
   }
@@ -850,6 +885,8 @@ import {
     const order = new Map(accounts.map((a, i) => [a.id, i]));
     const visible = sortAccounts(accounts.filter((a) => matchesListing(a, filter)), order, filter.sort);
     noMatchEl.classList.toggle("hidden", visible.length > 0);
+    // Tags widen the left column; widen it on every card then, so the usage bars still line up.
+    listEl.classList.toggle("has-tags", visible.some((a) => a.tags && a.tags.length));
     for (const acc of visible) {
       listEl.appendChild(card(acc, state.warnThreshold || 80));
     }

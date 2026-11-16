@@ -58,6 +58,7 @@ import {
 } from "../src/listing";
 import { ClaudeAuthIdentity, OAuthCreds, UsageSnapshot } from "../src/types";
 import { anthropicQueue, RequestQueue } from "../src/requestQueue";
+import { allTags, formatTags, MAX_TAG_LENGTH, MAX_TAGS, normalizeTags, parseTags, tagHue } from "../src/tags";
 
 // Requests to Anthropic are spaced out in real use; the tests don't need the pause.
 anthropicQueue.setGap(0);
@@ -532,6 +533,27 @@ async function runAccountStoreTests(): Promise<void> {
     store.get(profile.id)?.authEmail === "owner@example.com" &&
       store.get(profile.id)?.authAccountUuid === "acct-1"
   );
+
+  await store.setTags(profile.id, [" work ", "Work", "client  a", ""]);
+  check("setTags stores cleaned tags", store.get(profile.id)?.tags?.join("|") === "work|client a", String(store.get(profile.id)?.tags));
+  await store.setTags(profile.id, []);
+  check("setTags with no tags removes the field", store.get(profile.id) !== undefined && !("tags" in store.get(profile.id)!));
+  await store.setTags("missing-id", ["x"]);
+  check("setTags ignores unknown profiles", store.get("missing-id") === undefined);
+}
+
+function runTagTests(): void {
+  console.log("account tags:");
+  check("normalize trims, collapses spaces, drops empties", normalizeTags(["  a  b ", "", "   ", "c"]).join("|") === "a b|c");
+  check("normalize drops repeats ignoring case, first spelling wins", normalizeTags(["Work", "work", "WORK", "home"]).join("|") === "Work|home");
+  check("normalize ignores non-strings and non-arrays", normalizeTags(["a", 3, null, { x: 1 }]).join() === "a" && normalizeTags("a").length === 0 && normalizeTags(undefined).length === 0);
+  check("normalize cuts long tags", normalizeTags(["x".repeat(100)])[0].length === MAX_TAG_LENGTH);
+  check("normalize keeps at most MAX_TAGS", normalizeTags(Array.from({ length: 30 }, (_, i) => `t${i}`)).length === MAX_TAGS);
+  check("parse reads a comma-separated line", parseTags(" work, client a ,,Work, home").join("|") === "work|client a|home");
+  check("parse of an empty line is no tags", parseTags("").length === 0 && parseTags(" , ").length === 0);
+  check("format and parse round-trip", parseTags(formatTags(["a b", "c"])).join("|") === "a b|c");
+  check("allTags lists each tag once, A-Z", allTags([{ tags: ["zeta", "Alpha"] }, { tags: ["alpha", "mid"] }, {}]).join("|") === "Alpha|mid|zeta");
+  check("tag hue is stable, case-insensitive, and in range", tagHue("Work") === tagHue("work") && tagHue("work") >= 0 && tagHue("work") < 360 && tagHue("work") !== tagHue("home"));
 }
 
 function runIdentityTests(): void {
@@ -1433,6 +1455,10 @@ function runListingTests(): void {
   check("filter: without a Fable limit", shown({ scope: "no:fable" }) === "limitedLate,unknown,limitedSoon,avail80");
   check("filter: text matches the plan, name, and 'active'", shown({ text: "TEAM" }) === "avail30" && shown({ text: "late" }) === "limitedLate" && shown({ text: "active" }) === "avail80");
   check("filters combine", shown({ limit: "available", plan: "free" }) === "avail80");
+  const tagged = accounts.map((a) => (a.id === "avail30" ? { ...a, tags: ["Homework"] } : a.id === "unknown" ? { ...a, tags: ["work", "laptop"] } : a));
+  const shownTagged = (text: string) => tagged.filter((a) => matchesListing(a, { ...DEFAULT_LISTING, text })).map((a) => a.id).join();
+  check("filter: text matches tags", shownTagged("lap") === "unknown" && shownTagged("WORK") === "avail30,unknown");
+  check("filter: #tag matches that tag exactly", shownTagged("#work") === "unknown" && shownTagged("#Homework") === "avail30" && shownTagged("#wor") === "");
   check("scopes list model limits, not the general weekly one", JSON.stringify(scopesOf(accounts[1])) === '{"fable":"Fable"}' && Object.keys(scopesOf(accounts[3])).length === 0);
 
   check("normalize accepts good settings", JSON.stringify(normalizeListing({ text: "x", limit: "limited", plan: " Pro ", scope: "has:fable", sort: "plan" })) ===
@@ -1888,6 +1914,7 @@ runHistorySeriesTests();
 runUtilizationTests();
 runAvailabilityTests();
 runListingTests();
+runTagTests();
 runAvatarTests();
 runToneTests();
 runResetToneTests();

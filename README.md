@@ -95,6 +95,12 @@ much of every account's limits is left, and let the extension tell you which acc
   switches, and "limit available again" notifications skip it. A small mark on the card's top-right corner shows it is excluded; **Include in
   proposals** in the same menu brings it back. You can still switch to it by hand. The choice is
   kept on this computer only.
+- **Tags.** Label accounts with your own tags (for example `work`, `client-a`, `laptop`): choose
+  **Add tags…** / **Edit tags…** in an account's **⋯** menu and type them comma-separated; delete
+  a tag from the line to remove it. Tags show as colored badges under the account's icon, one per
+  line. Click a badge to show only the accounts with that tag (it puts `#tag` in the filter box;
+  click it again to show all), and plain filter text matches tags too. Tags are kept on this
+  computer and included in backups.
 
 ### Logins that stay valid
 
@@ -166,6 +172,7 @@ account can be used, across a week or hour by hour for a single day.
 | `Claude: Complete profile reauthorization` | Finish a reauthorization |
 | `Claude: Undo last switch` | Restore the previous account |
 | `Claude: Rename account profile` / `Remove account profile` | Manage saved accounts |
+| `Claude: Edit account profile tags` | Add or remove an account's tags |
 | `Claude: Back up account list (password-protected ZIP)` | Save all accounts to an encrypted ZIP |
 | `Claude: Restore account list from backup` | Merge a backup into the list |
 | `Claude: Delete collected usage history` | Remove all usage readings |
